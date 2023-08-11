@@ -11,7 +11,7 @@ from SESWrapper.ses_measure import SESMeasure
 import framegui, webcam
 
 SES_DIR = "D:/SES_1.9.6_Win64"
-WRAPPER_PATH = "D:/SES_1.9.6_Win64/SESWrapper.dll"
+WRAPPER_PATH = os.path.join(SES_DIR, "SESWrapper.dll")
 SES_INSTR = os.path.join(SES_DIR, "dll/SESInstrument.dll")
 INSTR_PATH = os.path.join(SES_DIR, "data/DA30_Instrument.dat")
 
@@ -65,8 +65,8 @@ class SESDAQMain(uiclass, baseclass):
             k: None for k in self.USER_WINDOWS.keys()
         }
 
-        self.webcam_btn.clicked.connect(lambda: self.toggle_window("webcam"))
-        self.basler_btn.clicked.connect(lambda: self.toggle_window("basler"))
+        self.webcam_btn.toggled.connect(lambda: self.toggle_window("webcam"))
+        self.basler_btn.toggled.connect(lambda: self.toggle_window("basler"))
 
     def toggle_window(self, window: str):
         if self._child_windows[window] is None:
@@ -74,7 +74,6 @@ class SESDAQMain(uiclass, baseclass):
             self._child_windows[window].show()
         else:
             self._child_windows[window].close()
-            print(self._child_windows[window])
             self._child_windows[window] = None
 
     def closeEvent(self, *args, **kwargs):

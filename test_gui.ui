@@ -63,12 +63,18 @@
           <property name="text">
            <string>Sample Camera</string>
           </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="webcam_btn">
           <property name="text">
            <string>Webcam Viewer</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
