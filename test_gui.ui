@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>123</width>
-    <height>208</height>
+    <width>293</width>
+    <height>250</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,41 +16,63 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QPushButton" name="CalibrateVoltages">
-        <property name="text">
-         <string>Calibrate Voltages</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QPushButton" name="CalibrateVoltages">
+          <property name="text">
+           <string>Calibrate Voltages</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="CalibrateDetector">
+          <property name="text">
+           <string>Calibrate Detector</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="ControlSupplies">
+          <property name="text">
+           <string>Control Supplies</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="SupplyInfo">
+          <property name="text">
+           <string>Supply Info</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="DetectorInfo">
+          <property name="text">
+           <string>Detector Info</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="CalibrateDetector">
-        <property name="text">
-         <string>Calibrate Detector</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="ControlSupplies">
-        <property name="text">
-         <string>Control Supplies</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="SupplyInfo">
-        <property name="text">
-         <string>Supply Info</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="DetectorInfo">
-        <property name="text">
-         <string>Detector Info</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QPushButton" name="basler_btn">
+          <property name="text">
+           <string>Sample Camera</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="webcam_btn">
+          <property name="text">
+           <string>Webcam Viewer</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
@@ -61,8 +83,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>123</width>
-     <height>22</height>
+     <width>293</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
