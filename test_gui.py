@@ -65,8 +65,8 @@ class SESDAQMain(uiclass, baseclass):
             k: None for k in self.USER_WINDOWS.keys()
         }
 
-        self.webcam_btn.toggled.connect(lambda: self.toggle_window("webcam"))
-        self.basler_btn.toggled.connect(lambda: self.toggle_window("basler"))
+        self.webcam_btn.clicked.connect(lambda: self.toggle_window("webcam"))
+        self.basler_btn.clicked.connect(lambda: self.toggle_window("basler"))
 
     def toggle_window(self, window: str):
         if self._child_windows[window] is None:

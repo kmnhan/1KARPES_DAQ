@@ -64,7 +64,7 @@
            <string>Sample Camera</string>
           </property>
           <property name="checkable">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -74,7 +74,7 @@
            <string>Webcam Viewer</string>
           </property>
           <property name="checkable">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -90,7 +90,7 @@
      <x>0</x>
      <y>0</y>
      <width>293</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
