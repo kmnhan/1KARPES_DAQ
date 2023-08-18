@@ -42,7 +42,8 @@ class SESDAQMain(uiclass, baseclass):
         self.setWindowTitle("1KARPES Controls")
 
         # for debugging purposes on macOS
-        if sys.platform.startswith("win"):
+        # if sys.platform.startswith("win"):
+        if False:
             self.measure = SESMeasure(
                 WRAPPER_PATH,
                 SES_DIR,
