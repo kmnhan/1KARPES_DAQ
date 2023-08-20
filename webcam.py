@@ -127,6 +127,7 @@ class MainWindow(uiclass, baseclass):
     def closeEvent(self, *args, **kwargs):
         self.settings.setValue("c922pro_focus", self.focus_slider.value())
         self.live_check.setChecked(False)
+        self.camera_handler.wait(2000)
         super().closeEvent(*args, **kwargs)
 
 

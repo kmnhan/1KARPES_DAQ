@@ -456,6 +456,7 @@ class MainWindow(MainWindowGUI):
 
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
+        self.frame_grabber.wait(2000)
         super().closeEvent(*args, **kwargs)
 
     def refresh_devices(self):
