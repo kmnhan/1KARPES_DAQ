@@ -30,12 +30,15 @@ class CameraHandler(QtCore.QThread):
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
+        frame_rate = 30
+        time_prev = time.time()
         while self.live:
             cap.set(cv2.CAP_PROP_FOCUS, int(self.focus * 5))
-
+            dt = time.time() - time_prev
             ret, image = cap.read()
-            if ret:
+            if ret and dt > 1.0 / frame_rate:
                 self.sigGrabbed.emit(image)
+                time_prev = time.time()
                 if self.save_requested:
                     filename = os.path.join(
                         SAVE_DIR,
