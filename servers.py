@@ -1,10 +1,5 @@
-from __future__ import annotations
-
-import logging
-import os
-
 import zmq
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore
 
 from constants import SLIT_TABLE, SLIT_PORT, CRYO_PORT, MG15_PORT
 from logreader import get_pressure, get_temperature

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 import qtawesome as qta
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtGui, uic
 
 
 class StautsIconWidget(qta.IconWidget):

@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import sys
 
 import zmq
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtWidgets, uic
 
 from constants import CRYO_PORT, MG15_PORT, SLIT_TABLE
 from servers import PressureServer, SlitServer, TemperatureServer
@@ -39,10 +37,7 @@ class SlitTable(QtCore.QAbstractTableModel):
         return 3
 
 
-uiclass, baseclass = uic.loadUiType("status.ui")
-
-
-class MainWindow(uiclass, baseclass):
+class MainWindow(*uic.loadUiType("status.ui")):
     sigSlitChanged = QtCore.Signal(int)
 
     def __init__(self):
@@ -106,7 +101,7 @@ class MainWindow(uiclass, baseclass):
         self.TB.setText(data["Sample stage"])
         self.TC.setText(data["Tilt bracket"])
         data = self.get_response(MG15_PORT)
-        self.pressure.setText(f"{float(data['IG Main']):e}")
+        self.pressure.setText(f"{float(data['IG Main']):.3e}")
 
     @QtCore.Slot()
     def set_slit_index(self):
@@ -130,7 +125,6 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
-    qapp.setStyle("Fusion")
 
     win = MainWindow()
     win.show()

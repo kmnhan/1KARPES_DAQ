@@ -1,17 +1,13 @@
-from __future__ import annotations
-
 import sys
 
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtWidgets, uic
 
 import framegui
 import status
 import webcam
 
-uiclass, baseclass = uic.loadUiType("main.ui")
 
-
-class ARPESMain(uiclass, baseclass):
+class ARPESMain(*uic.loadUiType("main.ui")):
     USER_WINDOWS: dict[str, type[QtWidgets.QWidget]] = {
         "webcam": webcam.MainWindow,
         "basler": framegui.MainWindow,
