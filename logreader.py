@@ -6,7 +6,7 @@ CRYO_LOG: str = "D:/Cryocooler_Log/DoNotTouch/LoggingNow.csv"
 MG15_LOG: str = "D:/MG15_Log/Don'tTouch/realtimelog.csv"
 
 CRYO_COLS: dict[int, str] = {
-    0: "time",
+    # 0: "time",
     2: "1K Cold finger",
     3: "Sample stage",
     4: "He pump",
@@ -15,7 +15,7 @@ CRYO_COLS: dict[int, str] = {
     11: "Tilt bracket",
 }
 MG15_COLS: dict[int, str] = {
-    0: "time",
+    # 0: "time",
     1: "IG Main",
 }
 
@@ -23,11 +23,18 @@ MG15_COLS: dict[int, str] = {
 def get_last_row(path) -> str:
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp = shutil.copy(path, tmpdirname)
+        result = None
         with open(tmp, "rb") as f:
-            f.seek(-2, os.SEEK_END)
-            while f.read(1) != b"\n":
-                f.seek(-2, os.SEEK_CUR)
-            result = f.readline().decode().rstrip()
+            while result is None:
+                try:
+                    f.seek(-2, os.SEEK_END)
+                    while f.read(1) != b"\n":
+                        f.seek(-2, os.SEEK_CUR)
+                except OSError:
+                    # empty file, retry until it is no longer empty
+                    continue
+                else:
+                    result = f.readline().decode().rstrip()
     return result
 
 
