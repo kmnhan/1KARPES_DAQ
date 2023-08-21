@@ -34,6 +34,13 @@ from logreader import get_pressure, get_temperature
 #         self.context.destroy()
 
 
+def dict_to_header(d: dict[str, str]) -> str:
+    out: str = ""
+    for k, v in d.items():
+        out += f"{k}={v}\n"
+    return out
+
+
 class SlitServer(QtCore.QThread):
     PORT = SLIT_PORT
     sigSocketBound = QtCore.Signal()
@@ -62,22 +69,18 @@ class SlitServer(QtCore.QThread):
             except zmq.error.Again:
                 continue
             else:
-                if message == b"0":
-                    socket.send_string(str(SLIT_TABLE[self.value][0]))
-                elif message == b"1":
-                    socket.send_string(str(SLIT_TABLE[self.value][1]))
-                elif message == b"2":
-                    socket.send_string(str(SLIT_TABLE[self.value][2]))
+                slit_info = {
+                    "Analyzer Slit Number": str(SLIT_TABLE[self.value][0]),
+                    "Analyzer Slit Width": str(SLIT_TABLE[self.value][1]),
+                    "Analyzer Slit Aperture": str(SLIT_TABLE[self.value][2]),
+                }
+                if message == b"1":
+                    socket.send_string(dict_to_header(slit_info))
+                else:
+                    socket.send_json(slit_info)
         socket.close()
         self.sigSocketClosed.emit()
         self.context.destroy()
-
-
-def dict_to_header(d: dict[str, str]) -> str:
-    out: str = ""
-    for k, v in d.items():
-        out += f"{k}={v}\n"
-    return out
 
 
 class TemperatureServer(QtCore.QThread):
