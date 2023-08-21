@@ -73,6 +73,13 @@ class SlitServer(QtCore.QThread):
         self.context.destroy()
 
 
+def dict_to_header(d: dict[str, str]) -> str:
+    out: str = ""
+    for k, v in d.items():
+        out += f"{k}={v}\n"
+    return out
+
+
 class TemperatureServer(QtCore.QThread):
     PORT = CRYO_PORT
     sigSocketBound = QtCore.Signal()
@@ -92,11 +99,15 @@ class TemperatureServer(QtCore.QThread):
 
         while self.running:
             try:
-                _ = socket.recv(flags=zmq.NOBLOCK)
+                message = socket.recv(flags=zmq.NOBLOCK)
             except zmq.error.Again:
                 continue
             else:
-                socket.send_json(get_temperature())
+                if message == b"1":
+                    socket.send_string(dict_to_header(get_temperature()))
+                else:
+                    socket.send_json(get_temperature())
+
         socket.close()
         self.sigSocketClosed.emit()
         self.context.destroy()
@@ -121,11 +132,15 @@ class PressureServer(QtCore.QThread):
 
         while self.running:
             try:
-                _ = socket.recv(flags=zmq.NOBLOCK)
+                message = socket.recv(flags=zmq.NOBLOCK)
             except zmq.error.Again:
                 continue
             else:
-                socket.send_json(get_pressure())
+                if message == b"1":
+                    socket.send_string(dict_to_header(get_pressure()))
+                else:
+                    socket.send_json(get_pressure())
+
         socket.close()
         self.sigSocketClosed.emit()
         self.context.destroy()
