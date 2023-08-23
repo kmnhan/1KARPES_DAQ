@@ -1,8 +1,13 @@
+import logging
+
 import zmq
 from qtpy import QtCore
 
-from constants import SLIT_TABLE, SLIT_PORT, CRYO_PORT, MG15_PORT
+from constants import CRYO_PORT, MG15_PORT, SLIT_PORT, SLIT_TABLE
 from logreader import get_pressure, get_temperature
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 # class ServerTemplate(QtCore.QThread):
 #     PORT = 5555
