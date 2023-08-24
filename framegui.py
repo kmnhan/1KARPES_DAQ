@@ -359,7 +359,8 @@ class FrameGrabber(QtCore.QThread):
         self.srgb_gamma: bool = value
 
     def run(self):
-        self.camera.MaxNumBuffer = 10
+        # save memory
+        self.camera.MaxNumBuffer = 5
         self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
         if genicam.IsReadable(self.camera.ExposureTimeRaw):
