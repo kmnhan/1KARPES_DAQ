@@ -3,7 +3,13 @@ import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets
 from collections.abc import Sequence
 
-import erlab.interactive.colors
+import matplotlib.colors
+
+
+def color_to_QColor(
+    c: str | tuple[float, ...], alpha: float | None = None
+) -> QtGui.QColor:
+    return QtGui.QColor.fromRgbF(*matplotlib.colors.to_rgba(c, alpha=alpha))
 
 
 class LegendTableModel(QtCore.QAbstractTableModel):
@@ -37,7 +43,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
                 pass
 
         self.colors = [
-            erlab.interactive.colors.color_to_QColor(clr)
+            color_to_QColor(clr)
             for clr in sns.color_palette("bright", len(self._entries))
         ]
 

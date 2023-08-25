@@ -1,12 +1,20 @@
 import datetime
+import os
 import sys
 
 import numpy as np
+import pandas as pd
+import PyQt6
 import pyqtgraph as pg
+import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-
 from logreader import get_cryocooler_log, get_pressure_log
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
