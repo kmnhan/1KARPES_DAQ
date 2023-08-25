@@ -2,15 +2,11 @@ import datetime
 import sys
 
 import numpy as np
-import pandas as pd
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 
 from logreader import get_cryocooler_log, get_pressure_log
-
-cryo_dat = pd.read_pickle("cryo")
-mg15_dat = pd.read_pickle("mg15")
 
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
