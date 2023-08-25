@@ -60,7 +60,7 @@ class MainWindow(MainWindowGUI):
         try:
             self.load_data()
             for i in range(self.legendtable.model().rowCount()):
-                if self.df.columns[i] in self.settings.load("enabled_names"):
+                if self.df.columns[i] in self.settings.value("enabled_names"):
                     self.legendtable.model().enabled[i] = True
         except ValueError:
             pass
