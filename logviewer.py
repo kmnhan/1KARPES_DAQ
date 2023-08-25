@@ -59,9 +59,10 @@ class MainWindow(MainWindowGUI):
         self.plot1.setVisible(False)
 
         try:
-            self.load_data()
+            self.load_data(update=False)
+            enabled = self.settings.value("enabled_names", [])
             for i in range(self.legendtable.model().rowCount()):
-                if self.df.columns[i] in self.settings.value("enabled_names", []):
+                if self.df.columns[i] in enabled:
                     self.legendtable.set_enabled(i, True)
         except ValueError:
             pass
@@ -87,12 +88,13 @@ class MainWindow(MainWindowGUI):
         self.load_data()
 
     @QtCore.Slot()
-    def load_data(self):
+    def load_data(self, *, update: bool = True):
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
         self.legendtable.set_items(self.df.columns)
         if self.pressure_check.isChecked():
             self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
-        self.update_plot()
+        if update:
+            self.update_plot()
 
     @QtCore.Slot(bool)
     def toggle_pressure(self, value: bool):
@@ -106,7 +108,7 @@ class MainWindow(MainWindowGUI):
 
     def update_plot(self):
         self.settings.setValue(
-            "enabled_names", self.df.columns[self.legendtable.enabled]
+            "enabled_names", list(self.df.columns[self.legendtable.enabled])
         )
         self.plot0.clearPlots()
 
