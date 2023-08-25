@@ -71,7 +71,7 @@ def get_log(
             pass
     if len(dataframes) == 0:
         raise ValueError("No log files were found in specified range.")
-    return pd.concat(dataframes)
+    return pd.concat(dataframes)[slice(startdate, enddate)]
 
 
 def get_cryocooler_log(startdate, enddate):
