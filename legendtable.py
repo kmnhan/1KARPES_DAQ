@@ -96,7 +96,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
         return len(self._entries)
 
     def columnCount(self, index=None):
-        return 2
+        return 3
 
 
 class ColorButtonDelegate(QtWidgets.QItemDelegate):
