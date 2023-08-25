@@ -1,0 +1,140 @@
+import datetime
+import sys
+
+import numpy as np
+import pandas as pd
+import pyqtgraph as pg
+from qtpy import QtCore, QtGui, QtWidgets, uic
+from collections.abc import Iterable
+
+
+from logreader import get_cryocooler_log, get_pressure_log
+
+cryo_dat = pd.read_pickle("cryo")
+mg15_dat = pd.read_pickle("mg15")
+
+
+class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+
+        self.setWindowTitle("1KARPES Log Viewer")
+
+        # add plot and image
+        self.plot0: pg.PlotItem = self.graphics_layout.addPlot(
+            0, 0, axisItems={"bottom": pg.DateAxisItem()}
+        )
+        self.plot1: pg.PlotItem = self.graphics_layout.addPlot(
+            1, 0, axisItems={"bottom": pg.DateAxisItem()}
+        )
+        self.plot1.setXLink(self.plot0)
+        self.plot0.getAxis("bottom").setStyle(showValues=False)
+        for pi in self.plot_items:
+            pi.setDefaultPadding(0)
+            pi.showGrid(x=True, y=True, alpha=1.0)
+            pi.showAxes((True, False, False, True))
+        self.plot1.setLogMode(False, True)
+
+        self.startdateedit.dateTimeChanged.connect(self.enddateedit.setMinimumDateTime)
+        self.enddateedit.dateTimeChanged.connect(self.startdateedit.setMaximumDateTime)
+        self.startdateedit.setDate(QtCore.QDate.currentDate())
+        self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.startdateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
+        self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
+
+    @property
+    def plot_items(self) -> tuple[pg.PlotItem, pg.PlotItem]:
+        return self.plot0, self.plot1
+
+
+class MainWindow(MainWindowGUI):
+    def __init__(self):
+        super().__init__()
+        self.settings = QtCore.QSettings("erlab", "1karpes_logviewer")
+        self.legendtable.model().sigCurveToggled.connect(self.update_plot)
+        self.legendtable.model().sigColorChanged.connect(self.update_plot)
+        self.load_btn.clicked.connect(self.update_data)
+        self.pressure_check.toggled.connect(self.toggle_pressure)
+
+        self.df = None
+        self.df_mg15 = None
+        self.plot1.setVisible(False)
+
+        try:
+            self.update_data()
+            for i in range(self.legendtable.model().rowCount()):
+                if self.df.columns[i] in self.settings.load("enabled_names"):
+                    self.legendtable.model().enabled[i] = True
+        except ValueError:
+            pass
+
+    def update_data(self):
+        self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
+        self.legendtable.set_items(self.df.columns)
+        if self.pressure_check.isChecked():
+            self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
+        self.update_plot()
+
+    def toggle_pressure(self, value: bool):
+        self.plot1.setVisible(value)
+        if value:
+            self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
+            self.update_plot()
+        else:
+            self.plot1.clearPlots()
+            self.df_mg15 = None
+
+    def update_plot(self):
+        self.settings.setValue(
+            "enabled_names", self.df.columns[self.legendtable.model().enabled]
+        )
+        self.plot0.clearPlots()
+
+        for i, on in enumerate(self.legendtable.model().enabled):
+            if on:
+                self.plot0.plot(
+                    self.df.index.values.astype(np.float64) * 1e-9,
+                    self.df[self.df.columns[i]].values,
+                    pen=pg.mkPen(self.legendtable.model().colors[i]),
+                    autoDownsample=True,
+                )
+
+        if self.pressure_check.isChecked():
+            self.plot1.plot(
+                self.df_mg15.index.values.astype(np.float64) * 1e-9,
+                self.df_mg15.values.flatten(),
+                # pen=pg.mkPen(),
+                autoDownsample=True,
+            )
+
+    def plot_cryo(self, column_index: int):
+        self.plot0.plot(
+            self.df0.index.values.astype(np.float64) * 1e-9,
+            self.df0[self.df.columns[column_index]].values,
+            pen=pg.mkPen(self.legendtable.model().colors[column_index], width=2),
+        )
+
+    @property
+    def start_datetime(self) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(
+            1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch()
+        )
+
+    @property
+    def end_datetime(self) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(
+            1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch()
+        )
+
+
+if __name__ == "__main__":
+    qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
+    if not qapp:
+        qapp = QtWidgets.QApplication(sys.argv)
+
+    win = MainWindow()
+    win.show()
+    win.activateWindow()
+
+    qapp.exec()
