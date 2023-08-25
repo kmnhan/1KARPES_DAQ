@@ -32,10 +32,11 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot1.setLogMode(False, True)
 
         self.startdateedit.dateTimeChanged.connect(self.enddateedit.setMinimumDateTime)
-        self.enddateedit.dateTimeChanged.connect(self.startdateedit.setMaximumDateTime)
         self.startdateedit.setDate(QtCore.QDate.currentDate())
-        self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.startdateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
+
+        self.enddateedit.dateTimeChanged.connect(self.startdateedit.setMaximumDateTime)
+        self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
     @property
@@ -61,7 +62,7 @@ class MainWindow(MainWindowGUI):
             self.load_data()
             for i in range(self.legendtable.model().rowCount()):
                 if self.df.columns[i] in self.settings.value("enabled_names", []):
-                    self.legendtable.model().enabled[i] = True
+                    self.legendtable.set_enabled(i, True)
         except ValueError:
             pass
 
@@ -105,16 +106,16 @@ class MainWindow(MainWindowGUI):
 
     def update_plot(self):
         self.settings.setValue(
-            "enabled_names", self.df.columns[self.legendtable.model().enabled]
+            "enabled_names", self.df.columns[self.legendtable.enabled]
         )
         self.plot0.clearPlots()
 
-        for i, on in enumerate(self.legendtable.model().enabled):
+        for i, on in enumerate(self.legendtable.enabled):
             if on:
                 self.plot0.plot(
                     self.df.index.values.astype(np.float64) * 1e-9,
                     self.df[self.df.columns[i]].values,
-                    pen=pg.mkPen(self.legendtable.model().colors[i]),
+                    pen=pg.mkPen(self.legendtable.colors[i]),
                     autoDownsample=True,
                 )
 
@@ -125,13 +126,6 @@ class MainWindow(MainWindowGUI):
                 # pen=pg.mkPen(),
                 autoDownsample=True,
             )
-
-    def plot_cryo(self, column_index: int):
-        self.plot0.plot(
-            self.df0.index.values.astype(np.float64) * 1e-9,
-            self.df0[self.df.columns[column_index]].values,
-            pen=pg.mkPen(self.legendtable.model().colors[column_index], width=2),
-        )
 
     @property
     def start_datetime(self) -> datetime.datetime:

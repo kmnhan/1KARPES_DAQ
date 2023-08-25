@@ -10,7 +10,7 @@ import pandas as pd
 import pyqtgraph as pg
 import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from collections.abc import Iterable
+from collections.abc import Sequence
 
 import erlab.interactive.colors
 
@@ -22,15 +22,15 @@ class LegendTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.enabled: list[bool] = []
-        self._entries: Iterable[str] = []
+        self._entries: Sequence[str] = []
         self.colors: list[QtGui.QColor] = []
 
     @property
-    def entries(self) -> Iterable[str]:
+    def entries(self) -> Sequence[str]:
         return self._entries
 
     @entries.setter
-    def entries(self, values: Iterable[str]):
+    def entries(self, values: Sequence[str]):
         self.beginResetModel()
         entries_old = list(self._entries)
         enabled_old = list(self.enabled)
@@ -138,5 +138,33 @@ class LegendTableView(QtWidgets.QTableView):
             + 2
         )
 
-    def set_items(self, items: Iterable[str]):
+    @property
+    def enabled(self) -> list[bool]:
+        return self.model().enabled
+
+    @property
+    def colors(self) -> list[QtGui.QColor]:
+        return self.model().colors
+
+    @property
+    def entries(self) -> Sequence[str]:
+        return self.model().entries
+
+    def set_items(self, items: Sequence[str]):
         self.model().entries = items
+
+    def set_enabled(self, index: int, value: bool):
+        self.model().setData(
+            index=self.model().createIndex(index, 0),
+            value=QtCore.Qt.CheckState.Checked.value
+            if value
+            else QtCore.Qt.CheckState.Unchecked.value,
+            role=QtCore.Qt.ItemDataRole.CheckStateRole,
+        )
+
+    def set_color(self, index: int, color: QtGui.QColor):
+        self.model().setData(
+            index=self.model().createIndex(index, 2),
+            value=color,
+            role=QtCore.Qt.ItemDataRole.EditRole,
+        )
