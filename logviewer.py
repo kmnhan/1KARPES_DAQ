@@ -18,10 +18,10 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
 
         # add plot and image
         self.plot0: pg.PlotItem = self.graphics_layout.addPlot(
-            0, 0, axisItems={"bottom": pg.DateAxisItem()}
+            0, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=9.0)}
         )
         self.plot1: pg.PlotItem = self.graphics_layout.addPlot(
-            1, 0, axisItems={"bottom": pg.DateAxisItem()}
+            1, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=9.0)}
         )
         self.plot1.setXLink(self.plot0)
         self.plot0.getAxis("bottom").setStyle(showValues=False)
