@@ -1,15 +1,6 @@
-import datetime
-import os
-import platform
-import sys
-import time
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import pyqtgraph as pg
 import seaborn as sns
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtGui, QtWidgets
 from collections.abc import Sequence
 
 import erlab.interactive.colors

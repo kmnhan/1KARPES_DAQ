@@ -1,7 +1,6 @@
 import pandas as pd
 import datetime
 import os
-from typing import Literal
 from collections.abc import Callable
 
 CRYO_DIR = "D:/Cryocooler_Log"
