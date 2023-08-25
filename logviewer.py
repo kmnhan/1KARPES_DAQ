@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from collections.abc import Iterable
 
 
 from logreader import get_cryocooler_log, get_pressure_log
@@ -54,28 +53,51 @@ class MainWindow(MainWindowGUI):
         self.settings = QtCore.QSettings("erlab", "1karpes_logviewer")
         self.legendtable.model().sigCurveToggled.connect(self.update_plot)
         self.legendtable.model().sigColorChanged.connect(self.update_plot)
-        self.load_btn.clicked.connect(self.update_data)
+        self.load_btn.clicked.connect(self.load_data)
         self.pressure_check.toggled.connect(self.toggle_pressure)
+        self.updatetime_check.toggled.connect(self.toggle_updates)
 
         self.df = None
         self.df_mg15 = None
         self.plot1.setVisible(False)
 
         try:
-            self.update_data()
+            self.load_data()
             for i in range(self.legendtable.model().rowCount()):
                 if self.df.columns[i] in self.settings.load("enabled_names"):
                     self.legendtable.model().enabled[i] = True
         except ValueError:
             pass
 
-    def update_data(self):
+        # setup timer
+        self.client_timer = QtCore.QTimer(self)
+        self.client_timer.setInterval(round(self.updatetime_spin.value() * 1000))
+        self.client_timer.timeout.connect(self.update_time)
+        self.updatetime_spin.valueChanged.connect(
+            lambda val: self.client_timer.setInterval(round(val * 1000))
+        )
+
+    @QtCore.Slot(bool)
+    def toggle_updates(self, value: bool):
+        if value:
+            self.client_timer.start()
+        else:
+            self.client_timer.stop()
+
+    @QtCore.Slot()
+    def update_time(self):
+        self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.load_data()
+
+    @QtCore.Slot()
+    def load_data(self):
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
         self.legendtable.set_items(self.df.columns)
         if self.pressure_check.isChecked():
             self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
         self.update_plot()
 
+    @QtCore.Slot(bool)
     def toggle_pressure(self, value: bool):
         self.plot1.setVisible(value)
         if value:
