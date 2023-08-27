@@ -349,12 +349,12 @@
   <customwidget>
    <class>ColorMapComboBox</class>
    <extends>QComboBox</extends>
-   <header>erlab.interactive.colors</header>
+   <header>qt_extensions.colors</header>
   </customwidget>
   <customwidget>
    <class>ColorMapGammaWidget</class>
    <extends>QWidget</extends>
-   <header>erlab.interactive.colors</header>
+   <header>qt_extensions.colors</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -158,7 +158,7 @@
   <customwidget>
    <class>LegendTableView</class>
    <extends>QTableView</extends>
-   <header>legendtable</header>
+   <header>qt_extensions.legendtable</header>
   </customwidget>
  </customwidgets>
  <tabstops>

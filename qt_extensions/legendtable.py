@@ -1,15 +1,12 @@
+__all__ = ["LegendTableView"]
+
+from collections.abc import Sequence
+
 import pyqtgraph as pg
 import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets
-from collections.abc import Sequence
 
-import matplotlib.colors
-
-
-def color_to_QColor(
-    c: str | tuple[float, ...], alpha: float | None = None
-) -> QtGui.QColor:
-    return QtGui.QColor.fromRgbF(*matplotlib.colors.to_rgba(c, alpha=alpha))
+from colors import color_to_QColor
 
 
 class LegendTableModel(QtCore.QAbstractTableModel):

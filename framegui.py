@@ -8,9 +8,10 @@ import time
 
 import numpy as np
 import pyqtgraph as pg
-from erlab.interactive.utilities import BetterColorBarItem, BetterImageItem
 from pypylon import genicam, pylon
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from qt_extensions.colors import BetterColorBarItem, BetterImageItem
 
 EXCLUDED_DEVICES: tuple[str, ...] = (
     "40049666",
@@ -410,7 +411,6 @@ class FrameGrabber(QtCore.QThread):
 
             grabResult.Release()
             if genicam.IsWritable(self.camera.ExposureTimeRaw):
-                
                 if self.camera.ExposureTimeRaw.Value != self.exposure:
                     print(self.exposure)
                     self.camera.ExposureTimeRaw = self.exposure
@@ -486,7 +486,7 @@ class MainWindow(MainWindowGUI):
         self.exposure_spin.setDisabled(mn == mx == val == 0)
 
         self.frame_grabber.set_exposure(val)
-        
+
         self.exposure_slider.setMinimum(mn)
         self.exposure_slider.setMaximum(mx)
         self.exposure_spin.setMinimum(mn)
