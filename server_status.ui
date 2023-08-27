@@ -74,7 +74,7 @@
   <customwidget>
    <class>ServerStatus</class>
    <extends>QLabel</extends>
-   <header>qt_extensions</header>
+   <header>qt_extensions.servercontrol</header>
   </customwidget>
  </customwidgets>
  <resources/>

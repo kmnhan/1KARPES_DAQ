@@ -6,7 +6,7 @@ import pyqtgraph as pg
 import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets
 
-from colors import color_to_QColor
+from qt_extensions.colors import color_to_QColor
 
 
 class LegendTableModel(QtCore.QAbstractTableModel):
