@@ -118,8 +118,8 @@ class MainWindow(MainWindowGUI):
         self.settings.setValue(
             "enabled_names", list(self.df.columns[self.legendtable.enabled])
         )
+        
         self.plot0.clearPlots()
-
         for i, on in enumerate(self.legendtable.enabled):
             if on:
                 self.plot0.plot(
@@ -130,6 +130,7 @@ class MainWindow(MainWindowGUI):
                 )
 
         if self.pressure_check.isChecked():
+            self.plot1.clearPlots()
             self.plot1.plot(
                 self.df_mg15.index.values.astype(np.float64) * 1e-9,
                 self.df_mg15.values.flatten(),
