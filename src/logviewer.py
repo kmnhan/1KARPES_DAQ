@@ -174,6 +174,7 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
+    qapp.setStyle("Fusion")
     qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.ico"))
     win = MainWindow()
     win.show()

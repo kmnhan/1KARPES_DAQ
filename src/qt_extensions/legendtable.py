@@ -67,6 +67,14 @@ class LegendTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ItemDataRole.UserRole:
             if index.column() == 2:
                 return self.colors[index.row()]
+        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            if index.column() == 1:
+                return int(
+                    QtCore.Qt.AlignmentFlag.AlignLeft
+                    | QtCore.Qt.AlignmentFlag.AlignVCenter
+                )
+            else:
+                return int(QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
         if index.column() == 0:
