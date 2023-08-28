@@ -2,5 +2,5 @@
 ## Building
 ### Log viewer
 ```
-pyinstaller logviewer.py --windowed --onefile --icon ./images/logviewer.ico --add-data="./images/logviewer.ico;./images" --add-data="logviewer.ui;." --add-data="logreader.py;." --add-data="./qt_extensions/*;./qt_extensions/"  --exclude IPython
+pyinstaller ./src/logviewer.py --windowed --onefile --icon src/images/logviewer.ico --add-data="src/images/logviewer.ico;./images" --add-data="src/logviewer.ui;." --add-data="src/logreader.py;." --add-data="src/qt_extensions/*;./qt_extensions/"  --exclude IPython --upx-dir C:\upx410w
 ```
