@@ -1,0 +1,39 @@
+name: Build LogViewer
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build packages
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        include:
+          - os: windows-latest
+            TARGET: windows
+            CMD_RESOLVE_DEPS: pip install -r requirements_logviewer.txt pyinstaller
+            CMD_BUILD: |
+              pyinstaller logviewer.spec
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Resolve dependencies for ${{ matrix.TARGET }}
+      run: ${{ matrix.CMD_RESOLVE_DEPS }}
+
+    - name: Build for ${{ matrix.TARGET }}
+      run: ${{ matrix.CMD_BUILD }}
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v2
+      with:
+        path: dist/*

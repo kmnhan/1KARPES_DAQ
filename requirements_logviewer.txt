@@ -1,0 +1,6 @@
+pandas
+matplotlib
+seaborn
+pyqt6
+qtpy
+pyqtgraph
