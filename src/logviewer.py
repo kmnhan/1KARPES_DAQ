@@ -31,6 +31,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot1.setXLink(self.plot0)
         self.plot0.getAxis("bottom").setStyle(showValues=False)
         for pi in self.plot_items:
+            pi.vb.setCursor(QtGui.QCursor(QtCore.Qt.CrossCursor))
+            pi.scene().sigMouseMoved.connect(self.mouse_moved)
             pi.setDefaultPadding(0)
             pi.showGrid(x=True, y=True, alpha=1.0)
             pi.showAxes((True, False, False, True))
@@ -47,6 +49,26 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     @property
     def plot_items(self) -> tuple[pg.PlotItem, pg.PlotItem]:
         return self.plot0, self.plot1
+
+    def mouse_moved(self, pos):
+        if self.plot_items[0].sceneBoundingRect().contains(pos):
+            index = 0
+        elif self.plot_items[1].sceneBoundingRect().contains(pos):
+            index = 1
+        else:
+            self.statusBar().clearMessage()
+            return
+        point = self.plot_items[index].vb.mapSceneToView(pos)
+        try:
+            dt = datetime.datetime.fromtimestamp(point.x())
+        except OSError:
+            return
+        yval = point.y()
+        if self.plot_items[index].ctrl.logYCheck.isChecked():
+            yval = 10**yval
+        self.statusBar().showMessage(
+            f"{dt.strftime('%Y-%m-%d %H:%M:%S')}     {yval:.6g}"
+        )
 
 
 class MainWindow(MainWindowGUI):
