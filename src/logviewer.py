@@ -3,10 +3,7 @@ import os
 import sys
 
 import numpy as np
-import pandas as pd
-import PyQt6
 import pyqtgraph as pg
-import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from logreader import get_cryocooler_log, get_pressure_log
@@ -118,7 +115,7 @@ class MainWindow(MainWindowGUI):
         self.settings.setValue(
             "enabled_names", list(self.df.columns[self.legendtable.enabled])
         )
-        
+
         self.plot0.clearPlots()
         for i, on in enumerate(self.legendtable.enabled):
             if on:
