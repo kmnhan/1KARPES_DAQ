@@ -17,6 +17,7 @@ CRYO_COLS: dict[int, str] = {
 MG15_COLS: dict[int, str] = {
     # 0: "time",
     1: "IG Main",
+    2: "IG Middle",
 }
 
 

@@ -117,7 +117,8 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def load_data(self, *, update: bool = True):
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
-        self.legendtable.set_items(self.df.columns)
+        if self.df is not None:
+            self.legendtable.set_items(self.df.columns)
         if self.pressure_check.isChecked():
             self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
         if update:
@@ -134,40 +135,50 @@ class MainWindow(MainWindowGUI):
             self.df_mg15 = None
 
     def update_plot(self):
-        self.settings.setValue(
-            "enabled_names", list(self.df.columns[self.legendtable.enabled])
-        )
-
         self.plot0.clearPlots()
-        for i, on in enumerate(self.legendtable.enabled):
-            if on:
-                self.plot0.plot(
-                    self.df.index.values.astype(np.float64) * 1e-9,
-                    self.df[self.df.columns[i]].values,
-                    pen=pg.mkPen(self.legendtable.colors[i]),
-                    autoDownsample=True,
-                )
-
+        if self.df is not None:
+            self.settings.setValue(
+                "enabled_names", list(self.df.columns[self.legendtable.enabled])
+            )
+            for i, on in enumerate(self.legendtable.enabled):
+                if on:
+                    self.plot0.plot(
+                        self.df.index.values.astype(np.float64) * 1e-9,
+                        self.df[self.df.columns[i]].values,
+                        pen=pg.mkPen(self.legendtable.colors[i]),
+                        autoDownsample=True,
+                    )
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
-            self.plot1.plot(
-                self.df_mg15.index.values.astype(np.float64) * 1e-9,
-                self.df_mg15.values.flatten(),
-                # pen=pg.mkPen(),
-                autoDownsample=True,
+            if self.df_mg15 is not None:
+                for j, pen in enumerate((pg.mkPen("r"), pg.mkPen("b"))):
+                    self.plot1.plot(
+                        self.df_mg15.index.values.astype(np.float64) * 1e-9,
+                        self.df_mg15[self.df_mg15.columns[j]].values,
+                        pen=pen,
+                        autoDownsample=True,
+                    )
+
+        for pi in self.plot_items:
+            pi.getViewBox().setLimits(
+                xMin=self.start_datetime_timestamp, xMax=self.end_datetime_timestamp
             )
 
     @property
+    def start_datetime_timestamp(self) -> float:
+        return 1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch()
+
+    @property
+    def end_datetime_timestamp(self) -> float:
+        return 1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch()
+
+    @property
     def start_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(
-            1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch()
-        )
+        return datetime.datetime.fromtimestamp(self.start_datetime_timestamp)
 
     @property
     def end_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(
-            1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch()
-        )
+        return datetime.datetime.fromtimestamp(self.end_datetime_timestamp)
 
 
 if __name__ == "__main__":

@@ -26,8 +26,8 @@ def parse_single_mg15(filename):
         filename,
         header=None,
         index_col=0,
-        usecols=(0, 1),
-        names=("Time", "IG Main"),
+        usecols=(0, 1, 2),
+        names=("Time", "IG Main", "IG Middle"),
         converters={0: parse_mg15_time},
     )
 
@@ -58,7 +58,8 @@ def get_log(
     enddate: datetime.datetime,
     directory: str,
     converter: Callable,
-) -> pd.DataFrame:
+    error: bool = True,
+) -> pd.DataFrame | None:
     """Read all log data in `directory` between `startdate` and `enddate` into a `pandas.DataFrame`."""
     dataframes = []
     for fname in map(
@@ -69,13 +70,16 @@ def get_log(
         except FileNotFoundError:
             pass
     if len(dataframes) == 0:
-        raise ValueError("No log files were found in specified range.")
+        if error:
+            raise ValueError("No log files were found in specified range.")
+        else:
+            return None
     return pd.concat(dataframes)[slice(startdate, enddate)]
 
 
-def get_cryocooler_log(startdate, enddate):
-    return get_log(startdate, enddate, CRYO_DIR, parse_single_cryo)
+def get_cryocooler_log(startdate, enddate, error=False):
+    return get_log(startdate, enddate, CRYO_DIR, parse_single_cryo, error=error)
 
 
-def get_pressure_log(startdate, enddate):
-    return get_log(startdate, enddate, MG15_DIR, parse_single_mg15)
+def get_pressure_log(startdate, enddate, error=False):
+    return get_log(startdate, enddate, MG15_DIR, parse_single_mg15, error=error)
