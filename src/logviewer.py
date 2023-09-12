@@ -13,6 +13,8 @@ try:
 except:
     pass
 
+UTC_OFFSET: int = 32400
+
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     def __init__(self):
@@ -23,10 +25,10 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
 
         # add plot and image
         self.plot0: pg.PlotItem = self.graphics_layout.addPlot(
-            0, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=9.0)}
+            0, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=UTC_OFFSET / 3600)}
         )
         self.plot1: pg.PlotItem = self.graphics_layout.addPlot(
-            1, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=9.0)}
+            1, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=UTC_OFFSET / 3600)}
         )
         self.plot1.setXLink(self.plot0)
         self.plot0.getAxis("bottom").setStyle(showValues=False)
@@ -60,7 +62,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             return
         point = self.plot_items[index].vb.mapSceneToView(pos)
         try:
-            dt = datetime.datetime.fromtimestamp(point.x())
+            dt = datetime.datetime.fromtimestamp(point.x() - UTC_OFFSET)
         except OSError:
             return
         yval = point.y()
@@ -166,11 +168,11 @@ class MainWindow(MainWindowGUI):
 
     @property
     def start_datetime_timestamp(self) -> float:
-        return 1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch()
+        return 1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch() + UTC_OFFSET
 
     @property
     def end_datetime_timestamp(self) -> float:
-        return 1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch()
+        return 1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch() + UTC_OFFSET
 
     @property
     def start_datetime(self) -> datetime.datetime:
