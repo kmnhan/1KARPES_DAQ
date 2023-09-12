@@ -22,19 +22,17 @@ MG15_COLS: dict[int, str] = {
 
 def get_last_row(path) -> str:
     with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp = shutil.copy(path, tmpdirname)
         result = None
-        with open(tmp, "rb") as f:
-            while result is None:
-                try:
+        while result is None:
+            try:
+                tmp = shutil.copy(path, tmpdirname)
+                with open(tmp, "rb") as f:
                     f.seek(-2, os.SEEK_END)
                     while f.read(1) != b"\n":
                         f.seek(-2, os.SEEK_CUR)
-                except OSError:
-                    # empty file, retry until it is no longer empty
-                    continue
-                else:
                     result = f.readline().decode().rstrip()
+            except OSError:  # empty file, retry until it is no longer empty
+                continue
     return result
 
 
