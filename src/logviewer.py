@@ -153,7 +153,7 @@ class MainWindow(MainWindowGUI):
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
             if self.df_mg15 is not None:
-                for j, pen in enumerate((pg.mkPen("b"), pg.mkPen("r"))):
+                for j, pen in enumerate((pg.mkPen("c"), pg.mkPen("m"))):
                     self.plot1.plot(
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
                         self.df_mg15[self.df_mg15.columns[j]].values,
