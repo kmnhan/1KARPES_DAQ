@@ -153,7 +153,7 @@ class MainWindow(MainWindowGUI):
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
             if self.df_mg15 is not None:
-                for j, pen in enumerate((pg.mkPen("r"), pg.mkPen("b"))):
+                for j, pen in enumerate((pg.mkPen("b"), pg.mkPen("r"))):
                     self.plot1.plot(
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
                         self.df_mg15[self.df_mg15.columns[j]].values,
@@ -176,11 +176,11 @@ class MainWindow(MainWindowGUI):
 
     @property
     def start_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(self.start_datetime_timestamp)
+        return datetime.datetime.fromtimestamp(self.start_datetime_timestamp - UTC_OFFSET)
 
     @property
     def end_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(self.end_datetime_timestamp)
+        return datetime.datetime.fromtimestamp(self.end_datetime_timestamp - UTC_OFFSET)
 
 
 if __name__ == "__main__":
