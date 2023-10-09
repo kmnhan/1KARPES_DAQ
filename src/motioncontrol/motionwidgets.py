@@ -5,6 +5,8 @@ from collections.abc import Sequence
 import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
+CONFIG_FILE = "D:/MotionController/piezomotors.ini"
+
 
 class StautsIconWidget(qta.IconWidget):
     def __init__(self, *icons: Sequence[str | dict | QtGui.QIcon], parent=None):
@@ -89,7 +91,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         # read configuration
         self.cal_A, self.cal_B = 1.0, 0.0
         self.config = configparser.ConfigParser()
-        self.config.read("piezomotors.ini")
+        self.config.read(CONFIG_FILE)
         self.set_motor_list(self.config.sections())
         self.update_motor()
 
