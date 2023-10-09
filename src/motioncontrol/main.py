@@ -78,8 +78,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         ]
         ret = QtWidgets.QMessageBox.question(
             self,
-            "Check capacitance for all enabled channels?",
-            f"Enabled channels: {', '.join([str(i) for i in enabled_channels])}",
+            "Capacitance check",
+            "Check capacitance for all enabled channel(s) "
+            f"{', '.join([str(i) for i in enabled_channels])}?",
         )
         if ret == QtWidgets.QMessageBox.Yes:
             res = []
@@ -89,7 +90,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
                     f"Ch{n}: Nominal {ch.nominal_capacitance}, Measured {cap:.4f} μF"
                 )
             QtWidgets.QMessageBox.information(
-                self, "Capacitance measured.", "\n".join(res)
+                self, "Capacitance measured", "\n".join(res)
             )
 
     def is_channel_enabled(self, channel: int) -> bool:
