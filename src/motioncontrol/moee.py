@@ -122,12 +122,14 @@ class MMThread(QtCore.QThread):
         """Return current frequency."""
         self.mmsend(MMCommand.READSIGTIME, channel)
         sigtime = self.mmrecv()
-        return 1 / (sigtime / 50 / 1000)
+        return 50000000 / sigtime
+        # return 1 / (sigtime / 50 / 1000)
 
-    def get_amplitude(self, channel: int) -> int:
+    def get_amplitude(self, channel: int) -> float:
         """Return current signal amplitude (voltage)."""
         self.mmsend(MMCommand.READSIGAMP, channel)
-        return self.mmrecv()
+        amp = self.mmrecv()
+        return amp / 65535 * 60.0
 
     def get_position(self, channel: int) -> int:
         """Return raw position integer."""
@@ -145,8 +147,11 @@ class MMThread(QtCore.QThread):
         )
         self._channel = int(channel)
         self._target = int(target)
-        self._sigtime = round(1000 * (1 / frequency) * 50)
-        self._amplitude = int(amplitude)
+        if (frequency >= 50) and (frequency <= 500):
+            self._sigtime = round(50000000 / frequency)
+        else:
+            self._sigtime = int(50000000 / 200)
+        self._amplitude = min((65535, round(amplitude * 65535 / 60)))
         self._threshold = int(abs(threshold))
         self.initialized = True
 
@@ -158,6 +163,10 @@ class MMThread(QtCore.QThread):
         self.sigMoveStarted.emit(self._channel)
         self.moving = True
         try:
+            # reset
+            self.mmsend(MMCommand.RESET, self._channel)
+            self.mmrecv()
+
             # set amplitude
             self.mmsend(MMCommand.SETSIGAMP, self._channel, self._amplitude)
             self.mmrecv()
@@ -226,12 +235,15 @@ if __name__ == "__main__":
     soc = MMThread()
     soc.connect()
     try:
-        print(soc.get_capacitance(1))
-        print(soc.get_capacitance(2))
-        print(soc.get_capacitance(3))
-        # print(soc.get_frequency(1))
-        # print(soc.get_frequency(2))
-        # print(soc.get_frequency(3))
+        # soc.get_capacitance(1)
+        # soc.get_capacitance(2)
+        # soc.get_capacitance(3)
+        # soc.get_amplitude(1)
+        # soc.get_amplitude(2)
+        # soc.get_amplitude(3)
+        soc.get_frequency(1)
+        soc.get_frequency(2)
+        soc.get_frequency(3)
 
         soc.mmsend(MMCommand.DISCONNECT)
 
