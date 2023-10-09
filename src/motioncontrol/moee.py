@@ -187,12 +187,12 @@ class MMThread(QtCore.QThread):
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
-                if len(delta_list) >= 20:
-                    # check whether last 20 delta are alternating in sign
+                if len(delta_list) >= 50:
+                    # check whether last 50 delta are alternating in sign
                     # if so, position is not converging, we need a larger threshold
-                    s0 = delta_list[-20] >= 0
+                    s0 = delta_list[-50] >= 0
                     alternating = True
-                    for n in delta_list[-20:]:
+                    for n in delta_list[-50:]:
                         s1 = n < 0
                         if s0 == s1:
                             alternating = False
