@@ -103,9 +103,9 @@ class MMThread(QtCore.QThread):
         log.debug(f"sent cmd {command} to ch {channel} with val {value}")
 
     def mmrecv(self):
-        val = self.sock.recv(4)
-        val = sum([val[i] * 256**i for i in range(4)])
-        log.debug(f"received value {val}")
+        raw = self.sock.recv(4)
+        val = sum([raw[i] * 256**i for i in range(4)])
+        log.debug(f"received value {val} {raw}")
         return val
 
     def get_capacitance(self, channel: int) -> float:
