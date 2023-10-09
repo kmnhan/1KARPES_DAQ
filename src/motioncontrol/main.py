@@ -41,6 +41,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         self.actionreadcap.triggered.connect(self.check_capacitance)
 
+        self.actiontargetcurr.triggered.connect(self.target_current_all)
+
         self.ch1.sigMoveRequested.connect(self.move_ch1)
         self.ch2.sigMoveRequested.connect(self.move_ch2)
         self.ch3.sigMoveRequested.connect(self.move_ch3)
@@ -96,10 +98,16 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def is_channel_enabled(self, channel: int) -> bool:
         return self.channels[channel - 1].enabled
 
+    @QtCore.Slot()
     def refresh_positions(self):
         for ch_num in (1, 2, 3):
             if self.is_channel_enabled(ch_num):
                 self.mmthread.get_position(ch_num)
+
+    @QtCore.Slot()
+    def target_current_all(self):
+        for ch in self.valid_channels:
+            ch.target_current_pos()
 
     @QtCore.Slot(int, int)
     def set_position(self, channel: int, pos: int):

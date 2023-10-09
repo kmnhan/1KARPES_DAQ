@@ -110,6 +110,10 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def nominal_capacitance(self) -> float | None:
         return self.current_config.getfloat("cap", None)
 
+    @QtCore.Slot()
+    def target_current_pos(self):
+        self.target_spin.setValue(self.convert_pos(self.raw_position))
+
     def set_channel_disabled(self, value: bool):
         self.combobox.setDisabled(value)
         self.pos_lineedit.setDisabled(value)

@@ -107,6 +107,13 @@
     <addaction name="actionreadpos"/>
     <addaction name="actionreadcap"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actiontargetcurr"/>
+   </widget>
+   <addaction name="menuEdit"/>
    <addaction name="menurun"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -128,6 +135,11 @@
   <action name="actionreadcap">
    <property name="text">
     <string>Read Capacitance</string>
+   </property>
+  </action>
+  <action name="actiontargetcurr">
+   <property name="text">
+    <string>Target Current Position</string>
    </property>
   </action>
  </widget>
