@@ -207,9 +207,9 @@ class MMThread(QtCore.QThread):
 
                 direction_old = direction
                 if delta_list[-1] > 0:
-                    direction = 1  # forwards
-                else:
                     direction = 0  # backwards
+                else:
+                    direction = 1  # forwards
                 if direction_old != direction:
                     log.info(f"changing direction to {direction}")
                     self.mmsend(MMCommand.SETSIGDIR, self._channel, direction)
