@@ -151,7 +151,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             target=target,
             frequency=frequency,
             amplitude=amplitude,
-            threshold=100,
+            threshold=self.threshold_spin.value(),
         )
         self.mmthread.start()
 
