@@ -133,6 +133,11 @@ class MMThread(QtCore.QThread):
 
     def get_position(self, channel: int) -> int:
         """Return raw position integer."""
+        while True:
+            self.mmsend(MMCommand.CHKSIGBUSY)
+            if self.mmrecv() == 0:
+                break
+        time.sleep(1e-3)
         self.mmsend(MMCommand.READPOS, channel)
         val = self.mmrecv()
         self.sigPosRead.emit(channel, val)
@@ -213,12 +218,6 @@ class MMThread(QtCore.QThread):
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
                 self.mmrecv()
-                self.mmsend(MMCommand.CHKSIGBUSY)
-                while True:
-                    self.mmsend(MMCommand.CHKSIGBUSY)
-                    if self.mmrecv() == 0:
-                        break
-                time.sleep(1e-3)
                 pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
 
