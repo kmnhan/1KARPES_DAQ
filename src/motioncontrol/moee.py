@@ -90,6 +90,20 @@ class MMThread(QtCore.QThread):
         log.debug("socket closed")
 
     def mmsend(self, command: int, channel: int = 0, value: int = 0):
+        """Send a command over the socket to the controller.
+
+        Parameters
+        ----------
+        command
+            `MMCommand` to send.
+        channel
+            Channel to send.
+        value
+            Integer value to send. The value is automatically converted to a uint8 array
+            of length 4, which combined with the command and the channel results in a
+            message of length 6.
+
+        """
         tmp, x1 = divmod(value, 256)
         tmp, x2 = divmod(tmp, 256)
         x4, x3 = divmod(tmp, 256)
@@ -102,7 +116,15 @@ class MMThread(QtCore.QThread):
             totalsent = totalsent + sent
         log.debug(f"sent cmd {command} to ch {channel} with val {value}")
 
-    def mmrecv(self):
+    def mmrecv(self) -> int:
+        """Receives a message over the socket from the controller.
+
+        Returns
+        -------
+        int
+            Received integer.
+
+        """
         raw = self.sock.recv(4)
         val = sum([raw[i] * 256**i for i in range(4)])
         log.debug(f"received value {val} {tuple(raw)}")
@@ -119,11 +141,10 @@ class MMThread(QtCore.QThread):
         return val
 
     def get_frequency(self, channel: int) -> float:
-        """Return current frequency."""
+        """Return current frequency in Hz."""
         self.mmsend(MMCommand.READSIGTIME, channel)
         sigtime = self.mmrecv()
         return 50000000 / sigtime
-        # return 1 / (sigtime / 50 / 1000)
 
     def get_amplitude(self, channel: int) -> float:
         """Return current signal amplitude (voltage)."""
@@ -211,7 +232,7 @@ class MMThread(QtCore.QThread):
                 else:
                     direction = 1  # forwards
                 if direction_old != direction:
-                    log.info(f"changing direction to {direction}")
+                    log.debug(f"changing direction to {direction}")
                     self.mmsend(MMCommand.SETSIGDIR, self._channel, direction)
                     self.mmrecv()
 

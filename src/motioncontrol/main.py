@@ -19,7 +19,9 @@ LOG_DIR = "D:/MotionController/logs"
 
 def write_log(content):
     now = datetime.datetime.now()
-    with open(os.path.join(LOG_DIR, now.strftime("%y%m%d") + ".csv"), "a") as f:
+    with open(
+        os.path.join(LOG_DIR, now.strftime("%y%m%d") + ".csv"), "a", newline=""
+    ) as f:
         writer = csv.writer(f)
         writer.writerow([now.isoformat(), content])
 
@@ -204,7 +206,7 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
-    qapp.setStyle("Fusion")
+    # qapp.setStyle("Fusion")
 
     win = MainWindow()
     win.show()

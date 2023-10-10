@@ -5,7 +5,8 @@ from collections.abc import Sequence
 import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-CONFIG_FILE = "D:/MotionController/piezomotors.ini"
+# CONFIG_FILE = "D:/MotionController/piezomotors.ini"
+CONFIG_FILE = "/Users/khan/Library/CloudStorage/SynologyDrive-ERLab/장비/1K_ARPES_Setup/DAQ/piezomotors.ini"
 
 
 class StautsIconWidget(qta.IconWidget):
@@ -79,8 +80,6 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.step_spin.valueChanged.connect(self.target_spin.setSingleStep)
         self.step_spin.setValue(0.1)
 
-        self.combobox.currentTextChanged.connect(self.update_motor)
-
         self.left_btn.clicked.connect(self.step_down)
         self.right_btn.clicked.connect(self.step_up)
         self.move_btn.clicked.connect(self.move)
@@ -88,11 +87,13 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         # internal variables
         self.raw_position: int | None = None
 
-        # read configuration
-        self.cal_A, self.cal_B = 1.0, 0.0
+        # read configuration & populate combobox
         self.config = configparser.ConfigParser()
         self.config.read(CONFIG_FILE)
-        self.set_motor_list(self.config.sections())
+        self.combobox.clear()
+        for sec in self.config.sections():
+            self.combobox.addItem(self.config[sec].get("alias", sec))
+        self.combobox.currentTextChanged.connect(self.update_motor)
         self.update_motor()
 
     def set_name(self, name: str):
@@ -103,8 +104,8 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         return self.checkbox.isChecked()
 
     @property
-    def current_config(self):
-        return self.config[self.combobox.currentText()]
+    def current_config(self) -> configparser.SectionProxy:
+        return self.config[self.config.sections()[self.combobox.currentIndex()]]
 
     @property
     def nominal_capacitance(self) -> float | None:
@@ -128,12 +129,19 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.move_btn.setDisabled(value)
 
     def update_motor(self):
-        self.cal_A: float = self.current_config.getfloat("a", 1.0)
-        self.cal_B: float = self.current_config.getfloat("b", 0.0)
+        self.cal_A = self.current_config.getfloat("a", 1.0)
+        self.cal_B = self.current_config.getfloat("b", 0.0)
+        self.cal_B += self.current_config.getfloat("offset", 0.0)
 
-        bounds = (self.convert_pos(0), self.convert_pos(65535))
+        bounds = (
+            self.convert_pos(self.current_config.getint("min", 0)),
+            self.convert_pos(self.current_config.getint("max", 65535)),
+        )
         self.target_spin.setMinimum(min(bounds))
         self.target_spin.setMaximum(max(bounds))
+
+        self.freq_spin.setValue(self.current_config.getint("freq", 200))
+        self.amp_spin.setValue(self.current_config.getint("voltage", 30))
 
         if self.raw_position is not None:
             self.set_current_pos(self.raw_position)
@@ -148,10 +156,6 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def set_current_pos(self, pos: int):
         self.raw_position = pos
         self.pos_lineedit.setText(f"{self.convert_pos(self.raw_position):.4f}")
-
-    def set_motor_list(self, motor_list: list[str]):
-        self.combobox.clear()
-        self.combobox.addItems(motor_list)
 
     @QtCore.Slot()
     def step_up(self):
@@ -171,6 +175,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
 
 if __name__ == "__main__":
+    # MWE for debugging
 
     class MyWidget(QtWidgets.QWidget):
         def __init__(self):
