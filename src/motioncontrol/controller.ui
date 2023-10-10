@@ -38,13 +38,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="disconnect_btn">
-        <property name="text">
-         <string>disconnect</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -102,7 +95,7 @@
      <string>Run</string>
     </property>
     <addaction name="actionstop"/>
-    <addaction name="actiondisconnect"/>
+    <addaction name="actionreconnect"/>
     <addaction name="separator"/>
     <addaction name="actionreadpos"/>
     <addaction name="actionreadcap"/>
@@ -122,9 +115,9 @@
     <string>Stop Motors</string>
    </property>
   </action>
-  <action name="actiondisconnect">
+  <action name="actionreconnect">
    <property name="text">
-    <string>Stop and Disconnect</string>
+    <string>Stop and Reconnect</string>
    </property>
   </action>
   <action name="actionreadpos">

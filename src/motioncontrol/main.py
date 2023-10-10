@@ -35,8 +35,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.stop_btn.setDefaultAction(self.actionstop)
         self.actionstop.triggered.connect(self.stop)
 
-        self.disconnect_btn.setDefaultAction(self.actiondisconnect)
-        self.actiondisconnect.triggered.connect(self.disconnect)
+        self.actionreconnect.triggered.connect(self.reconnect)
 
         self.readpos_btn.setDefaultAction(self.actionreadpos)
         self.actionreadpos.triggered.connect(self.refresh_positions)
@@ -95,8 +94,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
                 )
             # reconnect due to controller bug
             # position reading does not work after capacitance check
-            self.disconnect()
-            self.connect()
+            self.reconnect()
             QtWidgets.QMessageBox.information(
                 self, "Capacitance measured", "\n".join(res)
             )
@@ -197,6 +195,20 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.stop()
         self.mmthread.disconnect()
 
+    @QtCore.Slot()
+    def reconnect(self):
+        try:
+            self.disconnect()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self,
+                str(e),
+                f"Disconnect failed. If the problem persists, try "
+                "restarting the server process on the controller.",
+            )
+        else:
+            self.connect()
+
     def closeEvent(self, *args, **kwargs):
         self.disconnect()
         super().closeEvent(*args, **kwargs)
@@ -206,6 +218,7 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
+    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
     # qapp.setStyle("Fusion")
 
     win = MainWindow()
