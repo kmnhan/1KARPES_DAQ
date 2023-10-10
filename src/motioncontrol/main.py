@@ -91,6 +91,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
                 res.append(
                     f"Ch{n}: Nominal {ch.nominal_capacitance}, Measured {cap:.4f} μF"
                 )
+            # reconnect due to controller bug
+            # position reading does not work after capacitance check
+            self.disconnect()
+            self.connect()
             QtWidgets.QMessageBox.information(
                 self, "Capacitance measured", "\n".join(res)
             )
