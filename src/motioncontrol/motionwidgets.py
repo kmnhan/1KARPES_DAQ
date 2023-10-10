@@ -5,8 +5,7 @@ from collections.abc import Sequence
 import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-# CONFIG_FILE = "D:/MotionController/piezomotors.ini"
-CONFIG_FILE = "/Users/khan/Library/CloudStorage/SynologyDrive-ERLab/장비/1K_ARPES_Setup/DAQ/piezomotors.ini"
+CONFIG_FILE = "D:/MotionController/piezomotors.ini"
 
 
 class StautsIconWidget(qta.IconWidget):
