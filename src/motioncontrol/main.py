@@ -144,7 +144,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot(int, object)
     def update_plot(self, channel: int, delta: list[float]):
-        delta_abs = self.channels[channel - 1].cal_A * np.asarray(delta)
+        # delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
+        delta_abs = -np.asarray(delta)
         self.plot.curve.setData(delta_abs)
 
     @QtCore.Slot(int)
@@ -185,7 +186,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         return self.move(3, target, frequency, amplitude)
 
     @QtCore.Slot(int, int, int, object)
-    def move(self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]):
+    def move(
+        self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
+    ):
         write_log(
             f"Move Ch{channel} to {self.channels[channel - 1].convert_pos(target):.4f}"
         )
