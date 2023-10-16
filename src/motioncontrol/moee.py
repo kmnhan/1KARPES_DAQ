@@ -221,33 +221,33 @@ class MMThread(QtCore.QThread):
             self.reset()
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
-            if delta_list[-1] > 0:
-                direction = 0  # backwards
-            else:
-                direction = 1  # forwards
 
-            # set amplitude
+            # set amplitude if fwd and bwd are same
             direction_changes_voltage: bool = self._amplitudes[0] != self._amplitudes[1]
-            self.set_amplitude(self._channel, self._amplitudes[direction])
+            if not direction_changes_voltage:
+                self.set_amplitude(self._channel, self._amplitudes[0])
 
             # set frequency
             self.set_frequency(self._channel, self._sigtime)
 
-            # amplitude_adjusted = [0, 0]
+            # initialize direction
+            direction: int | None = None
+
             while True:
                 self.sigDeltaChanged.emit(self._channel, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
 
+                # determine direction
                 direction_old = direction
                 if delta_list[-1] > 0:
                     direction = 0  # backwards
                 else:
                     direction = 1  # forwards
-                if direction_old != direction:
-                    self.set_direction(self._channel, direction)
 
+                # scale amplitude
+                amplitude_changed = False
                 if abs(delta_list[-1]) < 10 * self._threshold:
                     factor = abs(delta_list[-1]) / (10 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
@@ -258,6 +258,14 @@ class MMThread(QtCore.QThread):
                             -factor / decay_rate
                         )
                         self.set_amplitude(self._channel, new_amp)
+                        amplitude_changed = True
+
+                # set direction if changed
+                if direction_old != direction:
+                    self.set_direction(self._channel, direction)
+                    if not amplitude_changed and direction_changes_voltage:
+                        # set amplitude if not set
+                        self.set_amplitude(self._channel, self._amplitudes[direction])
 
                 if len(delta_list) >= 50:
                     # check for alternating sign in delta
