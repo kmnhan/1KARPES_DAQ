@@ -190,6 +190,36 @@ class MMThread(QtCore.QThread):
         self.sigPosRead.emit(channel, val)
         return val
 
+    def freq_test(self, channel: int):
+        import numpy as np
+
+        self.reset()
+        self.set_frequency(channel, 200)
+        amps = (30, 35, 40, 45, 50, 55)
+        niter = 200
+
+        vals = np.zeros((len(amps), 2, niter), dtype=int)
+
+        p0 = self.get_position(channel)
+        for i, amp in enumerate(amps):
+            self.set_amplitude(channel, amp)
+            for j in range(niter):
+                self.set_direction(channel, 0)
+
+                self.mmsend(MMCommand.SENDSIGONCE, channel)
+                self.mmrecv()
+                p1 = self.get_position(channel)
+                vals[i, 0, j] = p1 - p0
+
+                self.set_direction(channel, 1)
+
+                self.mmsend(MMCommand.SENDSIGONCE, channel)
+                self.mmrecv()
+                p0 = self.get_position(channel)
+                vals[i, 1, j] = p0 - p1
+
+        np.save("D:/MotionController/freqtest.npy", vals)
+
     @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
         self,
@@ -325,21 +355,9 @@ if __name__ == "__main__":
     soc = MMThread()
     soc.connect()
     try:
-        # soc.get_capacitance(1)
-        # soc.get_capacitance(2)
-        # soc.get_capacitance(3)
-        # soc.get_amplitude(1)
-        # soc.get_amplitude(2)
-        # soc.get_amplitude(3)
-        soc.get_frequency(1)
-        soc.get_frequency(2)
-        soc.get_frequency(3)
-
-        soc.mmsend(MMCommand.DISCONNECT)
+        soc.freq_test(2)
 
     except Exception as e:
         print("error!", e)
 
-        soc.mmsend(MMCommand.DISCONNECT)
-
-    soc.sock.close()
+    soc.disconnect()
