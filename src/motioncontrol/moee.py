@@ -243,8 +243,9 @@ class MMThread(QtCore.QThread):
                         n_alt += 1
                         s0 = s1
                     if n_alt >= 4:
-                        amplitude_adjusted += 1
+                        # recent 4 delta are alternating
                         if self._amplitude > 18:
+                            amplitude_adjusted += 1
                             new_amp = (self._amplitude - 18) * 2.718281828459045 ** (
                                 -amplitude_adjusted / 10
                             ) + 18
