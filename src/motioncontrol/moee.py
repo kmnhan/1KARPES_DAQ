@@ -259,7 +259,7 @@ class MMThread(QtCore.QThread):
                     direction = 1  # forwards
                 if direction_old != direction:
                     log.debug(f"changing direction to {direction}")
-                    self.set_direction(direction)
+                    self.set_direction(self._channel, direction)
 
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
