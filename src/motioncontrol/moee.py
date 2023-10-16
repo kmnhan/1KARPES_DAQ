@@ -165,7 +165,7 @@ class MMThread(QtCore.QThread):
 
     def set_amplitude(self, channel: int, amplitude: int | float):
         sigamp = min((65535, round(amplitude * 65535 / 60)))
-        log.info(f"setting amplitude to {sigamp / 65535 * 60.0}")
+        log.info(f"setting amplitude to {sigamp / 65535 * 60.0:.2f}")
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
@@ -246,15 +246,15 @@ class MMThread(QtCore.QThread):
                     if n_alt >= 4:
                         # recent 4 delta are alternating
                         if self._amplitude > 18:
+                            if amplitude_adjusted == 0:
+                                self.set_frequency(self._channel, 100)
                             amplitude_adjusted += 1
 
-                            decay_constant = 5
+                            decay_constant = 3
                             new_amp = (self._amplitude - 18) * 2.718281828459045 ** (
                                 -amplitude_adjusted / decay_constant
                             ) + 18
-                        else:
-                            new_amp = 18
-                        self.set_amplitude(self._channel, new_amp)
+                            self.set_amplitude(self._channel, new_amp)
                     if n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
