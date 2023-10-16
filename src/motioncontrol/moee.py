@@ -277,32 +277,7 @@ class MMThread(QtCore.QThread):
                     direction = 0  # backwards
                 else:
                     direction = 1  # forwards
-
-                # scale amplitude
-                amplitude_changed = False
-                if abs(delta_list[-1]) < 20 * self._threshold:
-                    factor = abs(delta_list[-1]) / (20 * self._threshold)
-                    vmin, vmax = 20, self._amplitudes[direction]
-                    decay_rate = 0.5
-                    if len(delta_list) >= 2:
-                        decay_rate *= (
-                            abs(delta_list[-2] - delta_list[-1]) / self._threshold
-                        )
-                        decay_rate *= 0.05
-
-                    if vmin < vmax:
-                        new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
-                            -factor / (decay_rate + 1e-15)
-                        )
-                        self.set_amplitude(self._channel, new_amp)
-                        amplitude_changed = True
-
-                # set direction if changed
-                if direction_old != direction:
-                    self.set_direction(self._channel, direction)
-                    if not amplitude_changed and direction_changes_voltage:
-                        # set amplitude if not set
-                        self.set_amplitude(self._channel, self._amplitudes[direction])
+                    
 
                 if len(delta_list) >= 50:
                     # check for alternating sign in delta
@@ -331,7 +306,7 @@ class MMThread(QtCore.QThread):
                     #         ) + 25
                     #         self.set_amplitude(self._channel, new_amp)
                     if n_alt > 10:
-                        log.info(f"2 more pulses!!")
+                        log.info(f"2 more pulses in the previous direction!!")
                         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
                         self.mmrecv()
                         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
@@ -342,6 +317,33 @@ class MMThread(QtCore.QThread):
                             " position does not converge. Terminating."
                         )
                         break
+
+                # scale amplitude
+                amplitude_changed = False
+                if abs(delta_list[-1]) < 20 * self._threshold:
+                    factor = abs(delta_list[-1]) / (20 * self._threshold)
+                    vmin, vmax = 20, self._amplitudes[direction]
+                    decay_rate = 0.5
+                    if len(delta_list) >= 2:
+                        decay_rate *= (
+                            abs(delta_list[-2] - delta_list[-1]) / self._threshold
+                        )
+                        decay_rate *= 0.05
+
+                    if vmin < vmax:
+                        new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
+                            -factor / (decay_rate + 1e-15)
+                        )
+                        self.set_amplitude(self._channel, new_amp)
+                        amplitude_changed = True
+
+                # set direction if changed
+                if direction_old != direction:
+                    self.set_direction(self._channel, direction)
+                    if not amplitude_changed and direction_changes_voltage:
+                        # set amplitude if not set
+                        self.set_amplitude(self._channel, self._amplitudes[direction])
+
 
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
