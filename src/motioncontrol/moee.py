@@ -153,6 +153,7 @@ class MMThread(QtCore.QThread):
             sigtime = round(50000000 / frequency)
         else:
             sigtime = int(50000000 / 200)
+        log.info(f"setting frequency to {50000000 / sigtime}")
         self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
         return self.mmrecv()
 
@@ -163,8 +164,8 @@ class MMThread(QtCore.QThread):
         return amp / 65535 * 60.0
 
     def set_amplitude(self, channel: int, amplitude: int | float):
-        log.info(f"setting amplitude to {amplitude}")
         sigamp = min((65535, round(amplitude * 65535 / 60)))
+        log.info(f"setting amplitude to {sigamp / 65535 * 60.0}")
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
@@ -246,8 +247,10 @@ class MMThread(QtCore.QThread):
                         # recent 4 delta are alternating
                         if self._amplitude > 18:
                             amplitude_adjusted += 1
+
+                            decay_constant = 5
                             new_amp = (self._amplitude - 18) * 2.718281828459045 ** (
-                                -amplitude_adjusted / 10
+                                -amplitude_adjusted / decay_constant
                             ) + 18
                         else:
                             new_amp = 18
