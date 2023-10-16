@@ -28,6 +28,21 @@ def write_log(content):
         writer.writerow([now.isoformat(), content])
 
 
+class MotionPlot(pg.PlotWidget):
+    sigClosed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setWindowTitle("Relative position")
+        self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
+        # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
+        # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
+
+    def closeEvent(self, *args, **kwargs):
+        self.sigClosed.emit()
+        super().closeEvent(*args, **kwargs)
+
+
 class MainWindow(*uic.loadUiType("controller.ui")):
     def __init__(self):
         super().__init__()
@@ -58,11 +73,14 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.mmthread.sigPosRead.connect(self.set_position)
         self.mmthread.sigDeltaChanged.connect(self.update_plot)
 
-        self.plot = pg.PlotWidget()
+        # setup plotting
+        self.plot = MotionPlot()
         self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
-
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
+        self.plot.sigClosed.connect(self.actionplotpos.setChecked(False))
+        # self.actionplotpos.
 
+        # connect to controller
         self.connect()
 
     @property
