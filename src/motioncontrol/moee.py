@@ -224,33 +224,29 @@ class MMThread(QtCore.QThread):
 
             while True:
                 self.sigDeltaChanged.emit(self._channel, delta_list)
+                if abs(delta_list[-1]) < self._threshold:
+                    # position has converged
+                    break
+                    #
 
-                if abs(delta_list[-1]) < self._threshold * 10:
-                    if abs(delta_list[-1]) < self._threshold * 5:
-                        if abs(delta_list[-1]) < self._threshold:
-                            # position has converged
-                            break
-                        else:
-                            if amplitude_adjusted < 2:
-                                self.set_amplitude(self._channel, self._amplitude - 10)
-                                amplitude_adjusted += 1
-                    else:
-                        if amplitude_adjusted < 1:
-                            self.set_amplitude(self._channel, self._amplitude - 5)
-                            amplitude_adjusted += 1
-
-                if len(delta_list) >= 50:
-                    # check whether last 50 delta are alternating in sign
-                    # if so, position is not converging, we need a larger threshold
-                    s0 = delta_list[-50] >= 0
-                    alternating = True
-                    for n in delta_list[-50:]:
+                if len(delta_list) >= 30:
+                    # check for alternating sign in delta
+                    # the `n_alt` most recent delta are alternating in sign
+                    s0 = delta_list[-1] >= 0
+                    n_alt = 0
+                    for n in reversed(delta_list[-30:]):
                         s1 = n < 0
                         if s0 == s1:
-                            alternating = False
                             break
+                        n_alt += 1
                         s0 = s1
-                    if alternating:
+
+                    if n_alt >= 10:
+                        amplitude_adjusted += 1
+                        self.set_amplitude(
+                            self._channel, self._amplitude - 5 * amplitude_adjusted
+                        )
+                    if n_alt == 30:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
                             " position does not converge. Terminating."
