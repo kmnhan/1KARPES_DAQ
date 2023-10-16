@@ -328,7 +328,7 @@ class MMThread(QtCore.QThread):
                 # scale amplitude
                 amplitude_changed = False
                 absdelta = abs(delta_list[-1])
-                if (absdelta < 100 * self._threshold) and pulse_reduced == 0:
+                if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
                     self.set_pulse_train(self._channel, 5)
                     pulse_reduced += 1
                 if absdelta < 40 * self._threshold:
