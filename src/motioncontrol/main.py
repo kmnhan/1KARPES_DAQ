@@ -56,9 +56,12 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
+        self.mmthread.sigDeltaChanged.conenct(self.update_plot)
 
         self.plot = pg.PlotWidget()
         self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
+
+        self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
 
         self.connect()
 
@@ -135,8 +138,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.actionreadpos.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
-        self.plot.show()
-
     @QtCore.Slot(int)
     def move_finished(self, channel: int):
         for ch in self.channels:
@@ -145,9 +146,14 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.actionreadpos.setDisabled(False)
         self.actionreadcap.setDisabled(False)
 
-        # self.plot.clearPlots()
-        self.curve.setData()
-        self.plot.hide()
+    @QtCore.Slot()
+    def refresh_plot_visibility(self):
+        if self.actionplotpos.isChecked():
+            if not self.plot.isVisible():
+                self.plot.show()
+        else:
+            if self.plot.isVisible():
+                self.plot.hide()
 
     @QtCore.Slot(int, int, int)
     def move_ch1(self, target: int, frequency: int, amplitude: int):
