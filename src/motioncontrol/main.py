@@ -56,7 +56,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
-        self.mmthread.sigDeltaChanged.conenct(self.update_plot)
+        self.mmthread.sigDeltaChanged.connect(self.update_plot)
 
         self.plot = pg.PlotWidget()
         self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
