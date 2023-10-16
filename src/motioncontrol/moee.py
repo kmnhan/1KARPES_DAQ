@@ -248,8 +248,8 @@ class MMThread(QtCore.QThread):
 
                 # scale amplitude
                 amplitude_changed = False
-                if abs(delta_list[-1]) < 10 * self._threshold:
-                    factor = abs(delta_list[-1]) / (10 * self._threshold)
+                if abs(delta_list[-1]) < 20 * self._threshold:
+                    factor = abs(delta_list[-1]) / (20 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
                     decay_rate = 0.5
                     if len(delta_list) >= 2:
