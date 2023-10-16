@@ -196,7 +196,7 @@ class MMThread(QtCore.QThread):
         channel: int,
         target: int,
         frequency: int,
-        amplitude: tuple(int, int),
+        amplitude: tuple[int, int],
         threshold: int,
     ):
         log.info(
