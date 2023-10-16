@@ -338,7 +338,7 @@ class MMThread(QtCore.QThread):
 
                     factor = absdelta / (20 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
-                    decay_rate = 0.25
+                    decay_rate = 0.5
                     # if len(delta_list) >= 2:
                     #     decay_rate *= (
                     #         abs(delta_list[-2] - delta_list[-1]) / self._threshold
