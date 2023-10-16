@@ -243,11 +243,11 @@ class MMThread(QtCore.QThread):
                             break
                         n_alt += 1
                         s0 = s1
-                    if n_alt >= 4:
-                        # recent 4 delta are alternating
+                    if n_alt >= 3:
+                        # recent 3 delta are alternating
                         if self._amplitude > 18:
-                            if amplitude_adjusted == 0:
-                                self.set_frequency(self._channel, 100)
+                            # if amplitude_adjusted == 0:
+                                # self.set_frequency(self._channel, 100)
                             amplitude_adjusted += 1
 
                             decay_constant = 3
