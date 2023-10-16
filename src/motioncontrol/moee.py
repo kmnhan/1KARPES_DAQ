@@ -170,7 +170,7 @@ class MMThread(QtCore.QThread):
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
-        log.info(f"setting direction to {direction}")
+        # log.info(f"setting direction to {direction}")
         self.mmsend(MMCommand.SETSIGDIR, int(channel), direction)
         return self.mmrecv()
 
