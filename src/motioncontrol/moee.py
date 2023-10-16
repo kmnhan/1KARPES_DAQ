@@ -174,6 +174,11 @@ class MMThread(QtCore.QThread):
         self.mmsend(MMCommand.SETSIGDIR, int(channel), direction)
         return self.mmrecv()
 
+    def set_pulse_train(self, channel: int, train: int):
+        log.info(f"setting pulse train {train}")
+        self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
+        return self.mmrecv()
+
     def reset(self):
         self.mmsend(MMCommand.RESET)
         return self.mmrecv()
@@ -262,6 +267,10 @@ class MMThread(QtCore.QThread):
             # set frequency
             self.set_frequency(self._channel, self._sigtime)
 
+            # set pulse train
+            self.set_pulse_train(self._channel, 5)
+            pulse_reduced = False
+
             # initialize direction
             direction: int | None = None
 
@@ -304,12 +313,12 @@ class MMThread(QtCore.QThread):
                     #             -amplitude_adjusted[direction] / decay_constant
                     #         ) + 25
                     #         self.set_amplitude(self._channel, new_amp)
-                    if n_alt > 10:
-                        log.info(f"5 more pulses in the previous direction!!")
-                        for _ in range(5):
-                            self.mmsend(MMCommand.SENDSIGONCE, self._channel)
-                            self.mmrecv()
-                    elif n_alt == 50:
+                    # if n_alt > 10:
+                    #     log.info(f"5 more pulses in the previous direction!!")
+                    #     for _ in range(5):
+                    #         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
+                    #         self.mmrecv()
+                    if n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
                             " position does not converge. Terminating."
@@ -319,6 +328,12 @@ class MMThread(QtCore.QThread):
                 # scale amplitude
                 amplitude_changed = False
                 if abs(delta_list[-1]) < 50 * self._threshold:
+                    if (
+                        abs(delta_list[-1]) < 10 * self._threshold
+                    ) and not pulse_reduced:
+                        self.set_pulse_train(self._channel, 1)
+                        pulse_reduced = True
+
                     factor = abs(delta_list[-1]) / (50 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
                     decay_rate = 0.25
