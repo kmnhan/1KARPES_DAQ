@@ -178,7 +178,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.sigMoveRequested.emit(
             self.convert_pos_inv(self.target_spin.value()),
             self.freq_spin.value(),
-            (self.amp_fwd_spin.value(), self.amp_bwd_spin.value()),
+            (self.amp_bwd_spin.value(), self.amp_fwd_spin.value()),
         )
 
 
