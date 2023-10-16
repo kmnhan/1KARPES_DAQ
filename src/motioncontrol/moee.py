@@ -82,6 +82,7 @@ class MMThread(QtCore.QThread):
         self.sock.connect((host, port))
 
         log.debug("connected")
+        self.reset()
 
     def disconnect(self):
         self.mmsend(MMCommand.DISCONNECT)
@@ -108,7 +109,7 @@ class MMThread(QtCore.QThread):
         tmp, x1 = divmod(value, 256)
         tmp, x2 = divmod(tmp, 256)
         x4, x3 = divmod(tmp, 256)
-        msg = bytes([command, channel, int(x1), int(x2), int(x3), int(x4)])
+        msg = bytes([int(command), int(channel), int(x1), int(x2), int(x3), int(x4)])
         totalsent = 0
         while totalsent < 6:
             sent = self.sock.send(msg[totalsent:])
@@ -147,11 +148,32 @@ class MMThread(QtCore.QThread):
         sigtime = self.mmrecv()
         return 50000000 / sigtime
 
+    def set_frequency(self, channel: int, frequency: int | float):
+        if (frequency >= 50) and (frequency <= 500):
+            sigtime = round(50000000 / frequency)
+        else:
+            sigtime = int(50000000 / 200)
+        self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
+        return self.mmrecv()
+
     def get_amplitude(self, channel: int) -> float:
         """Return current signal amplitude (voltage)."""
         self.mmsend(MMCommand.READSIGAMP, channel)
         amp = self.mmrecv()
         return amp / 65535 * 60.0
+
+    def set_amplitude(self, channel: int, amplitude: int | float):
+        sigamp = min((65535, round(amplitude * 65535 / 60)))
+        self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
+        return self.mmrecv()
+
+    def set_direction(self, channel: int, direction: int):
+        self.mmsend(MMCommand.SETSIGDIR, int(channel), direction)
+        return self.mmrecv()
+
+    def reset(self):
+        self.mmsend(MMCommand.RESET)
+        return self.mmrecv()
 
     def get_position(self, channel: int) -> int:
         """Return raw position integer."""
@@ -174,11 +196,8 @@ class MMThread(QtCore.QThread):
         )
         self._channel = int(channel)
         self._target = int(target)
-        if (frequency >= 50) and (frequency <= 500):
-            self._sigtime = round(50000000 / frequency)
-        else:
-            self._sigtime = int(50000000 / 200)
-        self._amplitude = min((65535, round(amplitude * 65535 / 60)))
+        self._sigtime = frequency
+        self._amplitude = amplitude
         self._threshold = int(abs(threshold))
         self.initialized = True
 
@@ -191,25 +210,30 @@ class MMThread(QtCore.QThread):
         self.moving = True
         try:
             # reset
-            self.mmsend(MMCommand.RESET, self._channel)
-            self.mmrecv()
+            self.reset()
 
             # set amplitude
-            self.mmsend(MMCommand.SETSIGAMP, self._channel, self._amplitude)
-            self.mmrecv()
+            self.set_amplitude(self._channel, self._amplitude)
 
             # set frequency
-            self.mmsend(MMCommand.SETSIGTIME, self._channel, self._sigtime)
-            self.mmrecv()
+            self.set_frequency(self._channel, self._sigtime)
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
             direction: int | None = None
+            amplitude_adjusted = 0
 
             while True:
                 self.sigDeltaChanged.emit(self._channel, delta_list)
-                if abs(delta_list[-1]) < self._threshold:
-                    # position has converged
-                    break
+
+                if abs(delta_list[-1]) < self._threshold * 10:
+                    if abs(delta_list[-1]) < self._threshold:
+                        # position has converged
+                        break
+                    else:
+                        if amplitude_adjusted == 0:
+                            self.set_amplitude(self._channel, self._amplitude - 5)
+                            amplitude_adjusted += 1
+
                 if len(delta_list) >= 50:
                     # check whether last 50 delta are alternating in sign
                     # if so, position is not converging, we need a larger threshold
@@ -235,8 +259,7 @@ class MMThread(QtCore.QThread):
                     direction = 1  # forwards
                 if direction_old != direction:
                     log.debug(f"changing direction to {direction}")
-                    self.mmsend(MMCommand.SETSIGDIR, self._channel, direction)
-                    self.mmrecv()
+                    self.set_direction(direction)
 
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
