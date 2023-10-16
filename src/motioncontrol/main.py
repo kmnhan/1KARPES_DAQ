@@ -172,20 +172,20 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             if self.plot.isVisible():
                 self.plot.hide()
 
-    @QtCore.Slot(int, int, int)
-    def move_ch1(self, target: int, frequency: int, amplitude: int):
+    @QtCore.Slot(int, int, object)
+    def move_ch1(self, target: int, frequency: int, amplitude: tuple[int, int]):
         return self.move(1, target, frequency, amplitude)
 
-    @QtCore.Slot(int, int, int)
-    def move_ch2(self, target: int, frequency: int, amplitude: int):
+    @QtCore.Slot(int, int, object)
+    def move_ch2(self, target: int, frequency: int, amplitude: tuple[int, int]):
         return self.move(2, target, frequency, amplitude)
 
-    @QtCore.Slot(int, int, int)
-    def move_ch3(self, target: int, frequency: int, amplitude: int):
+    @QtCore.Slot(int, int, object)
+    def move_ch3(self, target: int, frequency: int, amplitude: tuple[int, int]):
         return self.move(3, target, frequency, amplitude)
 
-    @QtCore.Slot(int, int, int, int)
-    def move(self, channel: int, target: int, frequency: int, amplitude: int):
+    @QtCore.Slot(int, int, int, object)
+    def move(self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]):
         write_log(
             f"Move Ch{channel} to {self.channels[channel - 1].convert_pos(target):.4f}"
         )
@@ -202,7 +202,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             target=target,
             frequency=frequency,
             amplitude=amplitude,
-            threshold=self.threshold_spin.value(),
+            threshold=self.channels[channel - 1].tolerance,
         )
         self.mmthread.start()
 

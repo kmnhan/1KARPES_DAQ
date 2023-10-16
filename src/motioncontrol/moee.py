@@ -192,7 +192,12 @@ class MMThread(QtCore.QThread):
 
     @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
-        self, channel: int, target: int, frequency: int, amplitude: int, threshold: int
+        self,
+        channel: int,
+        target: int,
+        frequency: int,
+        amplitude: tuple(int, int),
+        threshold: int,
     ):
         log.info(
             f"Initializing parameters {channel} {target} {frequency} {amplitude} {threshold}"
@@ -200,7 +205,7 @@ class MMThread(QtCore.QThread):
         self._channel = int(channel)
         self._target = int(target)
         self._sigtime = frequency
-        self._amplitude = amplitude
+        self._amplitudes = amplitude
         self._threshold = int(abs(threshold))
         self.initialized = True
 
@@ -215,22 +220,44 @@ class MMThread(QtCore.QThread):
             # reset
             self.reset()
 
+            delta_list: list[int] = [self._target - self.get_position(self._channel)]
+            if delta_list[-1] > 0:
+                direction = 0  # backwards
+            else:
+                direction = 1  # forwards
+
             # set amplitude
-            self.set_amplitude(self._channel, self._amplitude)
+            direction_changes_voltage: bool = self._amplitudes[0] != self._amplitudes[1]
+            self.set_amplitude(self._channel, self._amplitudes[direction])
 
             # set frequency
             self.set_frequency(self._channel, self._sigtime)
 
-            delta_list: list[int] = [self._target - self.get_position(self._channel)]
-            direction: int | None = None
-            amplitude_adjusted = 0
-
+            # amplitude_adjusted = [0, 0]
             while True:
                 self.sigDeltaChanged.emit(self._channel, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
-                    #
+
+                direction_old = direction
+                if delta_list[-1] > 0:
+                    direction = 0  # backwards
+                else:
+                    direction = 1  # forwards
+                if direction_old != direction:
+                    self.set_direction(self._channel, direction)
+
+                if abs(delta_list[-1]) < 10 * self._threshold:
+                    factor = abs(delta_list[-1]) / (10 * self._threshold)
+                    vmin, vmax = 20, self._amplitudes[direction]
+                    decay_rate = 0.5
+
+                    if vmin < vmax:
+                        new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
+                            -factor / decay_rate
+                        )
+                        self.set_amplitude(self._channel, new_amp)
 
                 if len(delta_list) >= 50:
                     # check for alternating sign in delta
@@ -243,32 +270,27 @@ class MMThread(QtCore.QThread):
                             break
                         n_alt += 1
                         s0 = s1
-                    if n_alt >= 3:
-                        # recent 3 delta are alternating
-                        if self._amplitude > 18:
-                            # if amplitude_adjusted == 0:
-                                # self.set_frequency(self._channel, 100)
-                            amplitude_adjusted += 1
-
-                            decay_constant = 3
-                            new_amp = (self._amplitude - 18) * 2.718281828459045 ** (
-                                -amplitude_adjusted / decay_constant
-                            ) + 18
-                            self.set_amplitude(self._channel, new_amp)
+                    # if n_alt >= 5:
+                    #     # recent 5 delta are alternating
+                    #     if self._amplitudes[direction] > 25:
+                    #         # if amplitude_adjusted == 0:
+                    #         #    self.set_frequency(self._channel, 100)
+                    #         amplitude_adjusted[direction] = (
+                    #             amplitude_adjusted[direction] + 1
+                    #         )
+                    #         decay_constant = 5.0
+                    #         new_amp = (
+                    #             self._amplitudes[direction] - 25
+                    #         ) * 2.718281828459045 ** (
+                    #             -amplitude_adjusted[direction] / decay_constant
+                    #         ) + 25
+                    #         self.set_amplitude(self._channel, new_amp)
                     if n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
                             " position does not converge. Terminating."
                         )
                         break
-
-                direction_old = direction
-                if delta_list[-1] > 0:
-                    direction = 0  # backwards
-                else:
-                    direction = 1  # forwards
-                if direction_old != direction:
-                    self.set_direction(self._channel, direction)
 
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
@@ -278,6 +300,7 @@ class MMThread(QtCore.QThread):
 
                 if not self.moving:
                     break
+
         except Exception:
             log.exception("Exception while moving!")
         self.moving = False

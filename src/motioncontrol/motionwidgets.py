@@ -110,6 +110,14 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def nominal_capacitance(self) -> float | None:
         return self.current_config.getfloat("cap", None)
 
+    @property
+    def tolerance(self) -> int:
+        tol = self.current_config.getfloat("tol", None)
+        if tol is None:
+            return 4
+        else:
+            return round(abs(tol * 1e-3 / self.cal_A))
+
     @QtCore.Slot()
     def target_current_pos(self):
         self.target_spin.setValue(self.convert_pos(self.raw_position))
@@ -130,7 +138,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def update_motor(self):
         self.cal_A = self.current_config.getfloat("a", 1.0)
         self.cal_B = self.current_config.getfloat("b", 0.0)
-        self.cal_B += self.current_config.getfloat("offset", 0.0)
+        self.cal_B -= self.current_config.getfloat("origin", 0.0)
 
         bounds = (
             self.convert_pos(self.current_config.getint("min", 0)),
@@ -140,7 +148,8 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.target_spin.setMaximum(max(bounds))
 
         self.freq_spin.setValue(self.current_config.getint("freq", 200))
-        self.amp_spin.setValue(self.current_config.getint("voltage", 30))
+        self.amp_fwd_spin.setValue(self.current_config.getint("voltage_0", 30))
+        self.amp_bwd_spin.setValue(self.current_config.getint("voltage_1", 30))
 
         if self.raw_position is not None:
             self.set_current_pos(self.raw_position)
