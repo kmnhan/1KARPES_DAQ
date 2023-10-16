@@ -8,7 +8,7 @@ import time
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 # handler = logging.FileHandler("motion_logs.log", encoding="utf-8")
 # handler = logging.NullHandler()
 handler = logging.StreamHandler(sys.stdout)
@@ -75,21 +75,21 @@ class MMThread(QtCore.QThread):
         if host is None:
             host = "192.168.0.210"
 
-        log.debug(f"connecting to host {host} on port {port}")
+        log.info(f"connecting to host {host} on port {port}")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(5)
         self.sock.connect((host, port))
 
-        log.debug("connected")
+        log.info("connected")
         self.reset()
 
     def disconnect(self):
         self.mmsend(MMCommand.DISCONNECT)
         self.mmrecv()
-        log.debug("disconnected, closing socket...")
+        log.info("disconnected, closing socket...")
         self.sock.close()
-        log.debug("socket closed")
+        log.info("socket closed")
 
     def mmsend(self, command: int, channel: int = 0, value: int = 0):
         """Send a command over the socket to the controller.
@@ -163,11 +163,13 @@ class MMThread(QtCore.QThread):
         return amp / 65535 * 60.0
 
     def set_amplitude(self, channel: int, amplitude: int | float):
+        log.info(f"setting amplitude to {amplitude}")
         sigamp = min((65535, round(amplitude * 65535 / 60)))
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
+        log.info(f"setting direction to {direction}")
         self.mmsend(MMCommand.SETSIGDIR, int(channel), direction)
         return self.mmrecv()
 
@@ -259,7 +261,6 @@ class MMThread(QtCore.QThread):
                 else:
                     direction = 1  # forwards
                 if direction_old != direction:
-                    log.debug(f"changing direction to {direction}")
                     self.set_direction(self._channel, direction)
 
                 # send signal & read position
