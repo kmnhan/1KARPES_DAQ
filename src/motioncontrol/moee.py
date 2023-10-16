@@ -330,7 +330,12 @@ class MMThread(QtCore.QThread):
                     #             -amplitude_adjusted[direction] / decay_constant
                     #         ) + 25
                     #         self.set_amplitude(self._channel, new_amp)
-                    if n_alt == 50:
+                    if n_alt > 10:
+                        self.mmsend(MMCommand.SENDSIGONCE, self._channel)
+                        self.mmrecv()
+                        self.mmsend(MMCommand.SENDSIGONCE, self._channel)
+                        self.mmrecv()
+                    elif n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
                             " position does not converge. Terminating."
