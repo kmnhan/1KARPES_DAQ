@@ -77,7 +77,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.plot = MotionPlot()
         self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
-        self.plot.sigClosed.connect(self.actionplotpos.setChecked(False))
+        self.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
         # self.actionplotpos.
 
         # connect to controller
