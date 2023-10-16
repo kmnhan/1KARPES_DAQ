@@ -34,7 +34,7 @@ class MotionPlot(pg.PlotWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("Relative position")
-        self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
+        self.curve: pg.PlotDataItem = self.plot(pen="w")
         # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
         # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
 
