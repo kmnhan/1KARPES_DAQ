@@ -197,7 +197,7 @@ class MMThread(QtCore.QThread):
         self.set_frequency(channel, 300)
         # amps = (30, 35, 40, 45, 50, 55)
         amps = np.arange(30, 62, 2)
-        
+
         niter = 100
 
         vals = np.zeros((len(amps), 2, niter), dtype=int)
@@ -218,7 +218,7 @@ class MMThread(QtCore.QThread):
                 self.mmsend(MMCommand.SENDSIGONCE, channel)
                 self.mmrecv()
                 p0 = self.get_position(channel)
-                vals[i, 1, j] = p1-p0
+                vals[i, 1, j] = p1 - p0
 
         np.save("D:/MotionController/freqtest2.npy", vals)
 
@@ -277,7 +277,6 @@ class MMThread(QtCore.QThread):
                     direction = 0  # backwards
                 else:
                     direction = 1  # forwards
-                    
 
                 if len(delta_list) >= 50:
                     # check for alternating sign in delta
@@ -306,11 +305,10 @@ class MMThread(QtCore.QThread):
                     #         ) + 25
                     #         self.set_amplitude(self._channel, new_amp)
                     if n_alt > 10:
-                        log.info(f"2 more pulses in the previous direction!!")
-                        self.mmsend(MMCommand.SENDSIGONCE, self._channel)
-                        self.mmrecv()
-                        self.mmsend(MMCommand.SENDSIGONCE, self._channel)
-                        self.mmrecv()
+                        log.info(f"5 more pulses in the previous direction!!")
+                        for _ in range(5):
+                            self.mmsend(MMCommand.SENDSIGONCE, self._channel)
+                            self.mmrecv()
                     elif n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
@@ -343,7 +341,6 @@ class MMThread(QtCore.QThread):
                     if not amplitude_changed and direction_changes_voltage:
                         # set amplitude if not set
                         self.set_amplitude(self._channel, self._amplitudes[direction])
-
 
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, self._channel)
