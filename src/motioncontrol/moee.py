@@ -165,17 +165,6 @@ class MMThread(QtCore.QThread):
         self.sigPosRead.emit(channel, val)
         return val
 
-    @staticmethod
-    def convert_frequency(frequency) -> int:
-        if (frequency >= 50) and (frequency <= 500):
-            return round(50000000 / frequency)
-        else:
-            return int(50000000 / 200)
-
-    @staticmethod
-    def convert_amplitude(amplitude: int) -> int:
-        return min((65535, round(amplitude * 65535 / 60)))
-
     @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
         self, channel: int, target: int, frequency: int, amplitude: int, threshold: int
@@ -185,8 +174,11 @@ class MMThread(QtCore.QThread):
         )
         self._channel = int(channel)
         self._target = int(target)
-        self._sigtime = self.convert_frequency(frequency)
-        self._amplitude = self.convert_amplitude(amplitude)
+        if (frequency >= 50) and (frequency <= 500):
+            self._sigtime = round(50000000 / frequency)
+        else:
+            self._sigtime = int(50000000 / 200)
+        self._amplitude = min((65535, round(amplitude * 65535 / 60)))
         self._threshold = int(abs(threshold))
         self.initialized = True
 
@@ -212,23 +204,12 @@ class MMThread(QtCore.QThread):
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
             direction: int | None = None
-            amplitude_adjusted = 0
 
             while True:
                 self.sigDeltaChanged.emit(self._channel, delta_list)
-                if abs(delta_list[-1]) < self._threshold * 10:
-                    if abs(delta_list[-1]) < self._threshold:
-                        # position has converged
-                        break
-                    else:
-                        if amplitude_adjusted == 0:
-                            self.mmsend(
-                                MMCommand.SETSIGAMP,
-                                self._channel,
-                                int(self._amplitude - 5461),  # approx. 5 volts
-                            )
-                            amplitude_adjusted += 1
-
+                if abs(delta_list[-1]) < self._threshold:
+                    # position has converged
+                    break
                 if len(delta_list) >= 50:
                     # check whether last 50 delta are alternating in sign
                     # if so, position is not converging, we need a larger threshold
