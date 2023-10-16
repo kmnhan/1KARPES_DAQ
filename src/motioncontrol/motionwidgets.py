@@ -87,7 +87,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.raw_position: int | None = None
 
         # read configuration & populate combobox
-        self.config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser(inline_comment_prefixes="#")
         self.config.read(CONFIG_FILE)
         self.combobox.clear()
         for sec in self.config.sections():
