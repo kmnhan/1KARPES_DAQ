@@ -194,9 +194,11 @@ class MMThread(QtCore.QThread):
         import numpy as np
 
         self.reset()
-        self.set_frequency(channel, 200)
-        amps = (30, 35, 40, 45, 50, 55)
-        niter = 200
+        self.set_frequency(channel, 300)
+        # amps = (30, 35, 40, 45, 50, 55)
+        amps = np.arange(30, 62, 2)
+        
+        niter = 100
 
         vals = np.zeros((len(amps), 2, niter), dtype=int)
 
@@ -216,9 +218,9 @@ class MMThread(QtCore.QThread):
                 self.mmsend(MMCommand.SENDSIGONCE, channel)
                 self.mmrecv()
                 p0 = self.get_position(channel)
-                vals[i, 1, j] = p0 - p1
+                vals[i, 1, j] = p1-p0
 
-        np.save("D:/MotionController/freqtest.npy", vals)
+        np.save("D:/MotionController/freqtest2.npy", vals)
 
     @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
