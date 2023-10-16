@@ -331,6 +331,7 @@ class MMThread(QtCore.QThread):
                     #         ) + 25
                     #         self.set_amplitude(self._channel, new_amp)
                     if n_alt > 10:
+                        log.info(f"2 more pulses!!")
                         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
                         self.mmrecv()
                         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
@@ -362,8 +363,7 @@ if __name__ == "__main__":
     soc = MMThread()
     soc.connect()
     try:
-        soc.freq_test(2)
-
+        pass
     except Exception as e:
         print("error!", e)
 
