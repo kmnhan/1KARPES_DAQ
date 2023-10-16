@@ -4,6 +4,8 @@ import datetime
 import os
 import sys
 
+import numpy as np
+import pyqtgraph as pg
 from moee import MMCommand, MMThread
 from motionwidgets import SingleChannelWidget
 from qtpy import QtCore, QtGui, QtWidgets, uic
@@ -54,6 +56,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
+
+        self.plot = pg.PlotWidget(self)
+        self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
 
         self.connect()
 
@@ -117,6 +122,11 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def set_position(self, channel: int, pos: int):
         self.channels[channel - 1].set_current_pos(pos)
 
+    @QtCore.Slot(int, object)
+    def update_plot(self, channel: int, delta: list[float]):
+        delta_abs = self.channels[channel - 1].cal_A * np.asarray(delta)
+        self.curve.setData(delta_abs)
+
     @QtCore.Slot(int)
     def move_started(self, channel: int):
         for ch in self.channels:
@@ -125,6 +135,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.actionreadpos.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
+        self.plot.show()
+
     @QtCore.Slot(int)
     def move_finished(self, channel: int):
         for ch in self.channels:
@@ -132,6 +144,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.channels[channel - 1].status.setState(False)
         self.actionreadpos.setDisabled(False)
         self.actionreadcap.setDisabled(False)
+
+        # self.plot.clearPlots()
+        self.curve.setData()
+        self.plot.hide()
 
     @QtCore.Slot(int, int, int)
     def move_ch1(self, target: int, frequency: int, amplitude: int):

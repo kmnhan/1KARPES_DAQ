@@ -64,6 +64,7 @@ class MMThread(QtCore.QThread):
     sigMoveFinished = QtCore.Signal(int)
     sigCapRead = QtCore.Signal(int, float)
     sigPosRead = QtCore.Signal(int, int)
+    sigDeltaChanged = QtCore.Signal(int, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -205,6 +206,7 @@ class MMThread(QtCore.QThread):
             direction: int | None = None
 
             while True:
+                self.sigDeltaChanged.emit(self._channel, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
