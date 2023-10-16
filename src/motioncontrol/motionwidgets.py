@@ -64,7 +64,7 @@ class MotorStatus(StautsIconWidget):
 
 
 class SingleChannelWidget(*uic.loadUiType("channel.ui")):
-    sigMoveRequested = QtCore.Signal(int, int, int)
+    sigMoveRequested = QtCore.Signal(int, int, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -178,7 +178,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.sigMoveRequested.emit(
             self.convert_pos_inv(self.target_spin.value()),
             self.freq_spin.value(),
-            self.amp_spin.value(),
+            (self.amp_fwd_spin.value(), self.amp_bwd_spin.value()),
         )
 
 
