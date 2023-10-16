@@ -268,8 +268,8 @@ class MMThread(QtCore.QThread):
             self.set_frequency(self._channel, self._sigtime)
 
             # set pulse train
-            self.set_pulse_train(self._channel, 5)
-            pulse_reduced = False
+            self.set_pulse_train(self._channel, 10)
+            pulse_reduced = 0
 
             # initialize direction
             direction: int | None = None
@@ -327,14 +327,16 @@ class MMThread(QtCore.QThread):
 
                 # scale amplitude
                 amplitude_changed = False
-                if abs(delta_list[-1]) < 50 * self._threshold:
-                    if (
-                        abs(delta_list[-1]) < 10 * self._threshold
-                    ) and not pulse_reduced:
+                absdelta = abs(delta_list[-1])
+                if absdelta < 50 * self._threshold:
+                    if pulse_reduced == 0:
+                        self.set_pulse_train(self._channel, 5)
+                        pulse_reduced += 1
+                    if (absdelta < 10 * self._threshold) and pulse_reduced == 1:
                         self.set_pulse_train(self._channel, 1)
-                        pulse_reduced = True
+                        pulse_reduced += 1
 
-                    factor = abs(delta_list[-1]) / (50 * self._threshold)
+                    factor = absdelta / (50 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
                     decay_rate = 0.25
                     # if len(delta_list) >= 2:
