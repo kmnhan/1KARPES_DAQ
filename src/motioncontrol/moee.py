@@ -253,9 +253,10 @@ class MMThread(QtCore.QThread):
                     vmin, vmax = 20, self._amplitudes[direction]
                     decay_rate = 0.5
                     if len(delta_list) >= 2:
-                        decay_rate = self._threshold / (
-                            abs(delta_list[-2] - delta_list[-1]) + 1e-15
+                        decay_rate *= (
+                            abs(delta_list[-2] - delta_list[-1]) / self._threshold
                         )
+                        decay_rate *= 0.05
 
                     if vmin < vmax:
                         new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
