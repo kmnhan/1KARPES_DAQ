@@ -231,24 +231,23 @@ class MMThread(QtCore.QThread):
                     break
                     #
 
-                if len(delta_list) >= 30:
+                if len(delta_list) >= 10:
                     # check for alternating sign in delta
                     # the `n_alt` most recent delta are alternating in sign
                     s0 = delta_list[-1] >= 0
                     n_alt = 0
-                    for n in reversed(delta_list[-30:]):
+                    for n in reversed(delta_list[-10:]):
                         s1 = n < 0
                         if s0 == s1:
                             break
                         n_alt += 1
                         s0 = s1
-
-                    if n_alt >= 10:
+                    if n_alt >= 4:
                         amplitude_adjusted += 1
                         self.set_amplitude(
-                            self._channel, self._amplitude - 5 * amplitude_adjusted
+                            self._channel, self._amplitude - 1 * amplitude_adjusted
                         )
-                    if n_alt == 30:
+                    if n_alt == 10:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
                             " position does not converge. Terminating."
