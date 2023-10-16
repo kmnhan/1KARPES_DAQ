@@ -250,6 +250,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     def closeEvent(self, *args, **kwargs):
         self.disconnect()
+        self.plot.close()
         super().closeEvent(*args, **kwargs)
 
 
