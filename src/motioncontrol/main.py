@@ -75,7 +75,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # setup plotting
         self.plot = MotionPlot()
-        self.curve: pg.PlotDataItem = self.plot.plot(pen="w")
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
         # self.actionplotpos.
@@ -146,7 +145,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot(int, object)
     def update_plot(self, channel: int, delta: list[float]):
         delta_abs = self.channels[channel - 1].cal_A * np.asarray(delta)
-        self.curve.setData(delta_abs)
+        self.plot.curve.setData(delta_abs)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
