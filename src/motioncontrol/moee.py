@@ -336,7 +336,7 @@ class MMThread(QtCore.QThread):
                         self.set_pulse_train(self._channel, 1)
                         pulse_reduced += 1
 
-                    factor = absdelta / (40 * self._threshold)
+                    factor = absdelta / (20 * self._threshold)
                     vmin, vmax = 20, self._amplitudes[direction]
                     decay_rate = 0.25
                     # if len(delta_list) >= 2:
