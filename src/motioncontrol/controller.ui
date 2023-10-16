@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>518</width>
-    <height>138</height>
+    <width>432</width>
+    <height>140</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,26 +17,6 @@
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Threshold</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QSpinBox" name="threshold_spin">
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-        <property name="value">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -68,6 +48,9 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
       <item>
        <widget class="SingleChannelWidget" name="ch1" native="true"/>
       </item>
@@ -86,7 +69,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>518</width>
+     <width>432</width>
      <height>21</height>
     </rect>
    </property>
@@ -116,7 +99,11 @@
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+  </widget>
   <action name="actionstop">
    <property name="text">
     <string>Stop Motors</string>
