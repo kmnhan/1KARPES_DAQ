@@ -226,11 +226,16 @@ class MMThread(QtCore.QThread):
                 self.sigDeltaChanged.emit(self._channel, delta_list)
 
                 if abs(delta_list[-1]) < self._threshold * 10:
-                    if abs(delta_list[-1]) < self._threshold:
-                        # position has converged
-                        break
+                    if abs(delta_list[-1]) < self._threshold * 5:
+                        if abs(delta_list[-1]) < self._threshold:
+                            # position has converged
+                            break
+                        else:
+                            if amplitude_adjusted < 2:
+                                self.set_amplitude(self._channel, self._amplitude - 10)
+                                amplitude_adjusted += 1
                     else:
-                        if amplitude_adjusted == 0:
+                        if amplitude_adjusted < 1:
                             self.set_amplitude(self._channel, self._amplitude - 5)
                             amplitude_adjusted += 1
 
