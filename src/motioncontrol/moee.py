@@ -260,7 +260,7 @@ class MMThread(QtCore.QThread):
 
                     if vmin < vmax:
                         new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
-                            -factor / decay_rate
+                            -factor / (decay_rate + 1e-15)
                         )
                         self.set_amplitude(self._channel, new_amp)
                         amplitude_changed = True
