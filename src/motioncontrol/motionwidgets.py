@@ -1,11 +1,11 @@
-import configparser
 import sys
+import tomllib
 from collections.abc import Sequence
 
 import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-CONFIG_FILE = "D:/MotionController/piezomotors.ini"
+CONFIG_FILE = "D:/MotionController/piezomotors.toml"
 
 
 class StautsIconWidget(qta.IconWidget):
@@ -87,11 +87,12 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.raw_position: int | None = None
 
         # read configuration & populate combobox
-        self.config = configparser.ConfigParser(inline_comment_prefixes="#")
+        with open(CONFIG_FILE, "rb") as f:
+            self.config = tomllib.load(f)
         self.config.read(CONFIG_FILE)
         self.combobox.clear()
-        for sec in self.config.sections():
-            self.combobox.addItem(self.config[sec].get("alias", sec))
+        for k in self.config.keys():
+            self.combobox.addItem(self.config[k].get("alias", k))
         self.combobox.currentTextChanged.connect(self.update_motor)
         self.update_motor()
 
@@ -103,16 +104,16 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         return self.checkbox.isChecked()
 
     @property
-    def current_config(self) -> configparser.SectionProxy:
-        return self.config[self.config.sections()[self.combobox.currentIndex()]]
+    def current_config(self) -> dict:
+        return self.config[tuple(self.config.keys())[self.combobox.currentIndex()]]
 
     @property
     def nominal_capacitance(self) -> float | None:
-        return self.current_config.getfloat("cap", None)
+        return self.current_config.get("cap", None)
 
     @property
     def tolerance(self) -> int:
-        tol = self.current_config.getfloat("tol", None)
+        tol = self.current_config.get("tol", None)
         if tol is None:
             return 4
         else:
@@ -136,20 +137,20 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.move_btn.setDisabled(value)
 
     def update_motor(self):
-        self.cal_A = self.current_config.getfloat("a", 1.0)
-        self.cal_B = self.current_config.getfloat("b", 0.0)
-        self.cal_B -= self.current_config.getfloat("origin", 0.0)
+        self.cal_A = float(self.current_config.get("a", 1.0))
+        self.cal_B = float(self.current_config.get("b", 0.0))
+        self.cal_B -= float(self.current_config.get("origin", 0.0))
 
         bounds = (
-            self.convert_pos(self.current_config.getint("min", 0)),
-            self.convert_pos(self.current_config.getint("max", 65535)),
+            self.convert_pos(int(self.current_config.get("min", 0))),
+            self.convert_pos(int(self.current_config.get("max", 65535))),
         )
         self.target_spin.setMinimum(min(bounds))
         self.target_spin.setMaximum(max(bounds))
 
-        self.freq_spin.setValue(self.current_config.getint("freq", 200))
-        self.amp_bwd_spin.setValue(self.current_config.getint("voltage_0", 30))
-        self.amp_fwd_spin.setValue(self.current_config.getint("voltage_1", 30))
+        self.freq_spin.setValue(int(self.current_config.get("freq", 200)))
+        self.amp_bwd_spin.setValue(int(self.current_config.get("voltage_0", 30)))
+        self.amp_fwd_spin.setValue(int(self.current_config.get("voltage_1", 30)))
 
         if self.raw_position is not None:
             self.set_current_pos(self.raw_position)
