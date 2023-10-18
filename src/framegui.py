@@ -6,7 +6,7 @@ import platform
 import sys
 import time
 
-import cv2
+# import cv2
 import numpy as np
 import pyqtgraph as pg
 from pypylon import genicam, pylon
@@ -500,9 +500,9 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(object)
     def grabbed(self, image):
         self.image_item.setImage(image, autoLevels=False)
-        self.statusBar().showMessage(
-            f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
-        )
+        # self.statusBar().showMessage(
+        #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
+        # )
 
     @QtCore.Slot(object)
     def set_image(self, image):
