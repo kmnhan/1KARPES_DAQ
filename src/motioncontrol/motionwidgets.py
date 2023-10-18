@@ -89,7 +89,6 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         # read configuration & populate combobox
         with open(CONFIG_FILE, "rb") as f:
             self.config = tomllib.load(f)
-        self.config.read(CONFIG_FILE)
         self.combobox.clear()
         for k in self.config.keys():
             self.combobox.addItem(self.config[k].get("alias", k))
