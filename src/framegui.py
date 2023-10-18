@@ -6,6 +6,7 @@ import platform
 import sys
 import time
 
+import cv2
 import numpy as np
 import pyqtgraph as pg
 from pypylon import genicam, pylon
@@ -433,9 +434,7 @@ class MainWindow(MainWindowGUI):
 
         # handle image grabbing
         self.frame_grabber = FrameGrabber()
-        self.frame_grabber.sigGrabbed.connect(
-            lambda arr: self.image_item.setImage(arr, autoLevels=False)
-        )
+        self.frame_grabber.sigGrabbed.connect(self.grabbed)
         self.frame_grabber.sigExposureRead.connect(self.update_exposure_slider)
         # self.frame_grabber.sigFailed.connect(lambda: self.live_check.setChecked(False))
 
@@ -497,6 +496,13 @@ class MainWindow(MainWindowGUI):
         # self.exposure_spin.setValue(val)
         # self.exposure_spin.blockSignals(False)
         # self.exposure_slider.blockSignals(False)
+
+    @QtCore.Slot(object)
+    def grabbed(self, image):
+        self.image_item.setImage(image, autoLevels=False)
+        self.statusBar().showMessage(
+            f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
+        )
 
     @QtCore.Slot(object)
     def set_image(self, image):
