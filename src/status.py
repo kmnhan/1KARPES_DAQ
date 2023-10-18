@@ -4,6 +4,7 @@ import zmq
 from qtpy import QtCore, QtWidgets, uic
 
 from constants import CRYO_PORT, MG15_PORT, SLIT_TABLE
+from qt_extensions.servercontrol import ServerControlWidget
 from servers import PressureServer, SlitServer, TemperatureServer
 
 
@@ -61,7 +62,6 @@ class MainWindow(*uic.loadUiType("status.ui")):
         )
 
         # initialize servers
-        self.server_controls = tuple(getattr(self, f"sc{i}") for i in range(3))
         self.server_controls[0].set_server(
             SlitServer, value=self.slit_combo.currentIndex()
         )
@@ -73,6 +73,11 @@ class MainWindow(*uic.loadUiType("status.ui")):
         # connect signals (slit)
         self.slit_combo.currentIndexChanged.connect(self.set_slit_index)
         self.sigSlitChanged.connect(self.server_controls[0].server.set_value)
+
+        # initialize context
+        context = zmq.Context.instance()
+        if not context:
+            context = zmq.Context()
 
         # start slit server
         self.start_servers()
@@ -87,8 +92,12 @@ class MainWindow(*uic.loadUiType("status.ui")):
         self.update_info()
         self.client_timer.start()
 
+    @property
+    def server_controls(self) -> tuple[ServerControlWidget, ...]:
+        return self.sc0, self.sc1, self.sc2
+
     def get_response(self, port: int):
-        context = zmq.Context()
+        context = zmq.Context.instance()
         socket: zmq.Socket = context.socket(zmq.REQ)
         socket.connect(f"tcp://localhost:{port}")
         socket.send(b"")

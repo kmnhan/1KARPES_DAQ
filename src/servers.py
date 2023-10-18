@@ -1,13 +1,8 @@
-import logging
-
 import zmq
 from qtpy import QtCore
 
 from constants import CRYO_PORT, MG15_PORT, SLIT_PORT, SLIT_TABLE
 from livelogreader import get_pressure, get_temperature
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
 # class ServerTemplate(QtCore.QThread):
 #     PORT = 5555
@@ -15,12 +10,13 @@ log.addHandler(logging.NullHandler())
 #     def __init__(self):
 #         super().__init__()
 #         self.running: bool = False
-#         self.context: zmq.Context | None = None
 
 #     def run(self):
 #         self.running = True
-#         self.context = zmq.Context()
-#         socket:zmq.Socket = self.context.socket(zmq.REP)
+#         context = zmq.Context.instance()
+#         if not context:
+#             context = zmq.Context()
+#         socket: zmq.Socket = context.socket(zmq.REP)
 #         socket.bind(f"tcp://*:{self.PORT}")
 
 #         while self.running:
@@ -31,7 +27,6 @@ log.addHandler(logging.NullHandler())
 #             else:
 #                 socket.send_string("Hello World!")
 #         socket.close()
-#         self.context.destroy()
 
 
 def dict_to_header(d: dict[str, str]) -> str:
@@ -50,7 +45,6 @@ class SlitServer(QtCore.QThread):
         super().__init__()
         self.value = value
         self.running: bool = False
-        self.context: zmq.Context | None = None
 
     @QtCore.Slot(int)
     def set_value(self, value: int):
@@ -58,8 +52,10 @@ class SlitServer(QtCore.QThread):
 
     def run(self):
         self.running = True
-        self.context = zmq.Context()
-        socket: zmq.Socket = self.context.socket(zmq.REP)
+        context = zmq.Context.instance()
+        if not context:
+            context = zmq.Context()
+        socket: zmq.Socket = context.socket(zmq.REP)
         socket.bind(f"tcp://*:{self.PORT}")
         self.sigSocketBound.emit()
 
@@ -80,7 +76,6 @@ class SlitServer(QtCore.QThread):
                     socket.send_json(slit_info)
         socket.close()
         self.sigSocketClosed.emit()
-        self.context.destroy()
 
 
 class TemperatureServer(QtCore.QThread):
@@ -91,12 +86,13 @@ class TemperatureServer(QtCore.QThread):
     def __init__(self):
         super().__init__()
         self.running: bool = False
-        self.context: zmq.Context | None = None
 
     def run(self):
         self.running = True
-        self.context = zmq.Context()
-        socket: zmq.Socket = self.context.socket(zmq.REP)
+        context = zmq.Context.instance()
+        if not context:
+            context = zmq.Context()
+        socket: zmq.Socket = context.socket(zmq.REP)
         socket.bind(f"tcp://*:{self.PORT}")
         self.sigSocketBound.emit()
 
@@ -113,7 +109,6 @@ class TemperatureServer(QtCore.QThread):
 
         socket.close()
         self.sigSocketClosed.emit()
-        self.context.destroy()
 
 
 class PressureServer(QtCore.QThread):
@@ -124,12 +119,13 @@ class PressureServer(QtCore.QThread):
     def __init__(self):
         super().__init__()
         self.running: bool = False
-        self.context: zmq.Context | None = None
 
     def run(self):
         self.running = True
-        self.context = zmq.Context()
-        socket: zmq.Socket = self.context.socket(zmq.REP)
+        context = zmq.Context.instance()
+        if not context:
+            context = zmq.Context()
+        socket: zmq.Socket = context.socket(zmq.REP)
         socket.bind(f"tcp://*:{self.PORT}")
         self.sigSocketBound.emit()
 
@@ -146,4 +142,3 @@ class PressureServer(QtCore.QThread):
 
         socket.close()
         self.sigSocketClosed.emit()
-        self.context.destroy()
