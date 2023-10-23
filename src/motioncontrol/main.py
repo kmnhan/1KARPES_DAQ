@@ -3,6 +3,8 @@ import csv
 import datetime
 import os
 import sys
+import threading
+from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
@@ -19,13 +21,48 @@ LOG_DIR = "D:/MotionController/logs"
 # LOG_DIR = os.path.expanduser("~/MotionController/logs")
 
 
-def write_log(content):
-    now = datetime.datetime.now()
-    with open(
-        os.path.join(LOG_DIR, now.strftime("%y%m%d") + ".csv"), "a", newline=""
-    ) as f:
-        writer = csv.writer(f)
-        writer.writerow([now.isoformat(), content])
+class LoggingThread(threading.Thread):
+    def __init__(self, log_dir: str | os.PathLike):
+        super().__init__()
+        self.log_dir = log_dir
+        self._stopped: bool = False
+        self.messages: deque[tuple[datetime.datetime, list[str]]] = deque()
+
+    def run(self):
+        self._stopped = False
+        while not self._stopped:
+            if len(self.messages) == 0:
+                continue
+            dt, msg = self.messages.popleft()
+            try:
+                with open(
+                    os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
+                    "a",
+                    newline="",
+                ) as f:
+                    writer = csv.writer(f)
+                    writer.writerow([dt.isoformat()] + msg)
+            except PermissionError:
+                self.messages.appendleft((dt, msg))
+                continue
+
+    def stop(self):
+        n_left = len(self.messages)
+        if n_left != 0:
+            print(
+                f"Failed to write {n_left} log "
+                + ("entries:" if n_left > 1 else "entry:")
+            )
+            for dt, msg in self.messages:
+                print(f"{dt} | {msg}")
+        self._stopped = True
+        self.join()
+
+    def add_content(self, content: str | list[str]):
+        now = datetime.datetime.now()
+        if isinstance(content, str):
+            content = [content]
+        self.messages.append((now, content))
 
 
 class MotionPlot(pg.PlotWidget):
@@ -77,7 +114,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.plot = MotionPlot()
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
-        # self.actionplotpos.
+
+        # setup logging
+        self.log_writer = LoggingThread(LOG_DIR)
+        self.log_writer.start()
 
         # connect to controller
         self.connect()
@@ -91,6 +131,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @property
     def valid_channels(self):
         return tuple(ch for ch in self.channels if ch.enabled)
+
+    def write_log(self, content: str | list[str]):
+        self.log_writer.add_content(content)
 
     @QtCore.Slot()
     def check_capacitance(self):
@@ -144,8 +187,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot(int, object)
     def update_plot(self, channel: int, delta: list[float]):
-        # delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
-        delta_abs = -np.asarray(delta)
+        delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
+        # delta_abs = -np.asarray(delta)
         self.plot.curve.setData(delta_abs)
 
     @QtCore.Slot(int)
@@ -185,11 +228,16 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def move_ch3(self, target: int, frequency: int, amplitude: tuple[int, int]):
         return self.move(3, target, frequency, amplitude)
 
+    # @QtCore.Slot(int, float, int, object)
+    # def move(
+    #     self, channel: int, target: float, frequency: int, amplitude: tuple[int, int]
+    # ):
+
     @QtCore.Slot(int, int, int, object)
     def move(
         self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
     ):
-        write_log(
+        self.write_log(
             f"Move Ch{channel} to {self.channels[channel - 1].convert_pos(target):.4f}"
         )
         if not self.is_channel_enabled(channel):
@@ -230,7 +278,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def stop(self):
         self.mmthread.moving = False
         self.mmthread.wait(2000)
-        write_log("All motions stopped")
+        self.write_log("All motions stopped")
 
     @QtCore.Slot()
     def disconnect(self):
@@ -253,6 +301,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     def closeEvent(self, *args, **kwargs):
         self.disconnect()
+        self.log_writer.stop()
         self.plot.close()
         super().closeEvent(*args, **kwargs)
 
