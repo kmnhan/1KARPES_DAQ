@@ -72,6 +72,7 @@ class MotionPlot(pg.PlotWidget):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("Relative position")
         self.curve: pg.PlotDataItem = self.plot(pen="w")
+        self.resize(300, 175)
         # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
         # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
 
@@ -261,7 +262,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def connect(self):
         while True:
             try:
-                self.mmthread.connect()
+                self.mmthread.connect("192.168.0.210")
             except Exception as e:
                 QtWidgets.QMessageBox.critical(
                     self,

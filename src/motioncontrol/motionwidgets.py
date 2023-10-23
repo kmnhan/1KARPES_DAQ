@@ -133,7 +133,13 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
     def set_motion_busy(self, value: bool):
         self.combobox.setDisabled(value)
+        self.left_btn.setDisabled(value)
+        self.right_btn.setDisabled(value)
         self.move_btn.setDisabled(value)
+        self.target_spin.setDisabled(value)
+        self.freq_spin.setDisabled(value)
+        self.amp_bwd_spin.setDisabled(value)
+        self.amp_fwd_spin.setDisabled(value)
 
     def update_motor(self):
         self.cal_A = float(self.current_config.get("a", 1.0))

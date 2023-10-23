@@ -71,10 +71,7 @@ class MMThread(QtCore.QThread):
         self.moving: bool = False
         self.initialized: bool = False
 
-    def connect(self, host: str | None = None, port: int = 5000):
-        if host is None:
-            host = "192.168.0.210"
-
+    def connect(self, host: str, port: int = 5000):
         log.info(f"connecting to host {host} on port {port}")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -377,7 +374,7 @@ class MMThread(QtCore.QThread):
 
 if __name__ == "__main__":
     soc = MMThread()
-    soc.connect()
+    soc.connect("192.168.0.210")
     try:
         pass
     except Exception as e:
