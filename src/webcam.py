@@ -46,6 +46,7 @@ class CameraHandler(QtCore.QThread):
                     )
                     cv2.imwrite(filename, image)
                     self.save_requested = False
+            time.sleep(0.001)
         cap.release()
 
     @QtCore.Slot(int)
