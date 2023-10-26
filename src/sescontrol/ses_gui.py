@@ -1,19 +1,15 @@
-import configparser
 import csv
-import datetime
 import glob
-import itertools
 import os
 import sys
-import threading
 import time
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 
 sys.coinit_flags = 2
 
 os.environ["QT_API"] = "pyqt6"
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtWidgets, uic
 
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553
@@ -28,9 +24,6 @@ import numpy as np
 import pywinauto
 import pywinauto.win32functions
 import win32.lib.pywintypes
-import win32com.client
-import win32con
-import win32gui
 from liveviewer import LiveImageTool
 from plugins import Motor
 from scanwidgets import SingleMotorSetup
@@ -85,7 +78,6 @@ class MotorPosWriter(QtCore.QRunnable):
             for msg in self.messages:
                 print(",".join(msg))
         self._stopped = True
-        self.join()
 
     def set_file(
         self, dirname: str | os.PathLike, filename: str | os.PathLike, prefix: str
@@ -133,7 +125,6 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         # self.motion_thread.start()
 
         self.itool = LiveImageTool(threadpool=self.threadpool)
-        self.itool.show()
 
     @property
     def motors(self) -> tuple[SingleMotorSetup, SingleMotorSetup]:
@@ -242,6 +233,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         if self.itool is None:
             return
         self.itool.trigger_fetch(niter)
+        if not self.itool.isVisible():
+            self.itool.show()
 
     @QtCore.Slot()
     def pre_process(self):
@@ -281,6 +274,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
 
     def closeEvent(self, *args, **kwargs):
         self.pos_logger.stop()
+        self.threadpool.waitForDone()
         super().closeEvent(*args, **kwargs)
 
 
