@@ -42,8 +42,8 @@ class SESDAQMain(uiclass, baseclass):
         self.setWindowTitle("1KARPES Controls")
 
         # for debugging purposes on macOS
-        # if sys.platform.startswith("win"):
-        if False:
+        if sys.platform.startswith("win"):
+            # if False:
             self.measure = SESMeasure(
                 WRAPPER_PATH,
                 SES_DIR,
@@ -69,6 +69,21 @@ class SESDAQMain(uiclass, baseclass):
         self.webcam_btn.clicked.connect(lambda: self.toggle_window("webcam"))
         self.basler_btn.clicked.connect(lambda: self.toggle_window("basler"))
 
+    def test_acquisition(self):
+        region = {
+            # "fixed": False,
+            # "highEnergy": 16.9778,
+            # "lowEnergy": 15.4222,
+            # "energyStep": 0.020,
+            "fixed": True,
+            "centerEnergy": 16.2000,
+            "dwellTime": 10,  # ms
+            "lens_mode": "DA30_01",
+            "pass_energy": 20.0,
+            "sweeps": 1,
+        }
+        data, slice_scale, channel_scale = self.measure.MeasureAnalyzerRegion(region)
+
     def toggle_window(self, window: str):
         if self._child_windows[window] is None:
             self._child_windows[window] = self.USER_WINDOWS[window]()
@@ -91,5 +106,7 @@ if __name__ == "__main__":
     win = SESDAQMain()
     win.show()
     win.activateWindow()
+
+    win.test_acquisition()
 
     qapp.exec()
