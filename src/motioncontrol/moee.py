@@ -176,7 +176,7 @@ class MMThread(QtCore.QThread):
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
-    def reset(self, channel: int | None):
+    def reset(self, channel: int | None = None):
         log.info(f"resetting channel {channel}")
         if channel is None:
             self.mmsend(MMCommand.RESET)
