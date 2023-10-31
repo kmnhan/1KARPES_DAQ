@@ -189,9 +189,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot(int, object)
     def update_plot(self, channel: int, delta: list[float]):
-        delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
+        if self.plot.isVisible():
+            delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
         # delta_abs = -np.asarray(delta)
-        self.plot.curve.setData(delta_abs)
+            self.plot.curve.setData(delta_abs)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
