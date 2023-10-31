@@ -266,7 +266,7 @@ class MMThread(QtCore.QThread):
             self.set_frequency(self._channel, self._sigtime)
 
             # set pulse train
-            self.set_pulse_train(self._channel, 1)
+            # self.set_pulse_train(self._channel, 1)
             # self.set_pulse_train(self._channel, 10)
             pulse_reduced = 0
 
