@@ -190,6 +190,7 @@ class MMThread(QtCore.QThread):
         time.sleep(1e-3)
         self.mmsend(MMCommand.READPOS, channel)
         val = self.mmrecv()
+        log.info(f"received position {val}")
         self.sigPosRead.emit(channel, val)
         return val
 
