@@ -263,8 +263,8 @@ class MMThread(QtCore.QThread):
             self.reset(self._channel)
 
             # set pulse train
-            self.set_pulse_train(self._channel, 1)
-            # self.set_pulse_train(self._channel, 10)
+            # self.set_pulse_train(self._channel, 1)
+            self.set_pulse_train(self._channel, 10)
 
             # set amplitude if fwd and bwd are same
             direction_changes_voltage: bool = self._amplitudes[0] != self._amplitudes[1]
@@ -282,7 +282,7 @@ class MMThread(QtCore.QThread):
             direction: int | None = None
 
             while True:
-                # self.sigDeltaChanged.emit(self._channel, delta_list)
+                self.sigDeltaChanged.emit(self._channel, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
@@ -314,25 +314,25 @@ class MMThread(QtCore.QThread):
 
                 # scale amplitude
                 amplitude_changed = False
-                # absdelta = abs(delta_list[-1])
-                # if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
-                #     self.set_pulse_train(self._channel, 5)
-                #     pulse_reduced += 1
-                # if absdelta < 40 * self._threshold:
-                #     if pulse_reduced < 2:
-                #         self.set_pulse_train(self._channel, 1)
-                #         pulse_reduced += 1
+                absdelta = abs(delta_list[-1])
+                if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
+                    self.set_pulse_train(self._channel, 5)
+                    pulse_reduced += 1
+                if absdelta < 40 * self._threshold:
+                    if pulse_reduced < 2:
+                        self.set_pulse_train(self._channel, 1)
+                        pulse_reduced += 1
 
-                #     factor = absdelta / (20 * self._threshold)
-                #     vmin, vmax = 20, self._amplitudes[direction]
-                #     decay_rate = 0.5
+                    factor = absdelta / (20 * self._threshold)
+                    vmin, vmax = 20, self._amplitudes[direction]
+                    decay_rate = 0.5
 
-                #     if vmin < vmax:
-                #         new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
-                #             -factor / (decay_rate + 1e-15)
-                #         )
-                #         self.set_amplitude(self._channel, new_amp)
-                #         amplitude_changed = True
+                    if vmin < vmax:
+                        new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
+                            -factor / (decay_rate + 1e-15)
+                        )
+                        self.set_amplitude(self._channel, new_amp)
+                        amplitude_changed = True
 
                 # set direction if changed
                 if direction_old != direction:
