@@ -177,6 +177,7 @@ class MMThread(QtCore.QThread):
         return self.mmrecv()
 
     def reset(self):
+        log.info("resetting")
         self.mmsend(MMCommand.RESET)
         return self.mmrecv()
 
@@ -265,7 +266,8 @@ class MMThread(QtCore.QThread):
             self.set_frequency(self._channel, self._sigtime)
 
             # set pulse train
-            self.set_pulse_train(self._channel, 10)
+            self.set_pulse_train(self._channel, 1)
+            # self.set_pulse_train(self._channel, 10)
             pulse_reduced = 0
 
             # initialize direction
@@ -295,26 +297,6 @@ class MMThread(QtCore.QThread):
                             break
                         n_alt += 1
                         s0 = s1
-                    # if n_alt >= 5:
-                    #     # recent 5 delta are alternating
-                    #     if self._amplitudes[direction] > 25:
-                    #         # if amplitude_adjusted == 0:
-                    #         #    self.set_frequency(self._channel, 100)
-                    #         amplitude_adjusted[direction] = (
-                    #             amplitude_adjusted[direction] + 1
-                    #         )
-                    #         decay_constant = 5.0
-                    #         new_amp = (
-                    #             self._amplitudes[direction] - 25
-                    #         ) * 2.718281828459045 ** (
-                    #             -amplitude_adjusted[direction] / decay_constant
-                    #         ) + 25
-                    #         self.set_amplitude(self._channel, new_amp)
-                    # if n_alt > 10:
-                    #     log.info(f"5 more pulses in the previous direction!!")
-                    #     for _ in range(5):
-                    #         self.mmsend(MMCommand.SENDSIGONCE, self._channel)
-                    #         self.mmrecv()
                     if n_alt == 50:
                         log.warning(
                             f"Current threshold {self._threshold} is too small,"
@@ -324,30 +306,25 @@ class MMThread(QtCore.QThread):
 
                 # scale amplitude
                 amplitude_changed = False
-                absdelta = abs(delta_list[-1])
-                if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
-                    self.set_pulse_train(self._channel, 5)
-                    pulse_reduced += 1
-                if absdelta < 40 * self._threshold:
-                    if pulse_reduced < 2:
-                        self.set_pulse_train(self._channel, 1)
-                        pulse_reduced += 1
+                # absdelta = abs(delta_list[-1])
+                # if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
+                #     self.set_pulse_train(self._channel, 5)
+                #     pulse_reduced += 1
+                # if absdelta < 40 * self._threshold:
+                #     if pulse_reduced < 2:
+                #         self.set_pulse_train(self._channel, 1)
+                #         pulse_reduced += 1
 
-                    factor = absdelta / (20 * self._threshold)
-                    vmin, vmax = 20, self._amplitudes[direction]
-                    decay_rate = 0.5
-                    # if len(delta_list) >= 2:
-                    #     decay_rate *= (
-                    #         abs(delta_list[-2] - delta_list[-1]) / self._threshold
-                    #     )
-                    #     decay_rate *= 0.05
+                #     factor = absdelta / (20 * self._threshold)
+                #     vmin, vmax = 20, self._amplitudes[direction]
+                #     decay_rate = 0.5
 
-                    if vmin < vmax:
-                        new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
-                            -factor / (decay_rate + 1e-15)
-                        )
-                        self.set_amplitude(self._channel, new_amp)
-                        amplitude_changed = True
+                #     if vmin < vmax:
+                #         new_amp = vmax - (vmax - vmin) * 2.718281828459045 ** (
+                #             -factor / (decay_rate + 1e-15)
+                #         )
+                #         self.set_amplitude(self._channel, new_amp)
+                #         amplitude_changed = True
 
                 # set direction if changed
                 if direction_old != direction:

@@ -175,6 +175,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def refresh_positions(self):
         for ch_num in (1, 2, 3):
             if self.is_channel_enabled(ch_num):
+                self.mmthread.reset()
                 self.mmthread.get_position(ch_num)
 
     @QtCore.Slot()
