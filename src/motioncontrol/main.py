@@ -4,6 +4,7 @@ import datetime
 import os
 import sys
 import threading
+import time
 from collections import deque
 
 import numpy as np
@@ -31,6 +32,7 @@ class LoggingThread(threading.Thread):
     def run(self):
         self._stopped = False
         while not self._stopped:
+            time.sleep(0.2)
             if len(self.messages) == 0:
                 continue
             dt, msg = self.messages.popleft()
@@ -175,7 +177,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def refresh_positions(self):
         for ch_num in (1, 2, 3):
             if self.is_channel_enabled(ch_num):
-                self.mmthread.reset()
+                self.mmthread.reset(ch_num)
                 self.mmthread.get_position(ch_num)
 
     @QtCore.Slot()
@@ -189,10 +191,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot(int, object)
     def update_plot(self, channel: int, delta: list[float]):
-        if self.plot.isVisible():
-            delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
+        delta_abs = -self.channels[channel - 1].cal_A * np.asarray(delta)
         # delta_abs = -np.asarray(delta)
-            self.plot.curve.setData(delta_abs)
+        self.plot.curve.setData(delta_abs)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
