@@ -196,7 +196,7 @@ class MMThread(QtCore.QThread):
         time.sleep(1e-3)
         self.mmsend(MMCommand.READPOS, channel)
         val = self.mmrecv()
-        log.info(f"received position {val}")
+        # log.info(f"received position {val}")
         self.sigPosRead.emit(channel, val)
         return val
 
@@ -282,7 +282,7 @@ class MMThread(QtCore.QThread):
             direction: int | None = None
 
             while True:
-                self.sigDeltaChanged.emit(self._channel, delta_list)
+                # self.sigDeltaChanged.emit(self._channel, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
