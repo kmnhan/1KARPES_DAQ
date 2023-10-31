@@ -168,7 +168,7 @@ class MMThread(QtCore.QThread):
 
     def set_direction(self, channel: int, direction: int):
         # log.info(f"setting direction to {direction}")
-        self.mmsend(MMCommand.SETSIGDIR, int(channel), direction)
+        self.mmsend(MMCommand.SETSIGDIR, int(channel), int(direction))
         return self.mmrecv()
 
     def set_pulse_train(self, channel: int, train: int):
@@ -176,9 +176,12 @@ class MMThread(QtCore.QThread):
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
-    def reset(self):
-        log.info("resetting")
-        self.mmsend(MMCommand.RESET)
+    def reset(self, channel: int | None):
+        log.info(f"resetting channel {channel}")
+        if channel is None:
+            self.mmsend(MMCommand.RESET)
+        else:
+            self.mmsend(MMCommand.RESET, int(channel))
         return self.mmrecv()
 
     def get_position(self, channel: int) -> int:
@@ -254,9 +257,11 @@ class MMThread(QtCore.QThread):
         self.moving = True
         try:
             # reset
-            self.reset()
+            self.reset(self._channel)
 
-            delta_list: list[int] = [self._target - self.get_position(self._channel)]
+            # set pulse train
+            self.set_pulse_train(self._channel, 1)
+            # self.set_pulse_train(self._channel, 10)
 
             # set amplitude if fwd and bwd are same
             direction_changes_voltage: bool = self._amplitudes[0] != self._amplitudes[1]
@@ -266,9 +271,8 @@ class MMThread(QtCore.QThread):
             # set frequency
             self.set_frequency(self._channel, self._sigtime)
 
-            # set pulse train
-            # self.set_pulse_train(self._channel, 1)
-            # self.set_pulse_train(self._channel, 10)
+            delta_list: list[int] = [self._target - self.get_position(self._channel)]
+
             pulse_reduced = 0
 
             # initialize direction
