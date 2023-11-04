@@ -46,7 +46,7 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
 
         self.start.sigValueChanged.connect(self.boundschanged)
         self.end.sigValueChanged.connect(self.boundschanged)
-        self.nstep.sigValueChanged.connect(self.boundschanged)
+        self.nstep.sigValueChanged.connect(self.countchanged)
         self.delta.sigValueChanged.connect(self.deltachanged)
 
     def _refresh_values(self):
@@ -87,14 +87,35 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             self.start.setMaximum(maximum)
             self.end.setMaximum(maximum)
 
+    def set_delta(self, value: float, fixed: bool):
+        self.delta.setValue(value)
+        self.delta.setDisabled(fixed)
+
+    @QtCore.Slot()
+    def countchanged(self):
+        if self.delta.isEnabled():
+            self.boundschanged()
+            return
+        else:
+            self.motor_coord = np.arange(
+                self.start.value(),
+                self.start.value() + self.delta.value() * self.nstep.value(),
+                self.delta.value(),
+            )
+            self._refresh_values()
+
     @QtCore.Slot()
     def boundschanged(self):
         if self.start.value() == self.end.value():
             self.end.setValue(self.end.value() + self.delta.value())
             return
-        self.motor_coord = np.linspace(
-            self.start.value(), self.end.value(), self.nstep.value()
-        )
+        if self.delta.isEnabled():
+            self.motor_coord = np.linspace(
+                self.start.value(), self.end.value(), self.nstep.value()
+            )
+        else:
+            self.deltachanged()
+            return
         self._refresh_values()
 
     @QtCore.Slot()

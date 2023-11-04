@@ -1,20 +1,25 @@
 from __future__ import annotations
 
+import enum
 import importlib
 import os
 import traceback
 
-# TODO: add fixed step?
-
 
 class Motor:
+    plugins: dict[str, Motor] = {}
     minimum: float | None = None
     maximum: float | None = None
-    plugins: dict[str, Motor] = {}
+    delta: float | None = None
+    fix_delta: bool = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls.plugins[cls.__name__] = cls
+        if not cls.__name__.startswith("_"):
+            cls.plugins[cls.__name__] = cls
+
+    def move(self, target):
+        pass
 
     def pre_motion(self):
         pass

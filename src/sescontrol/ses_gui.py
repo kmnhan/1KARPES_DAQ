@@ -171,7 +171,12 @@ class ScanType(*uic.loadUiType("scantype.ui")):
                 mn = float(mn)
             if mx is not None:
                 mx = float(mx)
-            self.motors[index].set_limits(mn, mx)
+
+            motor = self.motors[index]
+            motor.set_limits(mn, mx)
+            if plugin_instance.delta is not None:
+                motor.set_delta(float(plugin_instance.delta), plugin_instance.fix_delta)
+
             plugin_instance.post_motion()
 
     def start_scan(self):
