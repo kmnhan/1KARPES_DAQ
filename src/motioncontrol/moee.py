@@ -18,11 +18,11 @@ handler.setFormatter(
 log.addHandler(handler)
 
 
-class MMStatus(enum.Enum):
-    MOVING = 1
-    DONE = 2
-    ABORTED = 3
-    ERROR = 4
+class MMStatus(enum.IntEnum):
+    Moving = 1
+    Done = 2
+    Aborted = 3
+    Error = 4
 
 
 class MMCommand(enum.IntEnum):

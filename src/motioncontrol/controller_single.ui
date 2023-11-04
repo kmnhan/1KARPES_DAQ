@@ -51,6 +51,15 @@
       <property name="spacing">
        <number>10</number>
       </property>
+      <item>
+       <widget class="SingleChannelWidget" name="ch1" native="true"/>
+      </item>
+      <item>
+       <widget class="SingleChannelWidget" name="ch2" native="true"/>
+      </item>
+      <item>
+       <widget class="SingleChannelWidget" name="ch3" native="true"/>
+      </item>
      </layout>
     </item>
    </layout>
@@ -128,23 +137,15 @@
     <string>Plot Position</string>
    </property>
   </action>
-  <action name="actiondisconnect">
-   <property name="text">
-    <string>Stop and Disconnect</string>
-   </property>
-  </action>
-  <action name="actionconnect">
-   <property name="text">
-    <string>Connect</string>
-   </property>
-   <property name="toolTip">
-    <string>Connect</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SingleChannelWidget</class>
+   <extends>QWidget</extends>
+   <header>motionwidgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

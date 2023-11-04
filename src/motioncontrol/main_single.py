@@ -83,7 +83,7 @@ class MotionPlot(pg.PlotWidget):
         super().closeEvent(*args, **kwargs)
 
 
-class MainWindow(*uic.loadUiType("controller.ui")):
+class MainWindow(*uic.loadUiType("controller_single.ui")):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -105,7 +105,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.ch2.sigMoveRequested.connect(self.move_ch2)
         self.ch3.sigMoveRequested.connect(self.move_ch3)
         for i in range(3):
-            self.channels[i].set_name(f"Ch{i+1}")
+            self.channels[i].checkbox.setText(f"Ch{i+1}")
 
         self.mmthread = MMThread()
         self.mmthread.sigMoveStarted.connect(self.move_started)
