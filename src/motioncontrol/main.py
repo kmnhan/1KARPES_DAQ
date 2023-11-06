@@ -1,11 +1,10 @@
 """GUI for the 1K ARPES 6-axis manipulator"""
 import csv
 import datetime
+import multiprocessing
 import os
 import sys
-import threading
 import time
-from collections import deque
 
 from maniserver import ManiServer
 from moee import MMStatus
@@ -21,8 +20,8 @@ LOG_DIR = "D:/MotionController/logs"
 # LOG_DIR = os.path.expanduser("~/MotionController/logs")
 
 
-class LoggingThread(threading.Thread):
-    """Thread for logging manipulator motion.
+class LoggingProc(multiprocessing.Process):
+    """Process for logging manipulator motion.
 
     Parameters
     ----------
@@ -35,16 +34,19 @@ class LoggingThread(threading.Thread):
     def __init__(self, log_dir: str | os.PathLike):
         super().__init__()
         self.log_dir = log_dir
-        self._stopped: bool = False
-        self.messages: deque[tuple[datetime.datetime, list[str]]] = deque()
+        self._stopped = multiprocessing.Event()
+        self.queue = multiprocessing.Queue()
 
     def run(self):
-        self._stopped = False
-        while not self._stopped:
+        self._stopped.clear()
+        while not self._stopped.is_set():
             time.sleep(0.2)
-            if len(self.messages) == 0:
+
+            if self.queue.empty():
                 continue
-            dt, msg = self.messages.popleft()
+
+            # retrieve message from queue
+            dt, msg = self.queue.get()
             try:
                 with open(
                     os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
@@ -54,26 +56,32 @@ class LoggingThread(threading.Thread):
                     writer = csv.writer(f)
                     writer.writerow([dt.isoformat()] + msg)
             except PermissionError:
-                self.messages.appendleft((dt, msg))
+                # put back the retrieved message in the queue
+                n_left = int(self.queue.qsize())
+                self.queue.put((dt, msg))
+                for _ in range(n_left):
+                    self.queue.put(self.queue.get())
                 continue
 
     def stop(self):
-        n_left = len(self.messages)
+        n_left = int(self.queue.qsize())
         if n_left != 0:
             print(
                 f"Failed to write {n_left} log "
                 + ("entries:" if n_left > 1 else "entry:")
             )
-            for dt, msg in self.messages:
+            for _ in range(n_left):
+                dt, msg = self.queue.get()
                 print(f"{dt} | {msg}")
-        self._stopped = True
+        self._stopped.set()
         self.join()
 
     def add_content(self, content: str | list[str]):
         now = datetime.datetime.now()
         if isinstance(content, str):
             content = [content]
-        self.messages.append((now, content))
+        # self.messages.append((now, content))
+        self.queue.put((now, content))
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
@@ -110,7 +118,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             con.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
 
         # setup logging
-        self.log_writer = LoggingThread(LOG_DIR)
+        self.log_writer = LoggingProc(LOG_DIR)
         self.log_writer.start()
 
         # setup server
@@ -122,6 +130,13 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @property
     def status(self) -> MMStatus:
+        """Status of the motors.
+
+        If one or more axis is moving, returns `MMStatus.Moving`. If no axis is moving
+        and one or more axis is aborted, returns `MMStatus.Aborted`. Otherwise, returns
+        `MMStatus.Done`.
+
+        """
         status_list = [con.status for con in self.controllers]
         if MMStatus.Moving in status_list:
             return MMStatus.Moving
@@ -163,7 +178,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     def disconnect(self):
         for con in self.controllers:
-            con.disconnect()
+            if con.isEnabled():
+                con.disconnect()
 
     def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
         return self.controllers[con_idx].get_channel[channel]
@@ -240,6 +256,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # stop log writer
         self.log_writer.stop()
+
+        print("closed logwriter")
 
         # close plots
         for con in self.controllers:
