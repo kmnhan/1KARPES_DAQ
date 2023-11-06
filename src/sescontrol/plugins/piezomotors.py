@@ -8,15 +8,14 @@ class _PiezoMotor(Motor):
     AXIS: str | None = None  # motor name
 
     def __init__(self):
-        if self.CHANNEL not in range(6):
-            raise ValueError("Channel index must be in range(6)")
+        pass
 
     def move(self, target):
         # print(f"FM1 {target}")
 
         # self.socket.send_string()
         return target
-    
+
     # @property
     # def minimum(self):
     #     context = zmq.Context.instance()

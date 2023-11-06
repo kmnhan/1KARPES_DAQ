@@ -87,7 +87,9 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             self.start.setMaximum(maximum)
             self.end.setMaximum(maximum)
 
-    def set_delta(self, value: float, fixed: bool):
+    def set_default_delta(self, value: float, fixed: bool):
+        self.start.setSingleStep(value)
+        self.end.setSingleStep(value)
         self.delta.setValue(value)
         self.delta.setDisabled(fixed)
 
