@@ -15,12 +15,15 @@ commands = [
     "?P",
     "?T",
     "?A",
+    "MOVE X 0.123"
 ]
 
 class ManiServer(QtCore.QThread):
     PORT = 42623
     sigSocketBound = QtCore.Signal()
     sigSocketClosed = QtCore.Signal()
+    
+    sigMove = QtCore.Signal(object, float)
 
     def __init__(self):
         super().__init__()

@@ -80,7 +80,6 @@ class LoggingProc(multiprocessing.Process):
         now = datetime.datetime.now()
         if isinstance(content, str):
             content = [content]
-        # self.messages.append((now, content))
         self.queue.put((now, content))
 
 
