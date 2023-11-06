@@ -7,6 +7,8 @@ import threading
 import time
 from collections import deque
 
+from maniserver import ManiServer
+from moee import MMStatus
 from motionwidgets import SingleChannelWidget, SingleControllerWidget
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -20,6 +22,16 @@ LOG_DIR = "D:/MotionController/logs"
 
 
 class LoggingThread(threading.Thread):
+    """Thread for logging manipulator motion.
+
+    Parameters
+    ----------
+    log_dir
+        Directory where the log file will be stored. The filename will be automatically
+        determined from the current date and time.
+
+    """
+
     def __init__(self, log_dir: str | os.PathLike):
         super().__init__()
         self.log_dir = log_dir
@@ -101,8 +113,46 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.log_writer = LoggingThread(LOG_DIR)
         self.log_writer.start()
 
+        # setup server
+        self.server = ManiServer()
+        self.server.start()
+
         # connect to controllers
         self.connect()
+
+    @property
+    def status(self) -> MMStatus:
+        status_list = [con.status for con in self.controllers]
+        if MMStatus.Moving in status_list:
+            return MMStatus.Moving
+        elif MMStatus.Aborted in status_list:
+            return MMStatus.Aborted
+        else:
+            return MMStatus.Done
+
+    @QtCore.Slot(int, int, int, object)
+    def move(
+        self,
+        con_idx: int,
+        channel: int,
+        target: int,
+        frequency: int,
+        amplitude: tuple[int, int],
+    ):
+        self.controllers[con_idx].move(channel, target, frequency, amplitude)
+
+    def get_current_positions(self, con_idx: int) -> list[float]:
+        con = self.controllers[con_idx]
+        if con.status != MMStatus.Moving:
+            con.refresh_positions()
+        return [ch.current_pos for ch in con.channels]
+
+    def get_current_position(self, con_idx: int, channel: int) -> float:
+        con = self.controllers[con_idx]
+        if con.status != MMStatus.Moving:
+            con.refresh_position(channel)
+        con.get_channel(channel).current_pos
+        return [ch.current_pos for ch in con.channels]
 
     def connect(self):
         for con in self.controllers:
@@ -115,12 +165,12 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         for con in self.controllers:
             con.disconnect()
 
+    def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
+        return self.controllers[con_idx].get_channel[channel]
+
     @QtCore.Slot(object)
     def write_log(self, content: str | list[str]):
         self.log_writer.add_content(content)
-
-    def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
-        return self.controllers[con_idx].get_channel[channel]
 
     @QtCore.Slot()
     def refresh_plot_visibility(self):
@@ -181,8 +231,17 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
 
     def closeEvent(self, *args, **kwargs):
+        # stop server
+        self.server.running = False
+        self.server.wait(2000)
+
+        # disconnect from controllers
         self.disconnect()
+
+        # stop log writer
         self.log_writer.stop()
+
+        # close plots
         for con in self.controllers:
             con.plot.close()
         super().closeEvent(*args, **kwargs)

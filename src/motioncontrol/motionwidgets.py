@@ -1,11 +1,14 @@
+import queue
 import sys
+import threading
+import time
 import tomllib
 from collections.abc import Sequence
 
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from moee import MMCommand, MMThread
+from moee import MMCommand, MMStatus, MMThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 CONFIG_FILE = "D:/MotionController/piezomotors.toml"
@@ -120,6 +123,13 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             return round(abs(tol * 1e-3 / self.cal_A))
 
     @property
+    def current_pos(self) -> float:
+        if self.enabled:
+            return self.convert_pos(self.raw_position)
+        else:
+            return np.nan
+
+    @property
     def name(self) -> str:
         return self.combobox.currentText()
 
@@ -209,6 +219,37 @@ class MotionPlot(pg.PlotWidget):
         super().closeEvent(*args, **kwargs)
 
 
+# class MotionWorker(QtCore.QThread):
+#     """Thread that handles queueing of motion commands."""
+
+#     # sigMotion
+
+#     def __init__(self, queue):
+#         super().__init__()
+#         self._stopped: bool = False
+#         self.queue = queue
+
+#     def run(self):
+#         self._stopped = False
+#         while not self._stopped:
+#             time.sleep(0.1)
+#             if self.queue.qsize() > 0:
+#                 pass
+
+#     def stop(self):
+
+#         n_left = len(self.messages)
+#         if n_left != 0:
+#             print(
+#                 f"Failed to write {n_left} log "
+#                 + ("entries:" if n_left > 1 else "entry:")
+#             )
+#             for dt, msg in self.messages:
+#                 print(f"{dt} | {msg}")
+#         self._stopped = True
+#         self.join()
+
+
 class SingleControllerWidget(QtWidgets.QWidget):
     writeLog = QtCore.Signal(object)
 
@@ -235,13 +276,19 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.mmthread.sigPosRead.connect(self.set_position)
         self.mmthread.sigDeltaChanged.connect(self.update_plot)
 
+        self.queue = queue.Queue()
+
         # setup plotting
         self.plot = MotionPlot()
 
-    def disable(self):
-        for ch in self.channels:
-            ch.checkbox.setChecked(False)
-        self.setDisabled(True)
+    @property
+    def status(self) -> MMStatus:
+        if self.mmthread.isRunning():
+            return MMStatus.Moving
+        elif self.mmthread.stopped:
+            return MMStatus.Aborted
+        else:
+            return MMStatus.Done
 
     @property
     def channels(
@@ -263,6 +310,11 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def is_channel_enabled(self, channel: int) -> bool:
         return self.get_channel(channel).enabled
 
+    def disable(self):
+        for ch in self.channels:
+            ch.checkbox.setChecked(False)
+        self.setDisabled(True)
+
     def write_log(self, entry: str | list[str]):
         self.writeLog.emit(entry)
 
@@ -280,9 +332,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def refresh_positions(self):
         for ch_num in (1, 2, 3):
-            if self.is_channel_enabled(ch_num):
-                self.mmthread.reset(ch_num)
-                self.mmthread.get_position(ch_num)
+            self.refresh_position(ch_num)
+
+    @QtCore.Slot()
+    def refresh_position(self, channel: int):
+        if self.is_channel_enabled(channel):
+            self.mmthread.reset(channel)
+            self.mmthread.get_position(channel)
 
     @QtCore.Slot()
     def target_current_all(self):
@@ -307,9 +363,14 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot(int)
     def move_finished(self, channel: int):
+        self.queue.task_done()
+
         for ch in self.channels:
             ch.set_motion_busy(False)
         self.get_channel(channel).status.setState(False)
+
+        if not self.queue.empty():
+            self._move(**self.queue.get())
 
     @QtCore.Slot()
     def refresh_plot_visibility(self):
@@ -336,15 +397,33 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def move(
         self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
     ):
+        if not self.mmthread.isRunning():
+            self._move(channel, target, frequency, amplitude)
+        else:
+            self.queue.put(
+                dict(
+                    channel=channel,
+                    target=target,
+                    frequency=frequency,
+                    amplitude=amplitude,
+                )
+            )
+
+    @QtCore.Slot(int, int, int, object)
+    def _move(
+        self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
+    ):
         ch = self.get_channel(channel)
         self.write_log(f"Move {ch.name} to {ch.convert_pos(target):.4f}")
         if not self.is_channel_enabled(channel):
             # warnings.warn("Move called on a disabled channel ignored.")
             print("Move called on a disabled channel ignored.")
+            self.queue.task_done()
             return
         if self.mmthread.isRunning():
             # warnings.warn("Motion already in progress.")
             print("Motion already in progress.")
+            self.queue.task_done()
             return
         self.mmthread.initialize_parameters(
             channel=channel,
@@ -385,7 +464,14 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def stop(self):
-        self.mmthread.moving = False
+        while not self.queue.empty():
+            try:
+                self.queue.get(block=False)
+            except queue.Empty:
+                continue
+            else:
+                self.queue.task_done()
+        self.mmthread.stopped = True
         self.mmthread.wait(2000)
 
     @QtCore.Slot()

@@ -68,7 +68,7 @@ class MMThread(QtCore.QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.moving: bool = False
+        self.stopped: bool = False
         self.initialized: bool = False
 
     def connect(self, host: str, port: int = 5000):
@@ -257,7 +257,7 @@ class MMThread(QtCore.QThread):
             return
 
         self.sigMoveStarted.emit(self._channel)
-        self.moving = True
+        self.stopped = False
         try:
             # reset
             self.reset(self._channel)
@@ -347,12 +347,11 @@ class MMThread(QtCore.QThread):
                 pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
 
-                if not self.moving:
+                if self.stopped:
                     break
 
         except Exception:
             log.exception("Exception while moving!")
-        self.moving = False
         self.initialized = False
         self.sigMoveFinished.emit(self._channel)
 

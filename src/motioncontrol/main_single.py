@@ -280,7 +280,7 @@ class MainWindow(*uic.loadUiType("controller_single.ui")):
 
     @QtCore.Slot()
     def stop(self):
-        self.mmthread.moving = False
+        self.mmthread.stopped = True
         self.mmthread.wait(2000)
         self.write_log("All motions stopped")
 
