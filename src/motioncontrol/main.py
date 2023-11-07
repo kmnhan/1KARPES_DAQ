@@ -6,6 +6,7 @@ import os
 import sys
 import time
 
+import numpy as np
 from maniserver import ManiServer
 from moee import MMStatus
 from motionwidgets import SingleChannelWidget, SingleControllerWidget
@@ -84,6 +85,8 @@ class LoggingProc(multiprocessing.Process):
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
+    sigReply = QtCore.Signal(object)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -122,10 +125,58 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # setup server
         self.server = ManiServer()
+        self.server.sigRequest.connect(self.parse_request)
+        self.server.sigMove.connect(self.parse_move)
+        self.sigReply.connect(self.server.set_value)
         self.server.start()
 
         # connect to controllers
         self.connect()
+
+    @QtCore.Slot(object)
+    def parse_request(self, request: list[str]):
+        if len(request) == 0:
+            self.sigReply.emit(
+                self.get_current_positions(0) + self.get_current_positions(1)
+            )
+        elif request[0] == "STATUS":
+            self.sigReply.emit(self.status)
+        elif request[0] == "TOL":
+            self.sigReply.emit(self.get_axis(request[1]).abs_tolerance)
+        elif request[0] == "MIN":
+            self.sigReply.emit(self.get_axis(request[1]).minimum)
+        elif request[0] == "MAX":
+            self.sigReply.emit(self.get_axis(request[1]).maximum)
+        else:
+            con_idx, channel = self.get_axis_index(request)
+            if con_idx is None:
+                print("AXIS NOT FOUND")
+                self.sigReply.emit(np.nan)
+            else:
+                self.sigReply.emit(self.get_current_position(con_idx, channel))
+
+    @QtCore.Slot(str, float)
+    def parse_move(self, axis: str, value: float):
+        ch = self.get_axis(axis)
+        if ch is None:
+            print("AXIS NOT FOUND")
+            return
+        ch.set_target(value)
+        ch.move()
+
+    def get_axis(self, axis: str) -> SingleChannelWidget | None:
+        for con in self.controllers:
+            for ch in con.channels:
+                if ch.enabled and ch.name == axis:
+                    return ch
+        return None
+
+    def get_axis_index(self, axis: str) -> tuple[int, int] | tuple[None, None]:
+        for i, con in enumerate(self.controllers):
+            for j, ch in enumerate(con.channels):
+                if ch.enabled and ch.name == axis:
+                    return i, j + 1
+        return None, None
 
     @property
     def status(self) -> MMStatus:
@@ -144,7 +195,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         else:
             return MMStatus.Done
 
-    @QtCore.Slot(int, int, int, object)
+    @QtCore.Slot(int, int, int, int, object)
     def move(
         self,
         con_idx: int,
@@ -165,8 +216,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         con = self.controllers[con_idx]
         if con.status != MMStatus.Moving:
             con.refresh_position(channel)
-        con.get_channel(channel).current_pos
-        return [ch.current_pos for ch in con.channels]
+        return con.get_channel(channel).current_pos
 
     def connect(self):
         for con in self.controllers:

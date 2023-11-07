@@ -123,6 +123,10 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             return round(abs(tol * 1e-3 / self.cal_A))
 
     @property
+    def abs_tolerance(self) -> float:
+        return abs(self.cal_A * self.tolerance)
+
+    @property
     def current_pos(self) -> float:
         if self.enabled:
             return self.convert_pos(self.raw_position)
@@ -130,12 +134,24 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             return np.nan
 
     @property
+    def minimum(self) -> float:
+        return self.target_spin.minimum()
+
+    @property
+    def maximum(self) -> float:
+        return self.target_spin.maximum()
+
+    @property
     def name(self) -> str:
         return self.combobox.currentText()
 
+    @QtCore.Slot(float)
+    def set_target(self, value: float):
+        self.target_spin.setValue(value)
+
     @QtCore.Slot()
     def target_current_pos(self):
-        self.target_spin.setValue(self.convert_pos(self.raw_position))
+        self.set_target(self.convert_pos(self.raw_position))
 
     def set_channel_disabled(self, value: bool):
         self.combobox.setDisabled(value)
