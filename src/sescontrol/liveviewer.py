@@ -1,16 +1,12 @@
 import os
+import threading
 
 import erlab.io
 import numpy as np
 import xarray as xr
-from erlab.interactive.imagetool import BaseImageTool
-
-from erlab.interactive.imagetool.core import ImageSlicerArea
-from erlab.interactive.imagetool.controls import (
-    ItoolBinningControls,
-    ItoolColormapControls,
-    ItoolCrosshairControls,
-)
+from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
+from erlab.interactive.imagetool.controls import ItoolControlsBase
+from plugins import Motor
 from qtpy import QtCore, QtWidgets
 
 
@@ -63,38 +59,185 @@ class DataFetcher(QtCore.QRunnable):
             for name, coord in self._motor_args:
                 wave.loc[{name: wave.coords[name] != coord[0]}] = np.nan
 
-        self.signals.sigDataFetched.emit(self._niter, wave)
+        self.signals.sigDataFetched.emit(
+            self._niter,
+            wave.rename({"Kinetic Energy [eV]": "eV", "Y-Scale [deg]": "deg"}),
+        )
 
 
-class LiveImageTool(QtWidgets.QWidget):
+class MotorThread(threading.Thread):
+    """Simple thread implementation of non-blocking motion."""
+
+    def __init__(self, motor_cls: type[Motor], target: float):
+        super().__init__()
+
+        self.motor_cls = motor_cls
+        self.target = target
+
+    def run(self):
+        motor = self.motor_cls()
+        motor.pre_motion()
+        motor.move(self.target)
+        if self.motor_cls.__name__ == "Delta":
+            motor.post_motion(reset=False)
+        else:
+            motor.post_motion()
+
+
+class MotorControls(ItoolControlsBase):
+    quick_move_dims = ["X", "Y", "Z", "Polar", "Tilt", "Azi", "Delta"]
+
+    def __init__(self, *args, **kwargs):
+        self.workers: list[MotorThread] = []
+        self.busy: bool = True
+        super().__init__(*args, **kwargs)
+
+    def initialize_layout(self):
+        self.setLayout(QtWidgets.QVBoxLayout(self))
+        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setSpacing(3)
+
+    def initialize_widgets(self):
+        super().initialize_widgets()
+        self.move_btn = QtWidgets.QPushButton("Move to cursor")
+        self.move_btn.clicked.connect(self.move_to_cursor)
+
+        self.checkbox_widget = QtWidgets.QWidget()
+        self.checkbox_widget.setLayout(QtWidgets.QHBoxLayout())
+        self.checkbox_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.checkbox_widget.layout().setSpacing(3)
+
+        self.checkboxes: tuple[QtWidgets.QCheckBox, ...] = (
+            QtWidgets.QCheckBox(),
+            QtWidgets.QCheckBox(),
+            QtWidgets.QCheckBox(),
+        )
+        for check in self.checkboxes:
+            self.checkbox_widget.layout().addWidget(check)
+            check.setChecked(True)
+            check.toggled.connect(self.update)
+
+        self.layout().addWidget(self.move_btn)
+        self.layout().addWidget(self.checkbox_widget)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.slicer_area.sigIndexChanged.connect(self.update)
+        self.slicer_area.sigCurrentCursorChanged.connect(self.update)
+        self.slicer_area.sigBinChanged.connect(self.update)
+        self.slicer_area.sigDataChanged.connect(self.data_changed)
+        self.slicer_area.sigShapeChanged.connect(self.update)
+
+    def disconnect_signals(self):
+        super().disconnect_signals()
+        self.slicer_area.sigIndexChanged.disconnect(self.update)
+        self.slicer_area.sigCurrentCursorChanged.disconnect(self.update)
+        self.slicer_area.sigBinChanged.disconnect(self.update)
+        self.slicer_area.sigDataChanged.disconnect(self.data_changed)
+        self.slicer_area.sigShapeChanged.disconnect(self.update)
+
+    @property
+    def valid_dims(self) -> list[str]:
+        return [d for d in self.data.dims if d in self.quick_move_dims]
+
+    @property
+    def enabled_dims(self) -> list[str]:
+        return [check.text() for check in self.checkboxes if check.isVisible()]
+
+    @property
+    def cursor_pos(self) -> dict[str, float]:
+        return {
+            dim: float(
+                self.array_slicer._values[self.slicer_area.current_cursor][
+                    self.data.dims.index(dim)
+                ]
+            )
+            for dim in self.enabled_dims
+        }
+
+    @QtCore.Slot()
+    def move_to_cursor(self):
+        for w in self.workers:
+            w.join()
+
+        self.workers = []
+        for k, v in self.cursor_pos.items():
+            motor_cls = Motor.plugins[k]
+            self.workers.append(MotorThread(motor_cls, v))
+            self.workers[-1].start()
+
+    @QtCore.Slot()
+    def update(self):
+        super().update()
+        if self.busy:
+            self.move_btn.setEnabled(False)
+        else:
+            self.move_btn.setDisabled(len(self.enabled_dims) == 0)
+
+    @QtCore.Slot()
+    def data_changed(self):
+        for i, check in enumerate(self.checkboxes):
+            try:
+                dim = self.valid_dims[i]
+            except IndexError:
+                check.setVisible(False)
+            else:
+                check.setText(dim)
+                check.setVisible(True)
+
+    def reset(self):
+        for spin in self.spins:
+            spin.setValue(1)
+
+
+class CustomMenuBar(ItoolMenuBar):
+    """Menubar with the data load menu customized."""
+
+    def _open_file(self):
+        valid_files = {
+            "xarray HDF5 Files (*.h5)": (xr.load_dataarray, dict(engine="h5netcdf")),
+            "1KARPES Raw Data (*.pxt *.zip)": (erlab.io.load_experiment, dict()),
+        }
+
+        dialog = QtWidgets.QFileDialog(self)
+        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptOpen)
+        dialog.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFile)
+        dialog.setNameFilters(valid_files.keys())
+
+        if dialog.exec():
+            files = dialog.selectedFiles()
+            fn, kargs = valid_files[dialog.selectedNameFilter()]
+
+            dat = fn(files[0], **kargs)
+
+            self.slicer_area.set_data(dat)
+            self.slicer_area.view_all()
+
+
+class LiveImageTool(BaseImageTool):
     def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
-        super().__init__(parent=parent)
+        super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
+
         if threadpool is None:
             threadpool = QtCore.QThreadPool()
         self.threadpool = threadpool
 
-        self.setLayout(QtWidgets.QVBoxLayout(self))
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        for d in self.docks:
+            d.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
 
-        self.controls = QtWidgets.QWidget(self)
-        self.slicer_area = ImageSlicerArea(
-            self, data=np.ones((2, 2, 2), dtype=np.float32)
+        self.motor_controls = MotorControls(self.slicer_area)
+
+        motor_dock = QtWidgets.QDockWidget("Motors", self)
+        motor_dock.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
         )
+        motor_dock.setWidget(self.widget_box(self.motor_controls))
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, motor_dock)
 
-        self.controls.setLayout(QtWidgets.QHBoxLayout(self.controls))
-        self.controls.layout().addWidget(ItoolCrosshairControls(self.slicer_area))
-        self.controls.layout().addWidget(ItoolColormapControls(self.slicer_area))
-        self.controls.layout().addWidget(ItoolBinningControls(self.slicer_area))
+        self.mnb = CustomMenuBar(self.slicer_area, self)
 
-        self.layout().addWidget(self.controls)
-        self.layout().addWidget(self.slicer_area)
-
-        # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
-        # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
-
-    @property
-    def array_slicer(self):
-        return self.slicer_area.array_slicer
+    def set_busy(self, busy: bool):
+        self.motor_controls.busy = busy
 
     def set_params(
         self,
@@ -108,6 +251,8 @@ class LiveImageTool(QtWidgets.QWidget):
         self._base_file = base_file
         self._data_idx = data_idx
 
+        self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
+
     def trigger_fetch(self, niter: int):
         data_fetcher = DataFetcher(
             self._motor_args, self._base_dir, self._base_file, self._data_idx, niter
@@ -119,7 +264,6 @@ class LiveImageTool(QtWidgets.QWidget):
     def update_data(self, niter: int, wave: xr.DataArray):
         if niter == 1:
             return self.slicer_area.set_data(wave)
-
         else:
             indices = list(
                 np.unravel_index(

@@ -102,7 +102,7 @@ class MotorPosWriter(QtCore.QRunnable):
         """
 
         file_name = os.path.join(self.dirname, self.prefix + str(self.filename))
-        if os.isfile(file_name):
+        if os.path.isfile(file_name):
             os.remove(file_name)
         self.write_pos(header)
 
@@ -115,16 +115,12 @@ class ScanType(*uic.loadUiType("scantype.ui")):
 
         self.ses = controller
 
-        self.valid_axes = list(Motor.plugins.keys())
-
-        self.motors[1].combo.addItems(self.valid_axes[1:])
         for i, motor in enumerate(self.motors):
             motor.combo.currentTextChanged.connect(
                 lambda *, ind=i: self.motor_changed(ind)
             )
             motor.toggled.connect(lambda *, ind=i: self.motor_changed(ind))
-        self.motors[1].combo.setCurrentIndex(1)
-        self.motors[1].combo.setCurrentIndex(0)
+        self.update_motor_list()
 
         self.start_btn.clicked.connect(self.start_scan)
 
@@ -139,7 +135,27 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         # self.motion_thread.started.connect(self.scan_worker.run)
         # self.motion_thread.start()
 
-        self.itool = LiveImageTool(threadpool=self.threadpool)
+        self._itools: list[LiveImageTool | None] = []
+
+    @property
+    def itool(self):
+        return self._itools[-1]
+
+    @itool.setter
+    def itool(self, imagetool: LiveImageTool):
+        self._itools.append(imagetool)
+
+    @property
+    def valid_axes(self) -> list[str]:
+        return [k for k, v in Motor.plugins.items() if v.enabled]
+
+    def update_motor_list(self):
+        self.motors[1].combo.blockSignals(True)
+        self.motors[1].combo.clear()
+        self.motors[1].combo.addItems(self.valid_axes[1:])
+        self.motors[1].combo.setCurrentIndex(1)
+        self.motors[1].combo.blockSignals(False)
+        self.motors[1].combo.setCurrentIndex(0)
 
     @property
     def motors(self) -> tuple[SingleMotorSetup, SingleMotorSetup]:
@@ -202,9 +218,6 @@ class ScanType(*uic.loadUiType("scantype.ui")):
             self.ses.run_sequence()
             return
 
-        # prepare before start
-        self.pre_process()
-
         # get motor arguments only if enabled
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
@@ -214,9 +227,14 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         base_dir, base_file, valid_ext, _ = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
 
-        if not self.damap_check.isChecked():
+        if self.damap_check.isChecked():
+            self.itool = None
+        else:
+            self.itool = LiveImageTool(threadpool=self.threadpool)
             self.itool.set_params(motor_args, base_dir, base_file, data_idx)
-            self.itool.show()
+
+        # prepare before start
+        self.pre_process()
 
         self.initialize_logging(
             dirname=base_dir,
@@ -238,6 +256,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         scan_worker.signals.sigFinished.connect(self.post_process)
         self.stop_btn.clicked.connect(scan_worker.force_stop)
         self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
+
         self.threadpool.start(scan_worker)
 
     @QtCore.Slot(int, object, object)
@@ -268,6 +287,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.damap_check.setDisabled(True)
         self.stop_btn.setDisabled(False)
         self.stop_point_btn.setDisabled(False)
+        if self.itool is not None:
+            self.itool.set_busy(True)
 
     @QtCore.Slot()
     def post_process(self):
@@ -277,6 +298,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.damap_check.setDisabled(False)
         self.stop_btn.setDisabled(True)
         self.stop_point_btn.setDisabled(True)
+        if self.itool is not None:
+            self.itool.set_busy(False)
 
     @QtCore.Slot(int)
     def step_started(self, niter: int):
@@ -296,6 +319,9 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.pos_logger.write_header(header)
 
     def closeEvent(self, *args, **kwargs):
+        for win in self._itools:
+            if win:
+                win.close()
         self.pos_logger.stop()
         self.threadpool.waitForDone()
         super().closeEvent(*args, **kwargs)
@@ -466,6 +492,16 @@ class ScanWorker(QtCore.QRunnable):
                 except PermissionError:
                     time.sleep(0.001)
                     continue
+                except FileExistsError:
+                    if f.endswith(".csv"):
+                        with open(f, "r", newline="") as source_csv:
+                            source_reader = csv.reader(source_csv)
+                            with open(new, "a", newline="") as dest_csv:
+                                dest_writer = csv.writer(dest_csv)
+                                for row in source_reader:
+                                    dest_writer.writerow(row)
+                        os.remove(f)
+                    break
                 else:
                     break
 
@@ -518,10 +554,14 @@ class ScanWorker(QtCore.QRunnable):
             ax.pre_motion()
 
             # last sanity check of bounds before motion
-            if not np.all(
-                (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
+            if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
+                ax.maximum is not None and max(self.coords[i]) > ax.maximum
             ):
+                # if not np.all(
+                #     (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
+                # ):
                 ax.post_motion()
+                self.signals.sigFinished.emit()
                 print("PARAMETERS OUT OF MOTOR BOUNDS")
                 return
 

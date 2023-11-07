@@ -111,6 +111,7 @@ class Delta(_PiezoMotor):
         ymin = self._query_float("? MIN Y")
 
         # get current position
+        self._wait_move_finish()
         self.x0 = self._get_pos("X")
         self.y0 = self._get_pos("Y")
 

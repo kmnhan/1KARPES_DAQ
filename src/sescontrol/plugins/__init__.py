@@ -23,6 +23,7 @@ class Motor:
 
     """
 
+    enabled: bool = True
     minimum: float | None = None
     maximum: float | None = None
     delta: float | None = None
