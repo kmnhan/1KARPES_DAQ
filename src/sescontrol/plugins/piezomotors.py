@@ -15,6 +15,7 @@ class MMStatus(enum.IntEnum):
 
 
 class _PiezoMotor(Motor):
+    enabled = False
     PORT: int = 42623
     AXIS: str | None = None  # motor name
 
@@ -97,7 +98,7 @@ class Azi(_PiezoMotor):
     AXIS = "A"
 
 
-class Beam(_PiezoMotor):
+class Delta(_PiezoMotor):
     beam_incidence: float = math.radians(50)
 
     def pre_motion(self):
@@ -152,5 +153,11 @@ class Beam(_PiezoMotor):
         # get final position
         return target
 
-    def post_motion(self):
+    def post_motion(self, reset: bool = True):
+        if reset:
+            # go back to initial position
+            self.socket.send(f"MOVE X {self.x0}".encode())
+            self.socket.recv()
+            self.socket.send(f"MOVE Y {self.y0}".encode())
+            self.socket.recv()
         self._disconnect()
