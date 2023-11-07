@@ -6,11 +6,7 @@ class FakeMotor1(Motor):
     delta = 1.0
     fix_delta = True
 
-    def __init__(self):
-        pass
-
     def move(self, target):
-        print(f"FM1 {target}")
         return target
 
 
@@ -19,9 +15,5 @@ class FakeMotor2(Motor):
     delta = 1.0
     fix_delta = True
 
-    def __init__(self):
-        pass
-
     def move(self, target):
-        print(f"FM2 {target}")
         return target

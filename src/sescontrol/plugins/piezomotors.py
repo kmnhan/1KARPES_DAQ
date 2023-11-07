@@ -1,38 +1,76 @@
+import enum
+import math
+import time
+
 import zmq
 
 from . import Motor
+
+
+class MMStatus(enum.IntEnum):
+    Moving = 1
+    Done = 2
+    Aborted = 3
+    Error = 4
 
 
 class _PiezoMotor(Motor):
     PORT: int = 42623
     AXIS: str | None = None  # motor name
 
-    def __init__(self):
-        pass
-
-    def move(self, target):
-        # print(f"FM1 {target}")
-
-        # self.socket.send_string()
-        return target
-
-    # @property
-    # def minimum(self):
-    #     context = zmq.Context.instance()
-    #     socket: zmq.Socket = context.socket(zmq.REQ)
-    #     socket.connect(f"tcp://localhost:{self.PORT}")
-    #     socket.send(b"")
-    #     return socket.recv_json()
-
     def pre_motion(self):
+        self._connect()
+
+        # get bounds (mm)
+        self.minimum = self._query_float(f"? MIN {self.AXIS}")
+        self.maximum = self._query_float(f"? MAX {self.AXIS}")
+
+        # get tolerance (mm)
+        self.tolerance = self._query_float(f"? TOL {self.AXIS}")
+
+    def move(self, target: float) -> float:
+        # send move command
+        self.socket.send(f"MOVE {self.AXIS} {target}".encode())
+        self.socket.recv()
+
+        # check if within tolerance
+        while True:
+            time.sleep(0.01)
+            if abs(self._get_pos(self.AXIS) - target) < self.tolerance:
+                break
+
+        # wait for motion to completely finish
+        self._wait_move_finish()  # this line may not be necessary
+
+        # get final position
+        return self._get_pos(self.AXIS)
+
+    def post_motion(self):
+        self._disconnect()
+
+    def _disconnect(self):
+        self.socket.close()
+
+    def _connect(self):
         context = zmq.Context.instance()
         if not context:
             context = zmq.Context()
         self.socket = context.socket(zmq.REQ)
         self.socket.connect(f"tcp://localhost:{self.PORT}")
 
-    def post_motion(self):
-        self.socket.close()
+    def _wait_move_finish(self):
+        while True:
+            self.socket.send(b"? STATUS")
+            msg = int(self.socket.recv().decode("utf-8"))
+            if int(msg) != MMStatus.Moving:
+                return
+
+    def _query_float(self, cmd: str) -> float:
+        self.socket.send(cmd.encode())
+        return float(self.socket.recv().decode())
+
+    def _get_pos(self, axis: str) -> float:
+        return self._query_float(f"? {axis}")
 
 
 class X(_PiezoMotor):
@@ -57,3 +95,62 @@ class Tilt(_PiezoMotor):
 
 class Azi(_PiezoMotor):
     AXIS = "A"
+
+
+class Beam(_PiezoMotor):
+    beam_incidence: float = math.radians(50)
+
+    def pre_motion(self):
+        self._connect()
+
+        # get bounds (mm)
+        xmin = self._query_float("? MIN X")
+        xmax = self._query_float("? MAX X")
+        ymax = self._query_float("? MAX Y")
+        ymin = self._query_float("? MIN Y")
+
+        # get current position
+        self.x0 = self._get_pos("X")
+        self.y0 = self._get_pos("Y")
+
+        # get motor limits
+        self.minimum = max(
+            (xmin - self.x0) / math.sin(self.beam_incidence),
+            (ymin - self.y0) / math.cos(self.beam_incidence),
+        )
+        self.maximum = min(
+            (xmax - self.x0) / math.sin(self.beam_incidence),
+            (ymax - self.y0) / math.cos(self.beam_incidence),
+        )
+
+        # get tolerance (mm)
+        self.xtol = self._query_float("? TOL X")
+        self.ytol = self._query_float("? TOL Y")
+
+    def move(self, target: float) -> float:
+        xtarget = self.x0 + target * math.sin(self.beam_incidence)
+        ytarget = self.y0 + target * math.cos(self.beam_incidence)
+
+        # send x move command
+        self.socket.send(f"MOVE X {xtarget}".encode())
+        self.socket.recv()
+
+        # send y move command
+        self.socket.send(f"MOVE Y {ytarget}".encode())
+        self.socket.recv()
+
+        # check if both within tolerance
+        while True:
+            time.sleep(0.01)
+            if abs(self._get_pos("X") - target) < self.xtol:
+                if abs(self._get_pos("Y") - target) < self.ytol:
+                    break
+
+        # wait for motion to completely finish
+        self._wait_move_finish()  # this line may not be necessary
+
+        # get final position
+        return target
+
+    def post_motion(self):
+        self._disconnect()
