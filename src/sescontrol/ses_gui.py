@@ -59,6 +59,8 @@ class MotorPosWriter(QtCore.QRunnable):
                 continue
             msg = self.messages.popleft()
             try:
+                # if file without prefix exists, the scan has finished but we have
+                # remaining log entries to enter.
                 fname = os.path.join(self.dirname, self.filename)
                 if not os.path.isfile(fname):
                     fname = os.path.join(self.dirname, self.prefix + str(self.filename))
@@ -87,9 +89,22 @@ class MotorPosWriter(QtCore.QRunnable):
         self.prefix = prefix
 
     def write_pos(self, content: str | list[str]):
+        """Appends content to log file."""
         if isinstance(content, str):
             content = [content]
         self.messages.append(content)
+
+    def write_header(self, header: str | list[str]):
+        """Creates and appends a header to log file.
+
+        If a file with the same name already exists, it will be removed.
+
+        """
+
+        file_name = os.path.join(self.dirname, self.prefix + str(self.filename))
+        if os.isfile(file_name):
+            os.remove(file_name)
+        self.write_pos(header)
 
 
 class ScanType(*uic.loadUiType("scantype.ui")):
@@ -190,11 +205,12 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         # prepare before start
         self.pre_process()
 
-        # get motor arguments if enabled
+        # get motor arguments only if enabled
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
         ]
 
+        # get file information
         base_dir, base_file, valid_ext, _ = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
 
@@ -277,7 +293,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         header = [""]
         for motor in motor_args:
             header.append(motor[0])
-        self.pos_logger.write_pos(header)
+        self.pos_logger.write_header(header)
 
     def closeEvent(self, *args, **kwargs):
         self.pos_logger.stop()
@@ -349,7 +365,7 @@ class ScanWorker(QtCore.QRunnable):
                 # path.ctrl.send_message_timeout(path.menu.COMMAND, path.command_id(), timeout=1.0)
                 path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
                 pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
-                time.sleep(0.1)
+                time.sleep(0.01)
             except win32.lib.pywintypes.error as e:
                 print(e)
                 continue
@@ -375,13 +391,28 @@ class ScanWorker(QtCore.QRunnable):
                 aborted = True
             if self.check_finished():
                 break
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         if aborted:
             return 1
         return 0
 
     def rename_file(self, index: int):
+        """Renames the data file to include the slice index.
+
+        This function adjusts file names to maintain a constant file number during
+        scans. File names are temporarily modified during scanning by adding a prefix,
+        which is later restored using `restore_filenames` when all scans are completed.
+
+        This is possible because SES determines the sequence number by parsing the name
+        of the files in the data directory.
+
+        Parameters
+        ----------
+        index : int
+            Index of the scan to rename.
+
+        """
         for ext in self.valid_ext:
             f = os.path.join(
                 self.base_dir, f"{self.base_file}{str(self.data_idx).zfill(4)}{ext}"
@@ -414,7 +445,7 @@ class ScanWorker(QtCore.QRunnable):
                     try:
                         os.rename(f, new)
                     except PermissionError:
-                        time.sleep(0.1)
+                        time.sleep(0.001)
                         continue
                     else:
                         break
@@ -433,7 +464,7 @@ class ScanWorker(QtCore.QRunnable):
                 try:
                     os.rename(f, new)
                 except PermissionError:
-                    time.sleep(0.1)
+                    time.sleep(0.001)
                     continue
                 else:
                     break
@@ -448,11 +479,11 @@ class ScanWorker(QtCore.QRunnable):
             # move outer loop to val 0
             pos0 = self.axes[0].move(val0)
 
-            if (i % 2) == 0:
-                coord1_iter = self.coords[1]
-            else:
+            if (i % 2) != 0:
                 # if outer loop index is odd, inner loop is reversed
                 coord1_iter = reversed(self.coords[1])
+            else:
+                coord1_iter = self.coords[1]
             for val1 in coord1_iter:
                 if len(self.axes) == 2:
                     # move inner loop to val 1
@@ -482,15 +513,22 @@ class ScanWorker(QtCore.QRunnable):
         if len(self.axes) == 1:
             self.coords.append([[0]])
 
-        self.axes[0].pre_motion()
-        if len(self.axes) != 1:
-            self.axes[1].pre_motion()
+        for i, ax in enumerate(self.axes):
+            # pre motion
+            ax.pre_motion()
+
+            # last sanity check of bounds before motion
+            if not np.all(
+                (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
+            ):
+                ax.post_motion()
+                print("PARAMETERS OUT OF MOTOR BOUNDS")
+                return
 
         self._motion_loop()
 
-        self.axes[0].post_motion()
-        if len(self.axes) != 1:
-            self.axes[1].post_motion()
+        for ax in self.axes:
+            ax.post_motion()
 
         # restore mangled filenames
         self.restore_filenames()
