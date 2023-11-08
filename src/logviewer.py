@@ -1,19 +1,25 @@
 import datetime
 import os
 import sys
+import time
 
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
+
+# os.environ["QT_API"] = "pyqt6"
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from logreader import get_cryocooler_log, get_pressure_log
+from qt_extensions.legendtable import LegendTableView
 
 try:
     os.chdir(sys._MEIPASS)
 except:
     pass
 
-UTC_OFFSET: int = 32400
+
+UTC_OFFSET: int = -time.timezone
 
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
@@ -32,6 +38,22 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         )
         self.plot1.setXLink(self.plot0)
         self.plot0.getAxis("bottom").setStyle(showValues=False)
+        self.plot0.setYRange(0, 300)
+
+        self.line0 = pg.InfiniteLine(
+            angle=90,
+            movable=True,
+            label="",
+            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 50)),
+        )
+        self.line0.sigPositionChanged.connect(self.sync_cursors)
+        self.line0.setZValue(100)
+        self.line1 = pg.InfiniteLine(angle=90, movable=True)
+        self.line1.sigPositionChanged.connect(self.sync_cursors)
+
+        self.plot0.addItem(self.line0)
+        self.plot1.addItem(self.line1)
+
         for pi in self.plot_items:
             pi.vb.setCursor(QtGui.QCursor(QtCore.Qt.CrossCursor))
             pi.scene().sigMouseMoved.connect(self.mouse_moved)
@@ -48,9 +70,34 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
+        self.actionshowcursor.setChecked(True)
+        self.actioncentercursor.triggered.connect(self.center_cursor)
+        self.actionshowcursor.toggled.connect(self.toggle_cursor)
+
+    def sync_cursors(self, line: pg.InfiniteLine):
+        if line == self.line0:
+            self.line1.blockSignals(True)
+            self.line1.setPos([line.getXPos(), 0])
+            self.line1.blockSignals(False)
+        else:
+            self.line0.blockSignals(True)
+            self.line0.setPos([line.getXPos(), 0])
+            self.line0.blockSignals(False)
+
     @property
     def plot_items(self) -> tuple[pg.PlotItem, pg.PlotItem]:
         return self.plot0, self.plot1
+
+    @QtCore.Slot(bool)
+    def toggle_cursor(self, value: bool):
+        self.line0.setVisible(value)
+        self.line1.setVisible(value)
+        self.actioncentercursor.setDisabled(not value)
+
+    @QtCore.Slot()
+    def center_cursor(self):
+        xmin, xmax = self.plot0.viewRange()[0]
+        self.line0.setValue((xmin + xmax) / 2)
 
     def mouse_moved(self, pos):
         if self.plot_items[0].sceneBoundingRect().contains(pos):
@@ -81,6 +128,7 @@ class MainWindow(MainWindowGUI):
         self.legendtable.model().sigColorChanged.connect(self.update_plot)
         self.load_btn.clicked.connect(self.load_data)
         self.pressure_check.toggled.connect(self.toggle_pressure)
+        self.temperature_check.toggled.connect(self.toggle_temperature)
         self.updatetime_check.toggled.connect(self.toggle_updates)
 
         self.df = None
@@ -103,6 +151,18 @@ class MainWindow(MainWindowGUI):
         self.updatetime_spin.valueChanged.connect(
             lambda val: self.client_timer.setInterval(round(val * 1000))
         )
+        self.line0.sigPositionChanged.connect(self.update_cursor_0)
+        # self.line1.sigPositionChanged.connect(self.sync_cursors)
+
+    @QtCore.Slot()
+    def update_cursor_0(self):
+        dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
+        row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
+        label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
+        for enabled, entry in zip(self.legendtable.enabled, self.legendtable.entries):
+            if enabled:
+                label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
+        self.line0.label.setText(label)
 
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):
@@ -135,6 +195,10 @@ class MainWindow(MainWindowGUI):
         else:
             self.plot1.clearPlots()
             self.df_mg15 = None
+
+    @QtCore.Slot(bool)
+    def toggle_temperature(self, value: bool):
+        self.plot0.setVisible(value)
 
     def update_plot(self):
         self.plot0.clearPlots()
@@ -176,7 +240,9 @@ class MainWindow(MainWindowGUI):
 
     @property
     def start_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(self.start_datetime_timestamp - UTC_OFFSET)
+        return datetime.datetime.fromtimestamp(
+            self.start_datetime_timestamp - UTC_OFFSET
+        )
 
     @property
     def end_datetime(self) -> datetime.datetime:

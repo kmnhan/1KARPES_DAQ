@@ -45,21 +45,21 @@
              <item row="0" column="0">
               <widget class="QLabel" name="label">
                <property name="text">
-                <string>Start Date</string>
+                <string>Start</string>
                </property>
               </widget>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_2">
                <property name="text">
-                <string>End Date</string>
+                <string>End</string>
                </property>
               </widget>
              </item>
              <item row="0" column="1">
               <widget class="QDateTimeEdit" name="startdateedit">
                <property name="currentSection">
-                <enum>QDateTimeEdit::DaySection</enum>
+                <enum>QDateTimeEdit::YearSection</enum>
                </property>
                <property name="displayFormat">
                 <string notr="true">yyyy-MM-dd hh:mm:ss</string>
@@ -69,7 +69,7 @@
              <item row="1" column="1">
               <widget class="QDateTimeEdit" name="enddateedit">
                <property name="currentSection">
-                <enum>QDateTimeEdit::DaySection</enum>
+                <enum>QDateTimeEdit::YearSection</enum>
                </property>
                <property name="displayFormat">
                 <string notr="true">yyyy-MM-dd hh:mm:ss</string>
@@ -89,11 +89,25 @@
             <widget class="LegendTableView" name="legendtable"/>
            </item>
            <item>
-            <widget class="QCheckBox" name="pressure_check">
-             <property name="text">
-              <string>Show Pressure</string>
-             </property>
-            </widget>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QCheckBox" name="temperature_check">
+               <property name="text">
+                <string>Temperature</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="pressure_check">
+               <property name="text">
+                <string>Pressure</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout">
@@ -112,6 +126,9 @@
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="updatetime_spin">
+               <property name="suffix">
+                <string> s</string>
+               </property>
                <property name="minimum">
                 <double>10.000000000000000</double>
                </property>
@@ -142,12 +159,33 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>720</width>
-     <height>22</height>
+     <width>788</width>
+     <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionshowcursor"/>
+    <addaction name="actioncentercursor"/>
+   </widget>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actioncentercursor">
+   <property name="text">
+    <string>Center cursor</string>
+   </property>
+  </action>
+  <action name="actionshowcursor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show cursor</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -165,7 +203,6 @@
   <tabstop>graphics_layout</tabstop>
   <tabstop>load_btn</tabstop>
   <tabstop>legendtable</tabstop>
-  <tabstop>pressure_check</tabstop>
   <tabstop>updatetime_check</tabstop>
   <tabstop>updatetime_spin</tabstop>
   <tabstop>startdateedit</tabstop>
