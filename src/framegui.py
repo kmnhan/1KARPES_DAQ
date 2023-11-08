@@ -330,7 +330,7 @@ class FrameGrabber(QtCore.QThread):
 
     def __init__(self):
         super().__init__()
-        self.live: bool = True
+        self._live: bool = True
         self._camera = None
         self.save_requested: bool = False
         self.set_srgb(True)
@@ -338,6 +338,16 @@ class FrameGrabber(QtCore.QThread):
     @property
     def camera(self) -> pylon.InstantCamera:
         return self._camera
+
+    @property
+    def live(self) -> bool:
+        return self._live
+
+    @live.setter
+    def live(self, value: bool):
+        self.mutex.lock()
+        self._live = value
+        self.mutex.unlock()
 
     def set_device(self, device) -> None:
         if isinstance(device, pylon.DeviceInfo):
@@ -354,13 +364,19 @@ class FrameGrabber(QtCore.QThread):
 
     @QtCore.Slot(int)
     def set_exposure(self, value: int):
+        self.mutex.lock()
         self.exposure: int = value
+        self.mutex.unlock()
 
     @QtCore.Slot(bool)
     def set_srgb(self, value: bool):
+        self.mutex.lock()
         self.srgb_gamma: bool = value
+        self.mutex.unlock()
 
     def run(self):
+        self.mutex = QtCore.QMutex()
+
         # save memory
         self.camera.MaxNumBuffer = 5
         self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
