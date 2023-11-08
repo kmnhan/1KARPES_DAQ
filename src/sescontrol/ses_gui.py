@@ -453,6 +453,7 @@ class ScanWorker(QtCore.QRunnable):
             )
             if self.has_da and ext == ".zip":
                 if not self._stopnow:
+                    # if aborted before scan termination, da map is (probably) not saved
                     i = 0
                     while True:
                         time.sleep(0.1)
