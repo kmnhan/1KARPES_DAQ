@@ -2,5 +2,25 @@
 ## Building
 ### Log viewer
 ```
-pyinstaller ./src/logviewer.py --onedir --windowed --icon src/images/logviewer.ico --add-data="src/logviewer.ui;." --add-data="src/logreader.py;." --add-data="src/images/logviewer.ico;./images" --add-data="src/qt_extensions/*;./qt_extensions/" --hidden-import PyQt6 --hidden-import pandas --hidden-import seaborn --exclude IPython --upx-dir C:\upx410w
+pyinstaller ./src/logviewer.py --onedir --windowed `
+--icon src/images/logviewer.ico `
+--add-data="src/logviewer.ui;." `
+--add-data="src/logreader.py;." `
+--add-data="src/images/logviewer.ico;./images"` `
+--add-data="src/qt_extensions/*;./qt_extensions/" `
+--hidden-import PyQt6 `
+--hidden-import pandas --hidden-import seaborn --exclude IPython `
+--upx-dir C:\upx410w
+```
+
+### Basler frame grabber
+```
+pyinstaller ./src/framegui.py --onedir --windowed `
+--icon src/images/erlab_pylon.ico `
+--add-data="src/framegrab.ui;." `
+--add-data="src/images/erlab_pylon.ico;./images"` `
+--add-data="src/qt_extensions/*;./qt_extensions/" `
+--hidden-import PyQt6 `
+--exclude IPython `
+--upx-dir C:\upx410w
 ```

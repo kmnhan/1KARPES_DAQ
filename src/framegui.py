@@ -14,6 +14,11 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from qt_extensions.colors import BetterColorBarItem, BetterImageItem
 
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
+
 EXCLUDED_DEVICES: tuple[str, ...] = (
     "40049666",
 )  #: Tuple of string of serial numbers to exclude from search.
@@ -554,6 +559,8 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
+        
+    qapp.setWindowIcon(QtGui.QIcon("./images/erlab_pylon.ico"))
 
     win = MainWindow()
     win.show()
