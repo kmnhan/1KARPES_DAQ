@@ -2,7 +2,7 @@ import sys
 
 from qtpy import QtCore, QtWidgets, uic
 
-import framegui
+import pyloncam
 import status
 import webcam
 
@@ -10,7 +10,7 @@ import webcam
 class ARPESMain(*uic.loadUiType("main.ui")):
     USER_WINDOWS: dict[str, type[QtWidgets.QWidget]] = {
         "webcam": webcam.MainWindow,
-        "basler": framegui.MainWindow,
+        "basler": pyloncam.MainWindow,
         "status": status.MainWindow,
     }
 

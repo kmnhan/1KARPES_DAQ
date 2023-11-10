@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['src\\framegui.py'],
+    ['src\\pyloncam.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/framegrab.ui', '.'), ('src/images/erlab_pylon.ico', './images `')],
+    datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images `')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -20,7 +20,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='framegui',
+    name='Pylon Camera Viewer',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -31,7 +31,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['src\\images\\erlab_pylon.ico'],
+    icon=['src\\images\\pyloncam.ico'],
 )
 coll = COLLECT(
     exe,
@@ -40,5 +40,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='framegui',
+    name='pyloncam',
 )

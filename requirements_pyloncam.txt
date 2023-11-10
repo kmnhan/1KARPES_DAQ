@@ -1,4 +1,3 @@
-numpy
 pypylon
 pyqt6
 qtpy

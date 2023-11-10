@@ -8,7 +8,7 @@ import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from SESWrapper.ses_measure import SESMeasure
-import framegui, webcam
+import pyloncam, webcam
 
 SES_DIR = "D:/SES_1.9.6_Win64"
 WRAPPER_PATH = os.path.join(SES_DIR, "SESWrapper.dll")
@@ -22,7 +22,7 @@ uiclass, baseclass = uic.loadUiType("test_gui.ui")
 class SESDAQMain(uiclass, baseclass):
     USER_WINDOWS: dict[str, type[QtWidgets.QWidget]] = {
         "webcam": webcam.MainWindow,
-        "basler": framegui.MainWindow,
+        "basler": pyloncam.MainWindow,
     }
 
     # When changing this, make sure to update the objectName of the buttons

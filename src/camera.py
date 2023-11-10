@@ -6,7 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-import framegui, webcam
+import pyloncam, webcam
 
 
 uiclass, baseclass = uic.loadUiType("camera.ui")
@@ -15,7 +15,7 @@ uiclass, baseclass = uic.loadUiType("camera.ui")
 class CameraWindow(uiclass, baseclass):
     USER_WINDOWS: dict[str, type[QtWidgets.QWidget]] = {
         "webcam": webcam.MainWindow,
-        "basler": framegui.MainWindow,
+        "basler": pyloncam.MainWindow,
     }
 
     sigFocusChanged = QtCore.Signal(int)

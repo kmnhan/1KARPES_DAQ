@@ -15,10 +15,10 @@ pyinstaller ./src/logviewer.py --onedir --windowed `
 
 ### Basler frame grabber
 ```
-pyinstaller ./src/framegui.py --onedir --windowed `
---icon src/images/erlab_pylon.ico `
+pyinstaller ./src/pyloncam.py --onedir --windowed `
+--icon src/images/pyloncam.ico `
 --add-data="src/framegrab.ui;." `
---add-data="src/images/erlab_pylon.ico;./images"` `
+--add-data="src/images/pyloncam.ico;./images"` `
 --add-data="src/qt_extensions/*;./qt_extensions/" `
 --hidden-import PyQt6 `
 --exclude IPython `

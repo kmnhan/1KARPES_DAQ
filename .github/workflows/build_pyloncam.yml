@@ -1,4 +1,4 @@
-name: Build Basler Camera Monitor
+name: Build Pylon Camera Viewer
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 jobs:
 
   build:
-    name: Build Basler Camera Monitor
+    name: Build Pylon Camera Viewer
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -26,13 +26,13 @@ jobs:
         python-version: 3.11
 
     - name: Resolving dependencies...
-      run: pip install -r requirements_basler.txt pyinstaller
+      run: pip install -r requirements_pyloncam.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller framegui.spec
+      run: pyinstaller pyloncam.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
         name: Camera Monitor
-        path: dist/framegui/
+        path: dist/pyloncam/

@@ -560,7 +560,7 @@ if __name__ == "__main__":
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
         
-    qapp.setWindowIcon(QtGui.QIcon("./images/erlab_pylon.ico"))
+    qapp.setWindowIcon(QtGui.QIcon("./images/pyloncam.ico"))
 
     win = MainWindow()
     win.show()
