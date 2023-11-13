@@ -297,7 +297,7 @@ class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
         try:
             # Maximize the Image AOI.
             if genicam.IsWritable(camera.OffsetX):
-                camera.OffsetX = camera.OffsetX.Min
+                camera.OffsetX.Value = camera.OffsetX.Min
             if genicam.IsWritable(camera.OffsetY):
                 camera.OffsetY.Value = camera.OffsetY.Min
             camera.Width.Value = camera.Width.Max
