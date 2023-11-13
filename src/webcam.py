@@ -146,6 +146,8 @@ if __name__ == "__main__":
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
 
+    qapp.setWindowIcon(QtGui.QIcon("./images/webcam.ico"))
+
     win = MainWindow()
     win.show()
     win.activateWindow()

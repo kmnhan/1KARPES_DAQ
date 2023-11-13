@@ -1,10 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import pypylon
+import pathlib
+pypylon_dir = pathlib.Path(pypylon.__file__).parent
+pylon_binaries = [(str(dll), '.') for dll in pypylon_dir.glob('*.dll')]
+pylon_binaries += [(str(dll), '.') for dll in pypylon_dir.glob('*.pyd')]
+
 
 a = Analysis(
     ['src\\pyloncam.py'],
     pathex=[],
-    binaries=[],
+    binaries=pylon_binaries,
     datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
     hiddenimports=['PyQt6', 'matplotlib'],
     hookspath=[],
