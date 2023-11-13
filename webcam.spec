@@ -5,7 +5,7 @@ a = Analysis(
     ['src\\webcam.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/framegrab.ui', '.'), ('src/images/webcam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
+    datas=[('src/webcam.ui', '.'), ('src/images/webcam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
     hiddenimports=['PyQt6'],
     hookspath=[],
     hooksconfig={},

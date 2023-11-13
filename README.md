@@ -31,7 +31,7 @@ pyinstaller ./src/pyloncam.py --onedir --windowed `
 ```
 pyinstaller ./src/webcam.py --onedir --windowed `
 --icon src/images/webcam.ico `
---add-data="src/framegrab.ui;." `
+--add-data="src/webcam.ui;." `
 --add-data="src/images/webcam.ico;./images" `
 --add-data="src/qt_extensions/*;./qt_extensions/" `
 --hidden-import PyQt6 `
