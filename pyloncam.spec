@@ -3,8 +3,8 @@
 import pypylon
 import pathlib
 pypylon_dir = pathlib.Path(pypylon.__file__).parent
-pylon_binaries = [(str(dll), '.') for dll in pypylon_dir.glob('*.dll')]
-pylon_binaries += [(str(dll), '.') for dll in pypylon_dir.glob('*.pyd')]
+pylon_binaries = [(str(f), './pypylon') for f in pypylon_dir.glob('*.dll')]
+pylon_binaries += [(str(f), './pypylon') for f in pypylon_dir.glob('*.pyd')]
 
 
 a = Analysis(
@@ -12,7 +12,7 @@ a = Analysis(
     pathex=[],
     binaries=pylon_binaries,
     datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
-    hiddenimports=['PyQt6', 'matplotlib', 'pypylon', 'pypylon.pylon', 'pypylon.genicam', 'pypylon._pylon', 'pypylon._genicam'],
+    hiddenimports=['PyQt6', 'matplotlib'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
