@@ -5,12 +5,12 @@ a = Analysis(
     ['src\\pyloncam.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images `')],
-    hiddenimports=[],
+    datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
+    hiddenimports=['PyQt6', 'matplotlib'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['IPython'],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

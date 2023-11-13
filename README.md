@@ -18,7 +18,7 @@ pyinstaller ./src/logviewer.py --onedir --windowed `
 pyinstaller ./src/pyloncam.py --onedir --windowed `
 --icon src/images/pyloncam.ico `
 --add-data="src/framegrab.ui;." `
---add-data="src/images/pyloncam.ico;./images"` `
+--add-data="src/images/pyloncam.ico;./images" `
 --add-data="src/qt_extensions/*;./qt_extensions/" `
 --hidden-import PyQt6 `
 --exclude IPython `
