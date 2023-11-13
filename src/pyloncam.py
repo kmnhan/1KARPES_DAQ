@@ -299,27 +299,27 @@ class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
             if genicam.IsWritable(camera.OffsetX):
                 camera.OffsetX = camera.OffsetX.Min
             if genicam.IsWritable(camera.OffsetY):
-                camera.OffsetY = camera.OffsetY.Min
-            camera.Width = camera.Width.Max
-            camera.Height = camera.Height.Max
+                camera.OffsetY.Value = camera.OffsetY.Min
+            camera.Width.Value = camera.Width.Max
+            camera.Height.Value = camera.Height.Max
 
             # Flip image.
             if genicam.IsWritable(camera.ReverseX):
-                camera.ReverseX = True
+                camera.ReverseX.Value = True
             if genicam.IsWritable(camera.ReverseY):
-                camera.ReverseY = False
+                camera.ReverseY.Value = False
 
             if genicam.IsWritable(camera.GainAuto):
-                camera.GainAuto = "Off"
+                camera.GainAuto.Value = "Off"
 
             if genicam.IsWritable(camera.GammaSelector):
-                camera.GammaSelector = "sRGB"
+                camera.GammaSelector.Value = "sRGB"
 
             if genicam.IsWritable(camera.ExposureAuto):
-                camera.ExposureAuto = "Off"
+                camera.ExposureAuto.Value = "Off"
 
             # Set the pixel data format.
-            camera.PixelFormat = "Mono8"
+            camera.PixelFormat.Value = "Mono8"
         except genicam.GenericException as e:
             raise genicam.RuntimeException(
                 "Could not apply configuration. GenICam::GenericException \
@@ -442,11 +442,11 @@ class FrameGrabber(QtCore.QThread):
             if genicam.IsWritable(self.camera.ExposureTimeRaw):
                 if self.camera.ExposureTimeRaw.Value != self.exposure:
                     print(self.exposure)
-                    self.camera.ExposureTimeRaw = self.exposure
+                    self.camera.ExposureTimeRaw.Value = self.exposure
 
             if genicam.IsWritable(self.camera.GammaEnable):
                 if bool(self.camera.GammaEnable.Value) != self.srgb_gamma:
-                    self.camera.GammaEnable = self.srgb_gamma
+                    self.camera.GammaEnable.Value = self.srgb_gamma
 
             if not self.live:
                 self.camera.StopGrabbing()
