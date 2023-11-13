@@ -26,13 +26,13 @@ jobs:
         python-version: 3.11
 
     - name: Resolving dependencies...
-      run: pip install -r requirements_pyloncam.txt pyinstaller
+      run: pip install -r requirements_webcam.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller pyloncam.spec
+      run: pyinstaller webcam.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
-        name: Camera Monitor
-        path: dist/pyloncam/
+        name: Webcam Viewer
+        path: dist/webcam/
