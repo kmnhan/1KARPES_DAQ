@@ -9,6 +9,12 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
+
+
 SAVE_DIR: str = os.path.join(
     os.path.expanduser("~"), "Pictures", "Camera Roll"
 )  #: Directory to save the image to.
@@ -46,7 +52,7 @@ class CameraHandler(QtCore.QThread):
                     )
                     cv2.imwrite(filename, image)
                     self.save_requested = False
-            time.sleep(0.001)
+            time.sleep(0.005)
         cap.release()
 
     @QtCore.Slot(int)

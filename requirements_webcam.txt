@@ -1,0 +1,4 @@
+opencv-python
+pyqt6
+qtpy
+pyqtgraph

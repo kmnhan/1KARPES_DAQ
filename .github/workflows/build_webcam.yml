@@ -1,0 +1,38 @@
+name: Build Webcam Viewer
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build Webcam Viewer
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Install UPX
+      uses: crazy-max/ghaction-upx@v2
+      with:
+        install-only: true
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Resolving dependencies...
+      run: pip install -r requirements_pyloncam.txt pyinstaller
+
+    - name: Building...
+      run: pyinstaller pyloncam.spec
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: Camera Monitor
+        path: dist/pyloncam/
