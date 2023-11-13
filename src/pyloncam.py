@@ -339,6 +339,7 @@ class FrameGrabber(QtCore.QThread):
         self._camera = None
         self.save_requested: bool = False
         self.set_srgb(True)
+        self.mutex: QtCore.QMutex | None = None
 
     @property
     def camera(self) -> pylon.InstantCamera:
@@ -350,9 +351,11 @@ class FrameGrabber(QtCore.QThread):
 
     @live.setter
     def live(self, value: bool):
-        self.mutex.lock()
+        if self.mutex is not None:
+            self.mutex.lock()
         self._live = value
-        self.mutex.unlock()
+        if self.mutex is not None:
+            self.mutex.unlock()
 
     def set_device(self, device) -> None:
         if isinstance(device, pylon.DeviceInfo):
@@ -369,15 +372,19 @@ class FrameGrabber(QtCore.QThread):
 
     @QtCore.Slot(int)
     def set_exposure(self, value: int):
-        self.mutex.lock()
+        if self.mutex is not None:
+            self.mutex.lock()
         self.exposure: int = value
-        self.mutex.unlock()
+        if self.mutex is not None:
+            self.mutex.unlock()
 
     @QtCore.Slot(bool)
     def set_srgb(self, value: bool):
-        self.mutex.lock()
+        if self.mutex is not None:
+            self.mutex.lock()
         self.srgb_gamma: bool = value
-        self.mutex.unlock()
+        if self.mutex is not None:
+            self.mutex.unlock()
 
     def run(self):
         self.mutex = QtCore.QMutex()
@@ -444,6 +451,7 @@ class FrameGrabber(QtCore.QThread):
             if not self.live:
                 self.camera.StopGrabbing()
         self.camera.Close()
+        self.mutex = None
 
 
 class MainWindow(MainWindowGUI):
@@ -559,7 +567,7 @@ if __name__ == "__main__":
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
-        
+
     qapp.setWindowIcon(QtGui.QIcon("./images/pyloncam.ico"))
 
     win = MainWindow()
