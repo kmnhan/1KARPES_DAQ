@@ -15,10 +15,10 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Install UPX
-      uses: crazy-max/ghaction-upx@v2
-      with:
-        install-only: true
+    # - name: Install UPX
+    #   uses: crazy-max/ghaction-upx@v2
+    #   with:
+    #     install-only: true
 
     - name: Install Python
       uses: actions/setup-python@v4
