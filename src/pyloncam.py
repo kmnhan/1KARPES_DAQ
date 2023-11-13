@@ -338,8 +338,8 @@ class FrameGrabber(QtCore.QThread):
         self._live: bool = True
         self._camera = None
         self.save_requested: bool = False
-        self.set_srgb(True)
         self.mutex: QtCore.QMutex | None = None
+        self.set_srgb(True)
 
     @property
     def camera(self) -> pylon.InstantCamera:
