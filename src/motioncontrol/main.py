@@ -296,9 +296,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
 
     def closeEvent(self, *args, **kwargs):
-        # stop server
-        self.server.running = False
-        self.server.wait(2000)
 
         # disconnect from controllers
         self.disconnect()
@@ -306,7 +303,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         # stop log writer
         self.log_writer.stop()
 
-        print("closed logwriter")
+        # stop server
+        self.server.running.set()
+        self.server.wait(2000)
 
         # close plots
         for con in self.controllers:
