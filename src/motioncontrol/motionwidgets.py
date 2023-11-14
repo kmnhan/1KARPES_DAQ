@@ -386,7 +386,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.get_channel(channel).status.setState(False)
 
         if not self.queue.empty():
-            self._move(**self.queue.get())
+            self._move()
 
     @QtCore.Slot()
     def refresh_plot_visibility(self):
@@ -422,15 +422,14 @@ class SingleControllerWidget(QtWidgets.QWidget):
             )
         )
         if not self.mmthread.isRunning():
-            self._move(channel, target, frequency, amplitude)
+            self._move()
 
-    @QtCore.Slot(int, int, int, object)
-    def _move(
-        self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
-    ):
-        ch = self.get_channel(channel)
-        self.write_log(f"Move {ch.name} to {ch.convert_pos(target):.4f}")
-        if not self.is_channel_enabled(channel):
+    @QtCore.Slot()
+    def _move(self):
+        kwargs = self.queue.get()
+        ch = self.get_channel(kwargs["channel"])
+        self.write_log(f"Move {ch.name} to {ch.convert_pos(kwargs['target']):.4f}")
+        if not self.is_channel_enabled(kwargs["channel"]):
             # warnings.warn("Move called on a disabled channel ignored.")
             print("Move called on a disabled channel ignored.")
             self.queue.task_done()
@@ -441,11 +440,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
             self.queue.task_done()
             return
         self.mmthread.initialize_parameters(
-            channel=channel,
-            target=target,
-            frequency=frequency,
-            amplitude=amplitude,
-            threshold=self.get_channel(channel).tolerance,
+            **kwargs, threshold=self.get_channel(kwargs["channel"]).tolerance
         )
         self.mmthread.start()
 
