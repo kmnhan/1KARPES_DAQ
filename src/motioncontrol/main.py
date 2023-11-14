@@ -240,12 +240,13 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot()
     def refresh_plot_visibility(self):
         for con in self.controllers:
-            if self.actionplotpos.isChecked():
-                if not con.plot.isVisible():
-                    con.plot.show()
-            else:
-                if con.plot.isVisible():
-                    con.plot.hide()
+            if con.isEnabled():
+                if self.actionplotpos.isChecked():
+                    if not con.plot.isVisible():
+                        con.plot.show()
+                else:
+                    if con.plot.isVisible():
+                        con.plot.hide()
 
     @QtCore.Slot()
     def move_started(self):
@@ -296,7 +297,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
 
     def closeEvent(self, *args, **kwargs):
-
         # disconnect from controllers
         self.disconnect()
 
