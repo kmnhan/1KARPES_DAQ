@@ -413,17 +413,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def move(
         self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
     ):
+        self.queue.put(
+            dict(
+                channel=channel,
+                target=target,
+                frequency=frequency,
+                amplitude=amplitude,
+            )
+        )
         if not self.mmthread.isRunning():
             self._move(channel, target, frequency, amplitude)
-        else:
-            self.queue.put(
-                dict(
-                    channel=channel,
-                    target=target,
-                    frequency=frequency,
-                    amplitude=amplitude,
-                )
-            )
 
     @QtCore.Slot(int, int, int, object)
     def _move(
