@@ -1,3 +1,5 @@
+"""Functions that use the Windows API to control SES.exe windows and menus."""
+
 import glob
 import os
 import sys
@@ -27,7 +29,7 @@ def get_ses_proc() -> psutil.Process:
 
 
 def get_ses_window(process: psutil.Process) -> int:
-    """Returns the first window of the given process with title `SES`."""
+    """Returns the first window hwnd of process that has the title `SES`."""
     windows = []
     for thread in process.threads():
 
@@ -45,6 +47,7 @@ def get_ses_window(process: psutil.Process) -> int:
 
 
 def get_ses_properties() -> tuple[int, int]:
+    """Returns the pid and hwnd of the SES.exe main window."""
     proc = get_ses_proc()
     return proc.pid, get_ses_window(proc)
 
@@ -80,10 +83,12 @@ def get_file_info() -> tuple[str, str, set[str], int]:
 
 
 def next_index(base_dir: str, base_file: str, valid_ext: Iterable[str]) -> int:
+    """Infer the index of the upcoming data file from existing files."""
     files = []
     for ext in valid_ext:
         files += glob.glob(os.path.join(base_dir, f"{base_file}*{ext}"))
 
+    # get all files matching signature, sorted by time of last modification
     files = [
         os.path.basename(f) for f in sorted(files, key=lambda f: os.stat(f).st_mtime)
     ]
@@ -102,54 +107,27 @@ class SESController(object):
         )
 
     def click_menu(self, path: Sequence[str]) -> int:
-        if not self.ses_alive:
+        if not self.alive:
             raise RuntimeError("SES is not running")
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shell.SendKeys("%")
-        win32gui.ShowWindow(self._hwnd, win32con.SW_NORMAL)
         path = (
             self._ses_app.window(handle=self._hwnd)
             .menu()
             .get_menu_path("->".join(path))
         )
         if path[-1].is_enabled():
-            path[-1].click()
+            path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
+            pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
             return 0
         else:
             return 1
 
     @property
-    def ses_alive(self) -> bool:
+    def alive(self) -> bool:
         try:
             proc = psutil.Process(self._pid)
         except psutil.NoSuchProcess:
             return False
         return proc.name() == "Ses.exe"
 
-    @property
-    def data_files(self) -> tuple[str, ...]:
-        """Returns a tuple of wildcard strings to match against the saved data file."""
-        base_dir, base_file, valid_ext, saveafter = get_file_info()
-        if saveafter != "0":
-            print("Autosave is on")
-            pass
-
-        # return tuple(os.path.join(base_dir, f"{base_file}*{ext}") for ext in valid_ext)
-
-    # def calibrate_voltages(self):
-    #     return self.click_menu(["Calibration", "Voltages..."])
-
-    # def file_options(self):
-    #     return self.click_menu("Setup", "File Options...")
-
-    # def sequence_setup(self):
-    #     return self.click_menu("Sequence", "Setup...")
-
     def run_sequence(self):
         return self.click_menu("Sequence", "Run")
-
-    # def control_theta(self):
-    #     return self.click_menu("DA30", "Control Theta...")
-
-    # def center_deflection(self):
-    #     return self.click_menu("DA30", "Center Deflection")

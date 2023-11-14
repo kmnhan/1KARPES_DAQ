@@ -107,226 +107,6 @@ class MotorPosWriter(QtCore.QRunnable):
         self.write_pos(header)
 
 
-class ScanType(*uic.loadUiType("scantype.ui")):
-    def __init__(self, controller: SESController, parent=None):
-        super().__init__(parent)
-        self.setupUi(self)
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-
-        self.ses = controller
-
-        for i, motor in enumerate(self.motors):
-            motor.combo.currentTextChanged.connect(
-                lambda *, ind=i: self.motor_changed(ind)
-            )
-            motor.toggled.connect(lambda *, ind=i: self.motor_changed(ind))
-        self.update_motor_list()
-
-        self.start_btn.clicked.connect(self.start_scan)
-
-        self.pos_logger = MotorPosWriter()
-        # self.pos_logger.start()
-
-        self.threadpool = QtCore.QThreadPool()
-        self.threadpool.start(self.pos_logger)
-        # self.motion_thread = QtCore.QThread()
-        # self.scan_worker = ScanWorker()
-        # self.scan_worker.moveToThread(self.motion_thread)
-        # self.motion_thread.started.connect(self.scan_worker.run)
-        # self.motion_thread.start()
-
-        self._itools: list[LiveImageTool | None] = []
-
-    @property
-    def itool(self):
-        return self._itools[-1]
-
-    @itool.setter
-    def itool(self, imagetool: LiveImageTool):
-        self._itools.append(imagetool)
-
-    @property
-    def valid_axes(self) -> list[str]:
-        return [k for k, v in Motor.plugins.items() if v.enabled]
-
-    def update_motor_list(self):
-        self.motors[1].combo.blockSignals(True)
-        self.motors[1].combo.clear()
-        self.motors[1].combo.addItems(self.valid_axes[1:])
-        self.motors[1].combo.setCurrentIndex(1)
-        self.motors[1].combo.blockSignals(False)
-        self.motors[1].combo.setCurrentIndex(0)
-
-    @property
-    def motors(self) -> tuple[SingleMotorSetup, SingleMotorSetup]:
-        return self.motor1, self.motor2
-
-    @property
-    def numpoints(self) -> int:
-        return self.motor1.npoints * self.motor2.npoints
-
-    def motor_changed(self, index):
-        # apply motion limits
-        self.update_motor_limits(index)
-
-        # make two comboboxes mutually exclusive
-        self.motors[1 - index].combo.blockSignals(True)
-        self.motors[1 - index].combo.clear()
-        if self.motors[index].isChecked():
-            self.motors[1 - index].combo.addItems(
-                [
-                    ax
-                    for ax in self.valid_axes
-                    if ax != self.motors[index].combo.currentText()
-                ]
-            )
-        else:
-            self.motors[1 - index].combo.addItems(self.valid_axes)
-        self.motors[1 - index].combo.blockSignals(False)
-
-        # apply motion limits to other combobox (selection may have changed)
-        self.update_motor_limits(1 - index)
-
-    def update_motor_limits(self, index: int):
-        # get motor limits from plugin
-        try:
-            plugin = Motor.plugins[self.motors[index].combo.currentText()]
-        except KeyError:
-            return
-        else:
-            plugin_instance = plugin()
-            plugin_instance.pre_motion()
-            mn, mx = plugin_instance.minimum, plugin_instance.maximum
-            # properly cast into float in case the return type is incompatible
-            if mn is not None:
-                mn = float(mn)
-            if mx is not None:
-                mx = float(mx)
-
-            motor = self.motors[index]
-            motor.set_limits(mn, mx)
-            if plugin_instance.delta is not None:
-                motor.set_default_delta(
-                    float(plugin_instance.delta), plugin_instance.fix_delta
-                )
-
-            plugin_instance.post_motion()
-
-    def start_scan(self):
-        if not (self.motors[0].isChecked() or self.motors[1].isChecked()):
-            # no axes selected, just click run
-            self.ses.run_sequence()
-            return
-
-        # get motor arguments only if enabled
-        motor_args: list[tuple[str, np.ndarray]] = [
-            m.motor_properties for m in self.motors if m.isChecked()
-        ]
-
-        # get file information
-        base_dir, base_file, valid_ext, _ = get_file_info()
-        data_idx = next_index(base_dir, base_file, valid_ext)
-
-        if self.damap_check.isChecked():
-            self.itool = None
-        else:
-            self.itool = LiveImageTool(threadpool=self.threadpool)
-            self.itool.set_params(motor_args, base_dir, base_file, data_idx)
-
-        # prepare before start
-        self.pre_process()
-
-        self.initialize_logging(
-            dirname=base_dir,
-            filename=f"{base_file}{str(data_idx).zfill(4)}_motors.csv",
-            prefix="_scan_",
-            motor_args=motor_args,
-        )
-        scan_worker = ScanWorker(
-            motor_args,
-            base_dir,
-            base_file,
-            data_idx,
-            valid_ext,
-            self.damap_check.isChecked(),
-        )
-        scan_worker.signals.sigStepFinished.connect(self.step_finished)
-        scan_worker.signals.sigStepFinished.connect(self.update_live)
-        scan_worker.signals.sigStepStarted.connect(self.step_started)
-        scan_worker.signals.sigFinished.connect(self.post_process)
-        self.stop_btn.clicked.connect(scan_worker.force_stop)
-        self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
-
-        self.threadpool.start(scan_worker)
-
-    @QtCore.Slot(int, object, object)
-    def step_finished(self, niter: int, pos0, pos1):
-        # display status
-        self.line.setText(f"{niter}/{self.numpoints} Finished, v1={pos0}, v2={pos1}")
-
-        # enter log entry
-        entry = [niter, np.float32(pos0)]
-        if pos1 is not None:
-            entry.append(np.float32(pos1))
-        self.pos_logger.write_pos([str(x) for x in entry])
-
-    @QtCore.Slot(int, object, object)
-    def update_live(self, niter, *args):
-        if self.itool is None:
-            return
-        self.itool.trigger_fetch(niter)
-        if not self.itool.isVisible():
-            self.itool.show()
-
-    @QtCore.Slot()
-    def pre_process(self):
-        # disable scan window during scan
-        for m in self.motors:
-            m.setDisabled(True)
-        self.start_btn.setDisabled(True)
-        self.damap_check.setDisabled(True)
-        self.stop_btn.setDisabled(False)
-        self.stop_point_btn.setDisabled(False)
-        if self.itool is not None:
-            self.itool.set_busy(True)
-
-    @QtCore.Slot()
-    def post_process(self):
-        for m in self.motors:
-            m.setDisabled(False)
-        self.start_btn.setDisabled(False)
-        self.damap_check.setDisabled(False)
-        self.stop_btn.setDisabled(True)
-        self.stop_point_btn.setDisabled(True)
-        if self.itool is not None:
-            self.itool.set_busy(False)
-
-    @QtCore.Slot(int)
-    def step_started(self, niter: int):
-        self.line.setText(f"{niter}/{self.numpoints} Started")
-
-    def initialize_logging(
-        self,
-        dirname,
-        filename: str,
-        prefix: str,
-        motor_args: list[tuple[str, np.ndarray]],
-    ):
-        self.pos_logger.set_file(dirname, filename, prefix)
-        header = [""]
-        for motor in motor_args:
-            header.append(motor[0])
-        self.pos_logger.write_header(header)
-
-    def closeEvent(self, *args, **kwargs):
-        for win in self._itools:
-            if win:
-                win.close()
-        self.pos_logger.stop()
-        self.threadpool.waitForDone()
-        super().closeEvent(*args, **kwargs)
-
-
 class ScanWorkerSignals(QtCore.QObject):
     sigStepFinished = QtCore.Signal(int, object, object)
     sigStepStarted = QtCore.Signal(int)
@@ -367,6 +147,7 @@ class ScanWorker(QtCore.QRunnable):
         self._stopnow: bool = False
 
     def check_finished(self) -> bool:
+        """Returns whether if sequence is finished."""
         path = (
             self._ses_app.window(handle=self._hwnd)
             .menu()
@@ -375,23 +156,16 @@ class ScanWorker(QtCore.QRunnable):
         return path[-1].is_enabled()
 
     def click_sequence_button(self, button: str):
+        """Click a button in the Sequence menu."""
         while True:
             try:
-                # https://stackoverflow.com/a/15503675
-                # shell = win32com.client.Dispatch("WScript.Shell")
-                # shell.SendKeys("%")
-                # win32gui.ShowWindow(self._hwnd, win32con.SW_NORMAL)
-                # win32gui.SetForegroundWindow(self._hwnd)
                 path = (
                     self._ses_app.window(handle=self._hwnd)
                     .menu()
                     .get_menu_path(f"Sequence->{button}")
                 )
-                # path[-1].click()
-                # path.ctrl.send_message_timeout(path.menu.COMMAND, path.command_id(), timeout=1.0)
                 path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
                 pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
-                time.sleep(0.01)
             except win32.lib.pywintypes.error as e:
                 print(e)
                 continue
@@ -399,16 +173,19 @@ class ScanWorker(QtCore.QRunnable):
                 break
 
     def stop_after_point(self):
+        """Stop after acquiring current motor point."""
         self._stop = True
 
     def force_stop(self):
+        """Force stop now."""
         self._stop = True
         self._stopnow = True
 
     def sequence_run_wait(self) -> int:
+        """Run sequence and wait until it finishes."""
         # click run button
         self.click_sequence_button("Run")
-        # time.sleep(0.1)
+        time.sleep(0.01)
 
         aborted: bool = False
         while True:
@@ -423,7 +200,42 @@ class ScanWorker(QtCore.QRunnable):
             return 1
         return 0
 
-    def rename_file(self, index: int):
+    def run(self):
+        if len(self.axes) == 0:
+            # no motors, single scan
+            self.signals.sigStepStarted.emit(1)
+            self.sequence_run_wait()
+            self.signals.sigStepFinished.emit(1, 0, 0)
+        else:
+            if len(self.axes) == 1:
+                self.coords.append([[0]])
+
+            for i, ax in enumerate(self.axes):
+                ax.pre_motion()
+
+                # last sanity check of bounds before motion
+                if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
+                    ax.maximum is not None and max(self.coords[i]) > ax.maximum
+                ):
+                    # if not np.all(
+                    #     (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
+                    # ):
+                    ax.post_motion()
+                    self.signals.sigFinished.emit()
+                    print("PARAMETERS OUT OF MOTOR BOUNDS")
+                    return
+
+            self._motion_loop()
+
+            for ax in self.axes:
+                ax.post_motion()
+
+            # restore mangled filenames
+            self._restore_filenames()
+
+        self.signals.sigFinished.emit()
+
+    def _rename_file(self, index: int):
         """Renames the data file to include the slice index.
 
         This function adjusts file names to maintain a constant file number during
@@ -477,7 +289,7 @@ class ScanWorker(QtCore.QRunnable):
                     else:
                         break
 
-    def restore_filenames(self):
+    def _restore_filenames(self):
         files = []
         for ext in list(self.valid_ext) + [".csv"]:
             files += glob.glob(
@@ -537,7 +349,7 @@ class ScanWorker(QtCore.QRunnable):
                     return
 
                 # mangle filename so that SES ignores it
-                self.rename_file(niter)
+                self._rename_file(niter)
                 self.signals.sigStepFinished.emit(niter, pos0, pos1)
 
                 if self._stop:
@@ -546,41 +358,233 @@ class ScanWorker(QtCore.QRunnable):
 
                 niter += 1
 
-    def run(self):
-        if len(self.axes) == 1:
-            self.coords.append([[0]])
 
-        for i, ax in enumerate(self.axes):
-            # pre motion
-            ax.pre_motion()
+class ScanType(*uic.loadUiType("scantype.ui")):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
-            # last sanity check of bounds before motion
-            if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
-                ax.maximum is not None and max(self.coords[i]) > ax.maximum
-            ):
-                # if not np.all(
-                #     (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
-                # ):
-                ax.post_motion()
-                self.signals.sigFinished.emit()
-                print("PARAMETERS OUT OF MOTOR BOUNDS")
-                return
+        for i, motor in enumerate(self.motors):
+            motor.combo.currentTextChanged.connect(
+                lambda *, ind=i: self.motor_changed(ind)
+            )
+            motor.toggled.connect(lambda *, ind=i: self.motor_changed(ind))
+        self.update_motor_list()
 
-        self._motion_loop()
+        self.start_btn.clicked.connect(self.start_scan)
 
-        for ax in self.axes:
-            ax.post_motion()
+        self.pos_logger = MotorPosWriter()
+        # self.pos_logger.start()
 
-        # restore mangled filenames
-        self.restore_filenames()
+        self.threadpool = QtCore.QThreadPool()
+        self.threadpool.start(self.pos_logger)
+        # self.motion_thread = QtCore.QThread()
+        # self.scan_worker = ScanWorker()
+        # self.scan_worker.moveToThread(self.motion_thread)
+        # self.motion_thread.started.connect(self.scan_worker.run)
+        # self.motion_thread.start()
 
-        self.signals.sigFinished.emit()
+        self._itools: list[LiveImageTool | None] = []
+
+    @property
+    def itool(self):
+        return self._itools[-1]
+
+    @itool.setter
+    def itool(self, imagetool: LiveImageTool):
+        self._itools.append(imagetool)
+
+    @property
+    def valid_axes(self) -> list[str]:
+        return [k for k, v in Motor.plugins.items() if v.enabled]
+
+    def update_motor_list(self):
+        self.motors[1].combo.blockSignals(True)
+        self.motors[1].combo.clear()
+        self.motors[1].combo.addItems(self.valid_axes[1:])
+        self.motors[1].combo.setCurrentIndex(1)
+        self.motors[1].combo.blockSignals(False)
+        self.motors[1].combo.setCurrentIndex(0)
+
+    @property
+    def motors(self) -> tuple[SingleMotorSetup, SingleMotorSetup]:
+        return self.motor1, self.motor2
+
+    @property
+    def numpoints(self) -> int:
+        return self.motor1.npoints * self.motor2.npoints
+
+    @property
+    def has_motor(self) -> bool:
+        return self.motors[0].isChecked() or self.motors[1].isChecked()
+
+    def motor_changed(self, index):
+        # apply motion limits
+        self.update_motor_limits(index)
+
+        # make two comboboxes mutually exclusive
+        self.motors[1 - index].combo.blockSignals(True)
+        self.motors[1 - index].combo.clear()
+        if self.motors[index].isChecked():
+            self.motors[1 - index].combo.addItems(
+                [
+                    ax
+                    for ax in self.valid_axes
+                    if ax != self.motors[index].combo.currentText()
+                ]
+            )
+        else:
+            self.motors[1 - index].combo.addItems(self.valid_axes)
+        self.motors[1 - index].combo.blockSignals(False)
+
+        # apply motion limits to other combobox (selection may have changed)
+        self.update_motor_limits(1 - index)
+
+    def update_motor_limits(self, index: int):
+        # get motor limits from plugin
+        try:
+            plugin = Motor.plugins[self.motors[index].combo.currentText()]
+        except KeyError:
+            return
+        else:
+            plugin_instance = plugin()
+            plugin_instance.pre_motion()
+            mn, mx = plugin_instance.minimum, plugin_instance.maximum
+            # properly cast into float in case the return type is incompatible
+            if mn is not None:
+                mn = float(mn)
+            if mx is not None:
+                mx = float(mx)
+
+            motor = self.motors[index]
+            motor.set_limits(mn, mx)
+            if plugin_instance.delta is not None:
+                motor.set_default_delta(
+                    float(plugin_instance.delta), plugin_instance.fix_delta
+                )
+
+            plugin_instance.post_motion()
+
+    def start_scan(self):
+        # self.ses.run_sequence()
+        # return
+
+        # get motor arguments only if enabled
+        motor_args: list[tuple[str, np.ndarray]] = [
+            m.motor_properties for m in self.motors if m.isChecked()
+        ]
+
+        # get file information
+        base_dir, base_file, valid_ext, _ = get_file_info()
+        data_idx = next_index(base_dir, base_file, valid_ext)
+
+        if self.damap_check.isChecked():
+            self.itool = None
+        else:
+            self.itool = LiveImageTool(threadpool=self.threadpool)
+            self.itool.set_params(motor_args, base_dir, base_file, data_idx)
+
+        # prepare before start
+        self.pre_process()
+
+        if self.has_motor:
+            self.initialize_logging(
+                dirname=base_dir,
+                filename=f"{base_file}{str(data_idx).zfill(4)}_motors.csv",
+                prefix="_scan_",
+                motor_args=motor_args,
+            )
+        scan_worker = ScanWorker(
+            motor_args,
+            base_dir,
+            base_file,
+            data_idx,
+            valid_ext,
+            self.damap_check.isChecked(),
+        )
+        scan_worker.signals.sigStepFinished.connect(self.step_finished)
+        scan_worker.signals.sigStepFinished.connect(self.update_live)
+        scan_worker.signals.sigStepStarted.connect(self.step_started)
+        scan_worker.signals.sigFinished.connect(self.post_process)
+        self.stop_btn.clicked.connect(scan_worker.force_stop)
+        self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
+
+        self.threadpool.start(scan_worker)
+
+    @QtCore.Slot(int, object, object)
+    def step_finished(self, niter: int, pos0, pos1):
+        # display status
+        self.line.setText(f"{niter}/{self.numpoints} Finished, v1={pos0}, v2={pos1}")
+
+        if self.has_motor:
+            # enter log entry
+            entry = [niter, np.float32(pos0)]
+            if pos1 is not None:
+                entry.append(np.float32(pos1))
+            self.pos_logger.write_pos([str(x) for x in entry])
+
+    @QtCore.Slot(int, object, object)
+    def update_live(self, niter, *args):
+        if self.itool is None:
+            return
+        self.itool.trigger_fetch(niter)
+        if not self.itool.isVisible():
+            self.itool.show()
+
+    @QtCore.Slot()
+    def pre_process(self):
+        # disable scan window during scan
+        for m in self.motors:
+            m.setDisabled(True)
+        self.start_btn.setDisabled(True)
+        self.damap_check.setDisabled(True)
+        self.stop_btn.setDisabled(False)
+        self.stop_point_btn.setDisabled(False)
+        if self.itool is not None:
+            self.itool.set_busy(True)
+
+    @QtCore.Slot()
+    def post_process(self):
+        for m in self.motors:
+            m.setDisabled(False)
+        self.start_btn.setDisabled(False)
+        self.damap_check.setDisabled(False)
+        self.stop_btn.setDisabled(True)
+        self.stop_point_btn.setDisabled(True)
+        if self.itool is not None:
+            self.itool.set_busy(False)
+
+    @QtCore.Slot(int)
+    def step_started(self, niter: int):
+        self.line.setText(f"{niter}/{self.numpoints} Started")
+
+    def initialize_logging(
+        self,
+        dirname,
+        filename: str,
+        prefix: str,
+        motor_args: list[tuple[str, np.ndarray]],
+    ):
+        self.pos_logger.set_file(dirname, filename, prefix)
+        header = [""]
+        for motor in motor_args:
+            header.append(motor[0])
+        self.pos_logger.write_header(header)
+
+    def closeEvent(self, *args, **kwargs):
+        for win in self._itools:
+            if win:
+                win.close()
+        self.pos_logger.stop()
+        self.threadpool.waitForDone()
+        super().closeEvent(*args, **kwargs)
 
 
 class SESShortcuts(QtWidgets.QWidget):
     SES_ACTIONS: dict[str, tuple[str, str]] = {
         "Calibrate Voltages": ("Calibration", "Voltages..."),
-        # "File Options": ("Setup", "File Options..."),
+        "File Options": ("Setup", "File Options..."),
         "Sequence Setup": ("Sequence", "Setup..."),
         "Control Theta": ("DA30", "Control Theta..."),
         "Center Deflection": ("DA30", "Center Deflection"),
@@ -595,7 +599,7 @@ class SESShortcuts(QtWidgets.QWidget):
         self.connect()
         self.create_buttons()
 
-        self.scantype = ScanType(self.ses)
+        self.scantype = ScanType()
         self.scantype.show()
         self.scantype.activateWindow()
 
@@ -606,8 +610,6 @@ class SESShortcuts(QtWidgets.QWidget):
     @ses.setter
     def ses(self, value: SESController):
         self._ses = value
-        if hasattr(self, "scantype"):
-            self.scantype.ses = value
 
     @QtCore.Slot()
     def connect(self):
@@ -631,7 +633,7 @@ class SESShortcuts(QtWidgets.QWidget):
             QtWidgets.QMessageBox.critical(
                 self,
                 str(e),
-                f"SES instance was lost.",
+                f"SES control failed",
             )
             self.connect()
 
@@ -648,7 +650,7 @@ if __name__ == "__main__":
         qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setStyle("Fusion")
     # widget = SESShortcuts()
-    widget = ScanType(SESController())
+    widget = ScanType()
     widget.show()
     widget.activateWindow()
     qapp.exec()

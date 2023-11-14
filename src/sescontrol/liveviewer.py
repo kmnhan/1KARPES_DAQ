@@ -10,61 +10,6 @@ from plugins import Motor
 from qtpy import QtCore, QtWidgets
 
 
-class DataFetcherSignals(QtCore.QObject):
-    sigDataFetched = QtCore.Signal(int, object)
-
-
-class DataFetcher(QtCore.QRunnable):
-    def __init__(
-        self,
-        motor_args: list[tuple[str, np.ndarray]],
-        base_dir: str,
-        base_file: str,
-        data_idx: int,
-        niter: int,
-    ):
-        super().__init__()
-        self.signals = DataFetcherSignals()
-
-        self._motor_args = motor_args
-        self._base_dir = base_dir
-        self._base_file = base_file
-        self._data_idx = data_idx
-        self._niter = niter
-
-    def run(self):
-        filename = os.path.join(
-            self._base_dir,
-            "_scan_"
-            + self._base_file
-            + f"{str(self._data_idx).zfill(4)}_S{str(self._niter).zfill(5)}.pxt",
-        )
-        if not os.path.isfile(filename):
-            filename = filename.replace("_scan_", "")
-        wave = erlab.io.load_experiment(filename)
-
-        if isinstance(wave, xr.Dataset):
-            # select first sequence
-            wave: xr.DataArray = list(wave.data_vars.values())[0]
-
-        # binning
-        wave = wave.coarsen({d: 4 for d in wave.dims}, boundary="trim").mean()
-
-        if self._niter == 1:
-            wave = wave.expand_dims(
-                {name: coord for name, coord in self._motor_args},
-                axis=[wave.ndim + i for i in range(len(self._motor_args))],
-            ).copy()
-
-            for name, coord in self._motor_args:
-                wave.loc[{name: wave.coords[name] != coord[0]}] = np.nan
-
-        self.signals.sigDataFetched.emit(
-            self._niter,
-            wave.rename({"Kinetic Energy [eV]": "eV", "Y-Scale [deg]": "deg"}),
-        )
-
-
 class MotorThread(threading.Thread):
     """Simple thread implementation of non-blocking motion."""
 
@@ -214,6 +159,76 @@ class CustomMenuBar(ItoolMenuBar):
             self.slicer_area.view_all()
 
 
+class DataFetcherSignals(QtCore.QObject):
+    sigDataFetched = QtCore.Signal(int, object)
+
+
+class DataFetcher(QtCore.QRunnable):
+    def __init__(
+        self,
+        motor_args: list[tuple[str, np.ndarray]],
+        base_dir: str,
+        base_file: str,
+        data_idx: int,
+        niter: int,
+    ):
+        super().__init__()
+        self.signals = DataFetcherSignals()
+
+        self._motor_args = motor_args
+        self._base_dir = base_dir
+        self._base_file = base_file
+        self._data_idx = data_idx
+        self._niter = niter
+
+    def run(self):
+        if len(self._motor_args) == 0:
+            filename = os.path.join(
+                self._base_dir, f"{self._base_file}{str(self._data_idx).zfill(4)}.pxt"
+            )
+            if not os.path.isfile(filename):
+                filename = filename.replace(".pxt", ".zip")
+        else:
+            filename = os.path.join(
+                self._base_dir,
+                "_scan_"
+                + self._base_file
+                + f"{str(self._data_idx).zfill(4)}_S{str(self._niter).zfill(5)}.pxt",
+            )
+            if not os.path.isfile(filename):
+                filename = filename.replace("_scan_", "")
+
+        if not os.path.isfile(filename):
+            print("File not found... skip display")
+            return
+
+        wave = erlab.io.load_experiment(filename)
+
+        if isinstance(wave, xr.Dataset):
+            # select first sequence
+            wave: xr.DataArray = list(wave.data_vars.values())[0]
+
+        # binning
+        if len(self._motor_args) != 0:
+            wave = wave.coarsen({d: 4 for d in wave.dims}, boundary="trim").mean()
+
+        if self._niter == 1:
+            # reserve space for future scans
+            wave = wave.expand_dims(
+                {name: coord for name, coord in self._motor_args},
+                axis=[wave.ndim + i for i in range(len(self._motor_args))],
+            ).copy()
+
+            # fill reserved space with nan
+            for name, coord in self._motor_args:
+                wave.loc[{name: wave.coords[name] != coord[0]}] = np.nan
+
+        self.signals.sigDataFetched.emit(
+            self._niter,
+            wave.rename({"Kinetic Energy [eV]": "eV", "Y-Scale [deg]": "deg"}),
+        )
+
+
 class LiveImageTool(BaseImageTool):
     def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
@@ -252,6 +267,9 @@ class LiveImageTool(BaseImageTool):
         self._data_idx = data_idx
 
         self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
+
+        if len(self._motor_args) == 0:
+            self.motor_dock.setDisabled(True)
 
     def trigger_fetch(self, niter: int):
         data_fetcher = DataFetcher(
