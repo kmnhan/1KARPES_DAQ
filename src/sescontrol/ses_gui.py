@@ -266,18 +266,17 @@ class ScanWorker(QtCore.QRunnable):
             if self.has_da and ext == ".zip":
                 if not self._stopnow:
                     # if aborted before scan termination, da map is (probably) not saved
-                    i = 0
+                    timeout_start = time.monotonic()
                     while True:
-                        time.sleep(0.1)
                         if os.path.isfile(f):
                             break
-                        if self._stop and i > 100:
-                            # TODO: improve stupid timeout implementation
+                        elif self._stop and time.monotonic() > timeout_start + 20:
                             # SES 상에서 stop after something 누른 다음 stop after
                             # point를 통해 abort할 시에는 DA map이 저장되지 않을 수도
-                            # 있으니까 10초쯤 기다려서 안 되면 그냥 안 되는갑다 하기
+                            # 있으니까 20초쯤 기다려서 안 되면 그냥 안 되는갑다 하기
                             break
-                        i += 1
+                        else:
+                            time.sleep(0.1)
 
             if os.path.isfile(f):
                 while True:
@@ -467,9 +466,6 @@ class ScanType(*uic.loadUiType("scantype.ui")):
             plugin_instance.post_motion()
 
     def start_scan(self):
-        # self.ses.run_sequence()
-        # return
-
         # get motor arguments only if enabled
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()

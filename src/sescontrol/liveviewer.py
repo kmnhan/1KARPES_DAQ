@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 
 import erlab.io
 import numpy as np
@@ -188,6 +189,12 @@ class DataFetcher(QtCore.QRunnable):
             )
             if not os.path.isfile(filename):
                 filename = filename.replace(".pxt", ".zip")
+                timeout = time.monotonic() + 20
+                while time.monotonic() < timeout:
+                    if os.path.isfile(filename):
+                        break
+                    else:
+                        time.sleep(0.2)
         else:
             filename = os.path.join(
                 self._base_dir,
@@ -269,7 +276,7 @@ class LiveImageTool(BaseImageTool):
         self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
 
         if len(self._motor_args) == 0:
-            self.motor_dock.setDisabled(True)
+            self.motor_controls.setDisabled(True)
 
     def trigger_fetch(self, niter: int):
         data_fetcher = DataFetcher(
