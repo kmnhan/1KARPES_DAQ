@@ -304,7 +304,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.log_writer.stop()
 
         # stop server
-        self.server.running.set()
+        self.server.stopped.set()
         self.server.wait(2000)
 
         # close plots
