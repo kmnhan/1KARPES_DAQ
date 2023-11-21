@@ -1,3 +1,5 @@
+import time
+
 import zmq
 from qtpy import QtCore
 
@@ -23,9 +25,10 @@ from livelogreader import get_pressure, get_temperature
 #             try:
 #                 message = socket.recv(flags=zmq.NOBLOCK)
 #             except zmq.error.Again:
-#                 continue
+#                 pass
 #             else:
 #                 socket.send_string("Hello World!")
+#             time.sleep(0.01)
 #         socket.close()
 
 
@@ -63,7 +66,7 @@ class SlitServer(QtCore.QThread):
             try:
                 message = socket.recv(flags=zmq.NOBLOCK)
             except zmq.error.Again:
-                continue
+                pass
             else:
                 slit_info = {
                     "Analyzer Slit Number": str(SLIT_TABLE[self.value][0]),
@@ -74,6 +77,7 @@ class SlitServer(QtCore.QThread):
                     socket.send_string(dict_to_header(slit_info))
                 else:
                     socket.send_json(slit_info)
+            time.sleep(0.01)
         socket.close()
         self.sigSocketClosed.emit()
 
@@ -100,13 +104,13 @@ class TemperatureServer(QtCore.QThread):
             try:
                 message = socket.recv(flags=zmq.NOBLOCK)
             except zmq.error.Again:
-                continue
+                pass
             else:
                 if message == b"1":
                     socket.send_string(dict_to_header(get_temperature()))
                 else:
                     socket.send_json(get_temperature())
-
+            time.sleep(0.01)
         socket.close()
         self.sigSocketClosed.emit()
 
@@ -133,12 +137,12 @@ class PressureServer(QtCore.QThread):
             try:
                 message = socket.recv(flags=zmq.NOBLOCK)
             except zmq.error.Again:
-                continue
+                pass
             else:
                 if message == b"1":
                     socket.send_string(dict_to_header(get_pressure()))
                 else:
                     socket.send_json(get_pressure())
-
+            time.sleep(0.01)
         socket.close()
         self.sigSocketClosed.emit()
