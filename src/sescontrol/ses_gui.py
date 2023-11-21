@@ -3,6 +3,7 @@ import glob
 import os
 import sys
 import time
+import zipfile
 from collections import deque
 from collections.abc import Iterable
 
@@ -183,10 +184,14 @@ class ScanWorker(QtCore.QRunnable):
 
     def sequence_run_wait(self) -> int:
         """Run sequence and wait until it finishes."""
+
+        workfiles = os.listdir(os.path.join(SES_DIR, "work"))
+
         # click run button
         self.click_sequence_button("Run")
         time.sleep(0.01)
 
+        # keep checking for abort during scan
         aborted: bool = False
         while True:
             if (not aborted) and self._stopnow:
@@ -196,6 +201,33 @@ class ScanWorker(QtCore.QRunnable):
                 break
             time.sleep(0.001)
 
+        if self.has_da:
+            # DA maps take time to save even after scan ends, let's try to wait
+            timeout_start = time.monotonic()
+            fname = os.path.join(
+                self.base_dir,
+                f"{self.base_file}{str(self.data_idx).zfill(4)}.zip",
+            )
+            while True:
+                time.sleep(0.2)
+                if os.path.isfile(fname) and os.stat(fname).st_size != 0:
+                    try:
+                        with zipfile.ZipFile(fname, "r") as _:
+                            # do nothing, just trying to open the file
+                            pass
+                    except zipfile.BadZipFile:
+                        continue
+                    else:
+                        # zipfile is intact, check work folder to confirm
+                        if len(workfiles) == len(
+                            os.listdir(os.path.join(SES_DIR, "work"))
+                        ):
+                            break
+                elif self._stop and time.monotonic() > timeout_start + 20:
+                    # SES 상에서 stop after something 누른 다음 stop after point를 통해
+                    # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 20초
+                    # 기다려서 안 되면 그냥 안 되는갑다 하기
+                    break
         if aborted:
             return 1
         return 0
@@ -217,9 +249,6 @@ class ScanWorker(QtCore.QRunnable):
                 if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
                     ax.maximum is not None and max(self.coords[i]) > ax.maximum
                 ):
-                    # if not np.all(
-                    #     (self.coords[i] >= ax.minimum) & (self.coords[i] <= ax.maximum)
-                    # ):
                     ax.post_motion()
                     self.signals.sigFinished.emit()
                     print("PARAMETERS OUT OF MOTOR BOUNDS")
@@ -263,21 +292,6 @@ class ScanWorker(QtCore.QRunnable):
                 + f"_S{str(index).zfill(5)}"
                 + ext,
             )
-            if self.has_da and ext == ".zip":
-                if not self._stopnow:
-                    # if aborted before scan termination, da map is (probably) not saved
-                    timeout_start = time.monotonic()
-                    while True:
-                        if os.path.isfile(f):
-                            break
-                        elif self._stop and time.monotonic() > timeout_start + 20:
-                            # SES 상에서 stop after something 누른 다음 stop after
-                            # point를 통해 abort할 시에는 DA map이 저장되지 않을 수도
-                            # 있으니까 20초쯤 기다려서 안 되면 그냥 안 되는갑다 하기
-                            break
-                        else:
-                            time.sleep(0.1)
-
             if os.path.isfile(f):
                 while True:
                     try:
@@ -374,15 +388,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.start_btn.clicked.connect(self.start_scan)
 
         self.pos_logger = MotorPosWriter()
-        # self.pos_logger.start()
-
         self.threadpool = QtCore.QThreadPool()
         self.threadpool.start(self.pos_logger)
-        # self.motion_thread = QtCore.QThread()
-        # self.scan_worker = ScanWorker()
-        # self.scan_worker.moveToThread(self.motion_thread)
-        # self.motion_thread.started.connect(self.scan_worker.run)
-        # self.motion_thread.start()
 
         self._itools: list[LiveImageTool | None] = []
 
