@@ -151,7 +151,8 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
     @QtCore.Slot()
     def target_current_pos(self):
-        self.set_target(self.convert_pos(self.raw_position))
+        if self.enabled:
+            self.set_target(self.current_pos)
 
     def set_channel_disabled(self, value: bool):
         self.combobox.setDisabled(value)
@@ -217,6 +218,46 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             self.freq_spin.value(),
             (self.amp_bwd_spin.value(), self.amp_fwd_spin.value()),
         )
+
+
+class DeltaWidget(QtWidgets.QWidget):
+    sigStepped = QtCore.Signal(float)
+    sigMoved = QtCore.Signal()
+
+    def __init__(self):
+        self.setLayout(QtWidgets.QHBoxLayout(self))
+
+        self.left_btn = QtWidgets.QPushButton(qta.icon("mdi6.arrow-left"))
+        self.right_btn = QtWidgets.QPushButton(qta.icon("mdi6.arrow-right"))
+        self.move_btn = QtWidgets.QPushButton("Move")
+
+        self.step_spin = QtWidgets.QDoubleSpinBox()
+        self.step_spin.setMinimum(0)
+        self.step_spin.setMaximum(0.5)
+        self.step_spin.setValue(0.1)
+        self.step_spin.setDecimals(2)
+        self.step_spin.setSingleStep(0.01)
+
+        self.layout().addStretch()
+        self.layout().addWidget(self.left_btn)
+        self.layout().addWidget(self.step_spin)
+        self.layout().addWidget(self.right_btn)
+
+        self.left_btn.clicked.connect(self.step_down)
+        self.right_btn.clicked.connect(self.step_up)
+        self.move_btn.clicked.connect(self.move)
+
+    @QtCore.Slot()
+    def step_up(self):
+        self.sigStepped.emit(self.step_spin.value())
+
+    @QtCore.Slot()
+    def step_down(self):
+        self.sigStepped.emit(-self.step_spin.value())
+
+    @QtCore.Slot()
+    def move(self):
+        self.sigMoved.emit()
 
 
 class MotionPlot(pg.PlotWidget):

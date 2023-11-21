@@ -9,7 +9,7 @@ import time
 import numpy as np
 from maniserver import ManiServer
 from moee import MMStatus
-from motionwidgets import SingleChannelWidget, SingleControllerWidget
+from motionwidgets import SingleChannelWidget, DeltaWidget, SingleControllerWidget
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
@@ -119,6 +119,11 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
             con.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
 
+        # add delta control
+        self.delta_widget = DeltaWidget()
+        self.delta_widget.sigStepped.connect(self.step_delta)
+        self.delta_widget.sigMoved.connect(self.move_delta)
+
         # setup logging
         self.log_writer = LoggingProc(LOG_DIR)
         self.log_writer.start()
@@ -178,6 +183,15 @@ class MainWindow(*uic.loadUiType("controller.ui")):
                     return i, j + 1
         return None, None
 
+    def get_xy_axes(self) -> tuple[SingleChannelWidget, SingleChannelWidget] | None:
+        chx, chy = self.get_axis("X"), self.get_axis("Y")
+        if chx is None or chy is None:
+            QtWidgets.QMessageBox.warning(
+                self, "Missing motor", "X or Y motor is not enabled."
+            )
+            return
+        return chx, chy
+
     @property
     def status(self) -> MMStatus:
         """Status of the motors.
@@ -205,6 +219,38 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         amplitude: tuple[int, int],
     ):
         self.controllers[con_idx].move(channel, target, frequency, amplitude)
+
+    @QtCore.Slot(float)
+    def step_delta(self, value: float):
+        chx, chy = self.get_xy_axes()
+
+        beam_incidence = np.deg2rad(50)
+        newx = chx.current_pos + value * np.sin(beam_incidence)
+        newy = chy.current_pos + value * np.cos(beam_incidence)
+
+        if not chx.minimum <= newx <= chx.maximum:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Out of bounds",
+                f"New X value {newx:.2f} is out of bounds.",
+            )
+            return
+        if not chy.minimum <= newy <= chy.maximum:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Out of bounds",
+                f"New Y value {newy:.2f} is out of bounds.",
+            )
+            return
+
+        chx.set_target(newx)
+        chy.set_target(newy)
+
+    @QtCore.Slot()
+    def move_delta(self):
+        chx, chy = self.get_xy_axes()
+        chx.move()
+        chy.move()
 
     def get_current_positions(self, con_idx: int) -> list[float]:
         con = self.controllers[con_idx]
