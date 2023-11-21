@@ -167,7 +167,7 @@ class MMThread(QtCore.QThread):
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
-        # log.info(f"setting direction to {direction}")
+        log.info(f"setting direction to {direction}")
         self.mmsend(MMCommand.SETSIGDIR, int(channel), int(direction))
         return self.mmrecv()
 
@@ -200,37 +200,37 @@ class MMThread(QtCore.QThread):
         self.sigPosRead.emit(channel, val)
         return val
 
-    def freq_test(self, channel: int):
-        import numpy as np
+    # def freq_test(self, channel: int):
+    #     import numpy as np
 
-        self.reset()
-        self.set_frequency(channel, 300)
-        # amps = (30, 35, 40, 45, 50, 55)
-        amps = np.arange(30, 62, 2)
+    #     self.reset()
+    #     self.set_frequency(channel, 300)
+    #     # amps = (30, 35, 40, 45, 50, 55)
+    #     amps = np.arange(30, 62, 2)
 
-        niter = 100
+    #     niter = 100
 
-        vals = np.zeros((len(amps), 2, niter), dtype=int)
+    #     vals = np.zeros((len(amps), 2, niter), dtype=int)
 
-        p0 = self.get_position(channel)
-        for i, amp in enumerate(amps):
-            self.set_amplitude(channel, amp)
-            for j in range(niter):
-                self.set_direction(channel, 0)
+    #     p0 = self.get_position(channel)
+    #     for i, amp in enumerate(amps):
+    #         self.set_amplitude(channel, amp)
+    #         for j in range(niter):
+    #             self.set_direction(channel, 0)
 
-                self.mmsend(MMCommand.SENDSIGONCE, channel)
-                self.mmrecv()
-                p1 = self.get_position(channel)
-                vals[i, 0, j] = p1 - p0
+    #             self.mmsend(MMCommand.SENDSIGONCE, channel)
+    #             self.mmrecv()
+    #             p1 = self.get_position(channel)
+    #             vals[i, 0, j] = p1 - p0
 
-                self.set_direction(channel, 1)
+    #             self.set_direction(channel, 1)
 
-                self.mmsend(MMCommand.SENDSIGONCE, channel)
-                self.mmrecv()
-                p0 = self.get_position(channel)
-                vals[i, 1, j] = p1 - p0
+    #             self.mmsend(MMCommand.SENDSIGONCE, channel)
+    #             self.mmrecv()
+    #             p0 = self.get_position(channel)
+    #             vals[i, 1, j] = p1 - p0
 
-        np.save("D:/MotionController/freqtest2.npy", vals)
+    #     np.save("D:/MotionController/freqtest2.npy", vals)
 
     @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
@@ -263,7 +263,6 @@ class MMThread(QtCore.QThread):
             self.reset(self._channel)
 
             # set pulse train
-            # self.set_pulse_train(self._channel, 1)
             self.set_pulse_train(self._channel, 10)
 
             # set amplitude if fwd and bwd are same
