@@ -1,5 +1,5 @@
-pyqt6
-qtpy
+pyqtgraph
 matplotlib
 pypylon
-pyqtgraph
+pyqt6
+qtpy
