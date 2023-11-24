@@ -39,3 +39,13 @@ pyinstaller ./src/webcam.py --onedir --windowed `
 --upx-dir C:\upx410w
 ```
 
+
+### Motion Controller
+```
+pyinstaller ./src/motioncontrol/main.py --onedir --windowed `
+--icon src/motioncontrol/icon.ico `
+--add-data="src/motioncontrol/*;." `
+--hidden-import PyQt6 `
+--exclude IPython
+```
+
