@@ -360,6 +360,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
