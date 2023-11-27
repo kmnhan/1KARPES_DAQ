@@ -8,6 +8,7 @@ import time
 
 try:
     os.chdir(sys._MEIPASS)
+    multiprocessing.freeze_support()
 except:
     pass
 
