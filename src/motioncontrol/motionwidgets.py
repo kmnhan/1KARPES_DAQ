@@ -229,8 +229,10 @@ class DeltaWidget(QtWidgets.QWidget):
 
         self.setLayout(QtWidgets.QHBoxLayout(self))
 
-        self.left_btn = QtWidgets.QPushButton(qta.icon("mdi6.arrow-left"))
-        self.right_btn = QtWidgets.QPushButton(qta.icon("mdi6.arrow-right"))
+        self.left_btn = QtWidgets.QPushButton()
+        self.left_btn.setIcon(qta.icon("mdi6.arrow-left"))
+        self.right_btn = QtWidgets.QPushButton()
+        self.right_btn.setIcon(qta.icon("mdi6.arrow-right"))
         self.move_btn = QtWidgets.QPushButton("Move")
 
         self.step_spin = QtWidgets.QDoubleSpinBox()
