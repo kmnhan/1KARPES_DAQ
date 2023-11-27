@@ -11,7 +11,7 @@ a = Analysis(
     ['src\\pyloncam.py'],
     pathex=[],
     binaries=pylon_binaries,
-    datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
+    datas=[('src/framegrab.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/images/pyloncam_white.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
     hiddenimports=['PyQt6', 'matplotlib', 'matplotlib.colors'],
     hookspath=[],
     hooksconfig={},
@@ -37,7 +37,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['src\\images\\pyloncam.ico'],
+    icon=['src\\images\\pyloncam_white.ico'],
 )
 coll = COLLECT(
     exe,
