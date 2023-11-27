@@ -159,7 +159,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>788</width>
+     <width>720</width>
      <height>21</height>
     </rect>
    </property>
@@ -169,6 +169,8 @@
     </property>
     <addaction name="actionshowcursor"/>
     <addaction name="actioncentercursor"/>
+    <addaction name="separator"/>
+    <addaction name="actiononlymain"/>
    </widget>
    <addaction name="menuView"/>
   </widget>
@@ -184,6 +186,14 @@
    </property>
    <property name="text">
     <string>Show cursor</string>
+   </property>
+  </action>
+  <action name="actiononlymain">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show only main pressure</string>
    </property>
   </action>
  </widget>

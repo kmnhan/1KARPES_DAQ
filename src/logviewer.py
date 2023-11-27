@@ -48,7 +48,12 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         )
         self.line0.sigPositionChanged.connect(self.sync_cursors)
         self.line0.setZValue(100)
-        self.line1 = pg.InfiniteLine(angle=90, movable=True)
+        self.line1 = pg.InfiniteLine(
+            angle=90,
+            movable=True,
+            label="",
+            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 50)),
+        )
         self.line1.sigPositionChanged.connect(self.sync_cursors)
 
         self.plot0.addItem(self.line0)
@@ -151,18 +156,33 @@ class MainWindow(MainWindowGUI):
         self.updatetime_spin.valueChanged.connect(
             lambda val: self.client_timer.setInterval(round(val * 1000))
         )
-        self.line0.sigPositionChanged.connect(self.update_cursor_0)
-        # self.line1.sigPositionChanged.connect(self.sync_cursors)
+        self.line0.sigPositionChanged.connect(self.update_cursor_label)
+        self.line1.sigPositionChanged.connect(self.update_cursor_label)
+
+        self.actiononlymain.toggled.connect(self.update_plot)
 
     @QtCore.Slot()
-    def update_cursor_0(self):
+    def update_cursor_label(self):
         dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
+
         row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
         label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
         for enabled, entry in zip(self.legendtable.enabled, self.legendtable.entries):
             if enabled:
                 label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
         self.line0.label.setText(label)
+
+        if self.df_mg15 is not None:
+            row = self.df_mg15.iloc[
+                self.df_mg15.index.get_indexer([dt], method="nearest")
+            ]
+            label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
+            entries = ["IG Main"]
+            if not self.actiononlymain.isChecked():
+                entries += ["IG Middle"]
+            for entry in entries:
+                label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
+            self.line1.label.setText(label)
 
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):
@@ -200,6 +220,7 @@ class MainWindow(MainWindowGUI):
     def toggle_temperature(self, value: bool):
         self.plot0.setVisible(value)
 
+    @QtCore.Slot()
     def update_plot(self):
         self.plot0.clearPlots()
         if self.df is not None:
@@ -216,8 +237,12 @@ class MainWindow(MainWindowGUI):
                     )
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
+            if self.actiononlymain.isChecked():
+                pens = (pg.mkPen("c"),)
+            else:
+                pens = (pg.mkPen("c"), pg.mkPen("m"))
             if self.df_mg15 is not None:
-                for j, pen in enumerate((pg.mkPen("c"), pg.mkPen("m"))):
+                for j, pen in enumerate(pens):
                     self.plot1.plot(
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
                         self.df_mg15[self.df_mg15.columns[j]].values,
