@@ -164,14 +164,15 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def update_cursor_label(self):
         dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
-
-        row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
-        label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
-        for enabled, entry in zip(self.legendtable.enabled, self.legendtable.entries):
-            if enabled:
-                label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
-        self.line0.label.setText(label)
-
+        if self.df is not None:
+            row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
+            label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
+            for enabled, entry in zip(
+                self.legendtable.enabled, self.legendtable.entries
+            ):
+                if enabled:
+                    label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
+            self.line0.label.setText(label)
         if self.df_mg15 is not None:
             row = self.df_mg15.iloc[
                 self.df_mg15.index.get_indexer([dt], method="nearest")
