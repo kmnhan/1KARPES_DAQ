@@ -224,7 +224,9 @@ class DeltaWidget(QtWidgets.QWidget):
     sigStepped = QtCore.Signal(float)
     sigMoved = QtCore.Signal()
 
-    def __init__(self):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
         self.setLayout(QtWidgets.QHBoxLayout(self))
 
         self.left_btn = QtWidgets.QPushButton(qta.icon("mdi6.arrow-left"))
