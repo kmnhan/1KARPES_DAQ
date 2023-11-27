@@ -34,5 +34,5 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
-        name: Camera Monitor
+        name: Motion Controller
         path: dist/motioncontrol/
