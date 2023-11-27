@@ -181,7 +181,7 @@ class MainWindow(MainWindowGUI):
             if not self.actiononlymain.isChecked():
                 entries += ["IG Middle"]
             for entry in entries:
-                label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
+                label += f"\n{entry}: {row[entry].iloc[0]:.3g}"
             self.line1.label.setText(label)
 
     @QtCore.Slot(bool)
