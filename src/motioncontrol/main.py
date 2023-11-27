@@ -6,16 +6,16 @@ import os
 import sys
 import time
 
-import numpy as np
-from maniserver import ManiServer
-from moee import MMStatus
-from motionwidgets import SingleChannelWidget, DeltaWidget, SingleControllerWidget
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+import numpy as np
+from maniserver import ManiServer
+from moee import MMStatus
+from motionwidgets import DeltaWidget, SingleChannelWidget, SingleControllerWidget
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 LOG_DIR = "D:/MotionController/logs"
 # LOG_DIR = os.path.expanduser("~/MotionController/logs")
