@@ -124,6 +124,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.delta_widget = DeltaWidget()
         self.delta_widget.sigStepped.connect(self.step_delta)
         self.delta_widget.sigMoved.connect(self.move_delta)
+        self.verticalLayout.addWidget(self.delta_widget)
 
         # setup logging
         self.log_writer = LoggingProc(LOG_DIR)
