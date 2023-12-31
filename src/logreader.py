@@ -1,9 +1,9 @@
-import pandas as pd
 import datetime
 import os
+import sys
 from collections.abc import Callable
 
-import sys
+import pandas as pd
 
 if sys.platform == "darwin":
     # debug on macOS
@@ -18,8 +18,15 @@ def parse_mg15_time(s: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(s[:10] + "T" + s[11:])
 
 
-def parse_labview_timestamp(v: float) -> datetime.datetime:
-    return datetime.datetime.fromtimestamp(float(v) - 2082844800.0)
+def parse_mg15_time_old(s: float) -> datetime.datetime:
+    return datetime.datetime.strptime(str(int(float(s))), "%y%m%d%H%M%S")
+
+
+def parse_labview_timestamp(v: str | float) -> datetime.datetime:
+    try:
+        return datetime.datetime.fromtimestamp(float(v) - 2082844800.0)
+    except ValueError:
+        return datetime.datetime.fromisoformat(v)
 
 
 def datetime_to_filename(dt: datetime.datetime) -> str:
@@ -29,14 +36,25 @@ def datetime_to_filename(dt: datetime.datetime) -> str:
 
 def parse_single_mg15(filename):
     """Read data from a pressure log file to a `pandas.DataFrame`."""
-    return pd.read_csv(
-        filename,
-        header=None,
-        index_col=0,
-        usecols=(0, 1, 2),
-        names=("Time", "IG Main", "IG Middle"),
-        converters={0: parse_mg15_time},
-    )
+    try:
+        return pd.read_csv(
+            filename,
+            header=None,
+            index_col=0,
+            usecols=(0, 1, 2),
+            names=("Time", "IG Main", "IG Middle"),
+            converters={0: parse_mg15_time},
+        )
+    except pd.errors.ParserError:
+        return pd.read_csv(
+            filename,
+            header=None,
+            sep="\t",
+            index_col=0,
+            usecols=(0, 1, 2),
+            names=("Time", "IG Main", "IG Middle"),
+            converters={0: parse_mg15_time_old},
+        )
 
 
 def parse_single_cryo(filename):
@@ -54,7 +72,7 @@ def parse_single_cryo(filename):
         skiprows=header_rows[-1],
         index_col=0,
         header=0,
-        usecols=lambda x: x not in ["Date&Time", "Clear"],
+        usecols=lambda x: x not in ["Running Time (s)", "Date&Time", "Clear"],
         skip_blank_lines=True,
         converters={1: parse_labview_timestamp},
     ).rename_axis("Time")
