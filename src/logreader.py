@@ -22,10 +22,12 @@ def parse_mg15_time_old(s: float) -> datetime.datetime:
     return datetime.datetime.strptime(str(int(float(s))), "%y%m%d%H%M%S")
 
 
-def parse_labview_timestamp(v: str | float) -> datetime.datetime:
+def parse_cryo_time(v: str | float) -> datetime.datetime:
     try:
+        # convert labview timestamp
         return datetime.datetime.fromtimestamp(float(v) - 2082844800.0)
     except ValueError:
+        # for older data, time is given in iso format
         return datetime.datetime.fromisoformat(v)
 
 
@@ -74,7 +76,7 @@ def parse_single_cryo(filename):
         header=0,
         usecols=lambda x: x not in ["Running Time (s)", "Date&Time", "Clear"],
         skip_blank_lines=True,
-        converters={1: parse_labview_timestamp},
+        converters={1: parse_cryo_time},
     ).rename_axis("Time")
 
 

@@ -39,10 +39,11 @@ class LegendTableModel(QtCore.QAbstractTableModel):
             except ValueError:
                 pass
 
-        self.colors = [
-            color_to_QColor(clr)
-            for clr in sns.color_palette("bright", len(self._entries))
-        ]
+        if len(self.colors) != len(self._entries):
+            self.colors = [
+                color_to_QColor(clr)
+                for clr in sns.color_palette("bright", len(self._entries))
+            ]
 
         self.endResetModel()
 
@@ -108,14 +109,20 @@ class ColorButtonDelegate(QtWidgets.QItemDelegate):
     def createEditor(self, parent, option, index):
         editor = pg.ColorButton(parent, padding=10)
         editor.setFlat(True)
+        editor.sigColorChanged.connect(self.commitAndCloseEditor)
         return editor
 
     def setEditorData(self, editor, index):
         model_value = index.model().data(index, QtCore.Qt.ItemDataRole.UserRole)
-        editor.setColor(model_value, finished=True)
+        editor.setColor(model_value, finished=False)
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.color(mode="qcolor"), QtCore.Qt.EditRole)
+
+    def commitAndCloseEditor(self):
+        editor = self.sender()
+        self.commitData.emit(editor)
+        self.closeEditor.emit(editor)
 
 
 class LegendTableView(QtWidgets.QTableView):
