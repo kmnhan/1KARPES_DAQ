@@ -107,8 +107,12 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         return self.checkbox.isChecked()
 
     @property
+    def motor_serial(self) -> str:
+        return tuple(self.config.keys())[self.combobox.currentIndex()]
+
+    @property
     def current_config(self) -> dict:
-        return self.config[tuple(self.config.keys())[self.combobox.currentIndex()]]
+        return self.config[self.motor_serial]
 
     @property
     def nominal_capacitance(self) -> float | None:
@@ -425,6 +429,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(int)
     def move_finished(self, channel: int):
         self.queue.task_done()
+        ch = self.get_channel(channel)
+        self.write_log(["Moved", ch.name, f"{ch.current_pos:.4f}"])
 
         for ch in self.channels:
             ch.set_motion_busy(False)
@@ -473,7 +479,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def _move(self):
         kwargs = self.queue.get()
         ch = self.get_channel(kwargs["channel"])
-        self.write_log(f"Move {ch.name} to {ch.convert_pos(kwargs['target']):.4f}")
+        self.write_log(["Start", ch.name, f"{ch.convert_pos(kwargs['target']):.4f}"])
         if not self.is_channel_enabled(kwargs["channel"]):
             # warnings.warn("Move called on a disabled channel ignored.")
             print("Move called on a disabled channel ignored.")
