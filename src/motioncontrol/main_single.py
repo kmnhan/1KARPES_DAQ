@@ -87,7 +87,7 @@ class MainWindow(*uic.loadUiType("controller_single.ui")):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle("1KARPES Motion Control")
+        self.setWindowTitle("Motion Control")
 
         self.stop_btn.setDefaultAction(self.actionstop)
         self.actionstop.triggered.connect(self.stop)
