@@ -75,9 +75,8 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.checkbox.toggled.connect(
-            lambda: self.set_channel_disabled(not self.enabled)
-        )
+        self.checkbox.toggled.connect(self.refresh_enabled)
+        self.checkbox.setChecked(True)
         self.status = MotorStatus(self)
         self.layout().addWidget(self.status)
         self.left_btn.setIcon(qta.icon("mdi6.arrow-left"))
@@ -157,6 +156,10 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def target_current_pos(self):
         if self.enabled:
             self.set_target(self.current_pos)
+
+    @QtCore.Slot()
+    def refresh_enabled(self):
+        self.set_channel_disabled(not self.enabled)
 
     def set_channel_disabled(self, value: bool):
         self.combobox.setDisabled(value)
