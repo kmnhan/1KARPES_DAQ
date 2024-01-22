@@ -190,6 +190,20 @@ class MMThread(QtCore.QThread):
             if self.mmrecv() == 0:
                 break
 
+    def get_refreshed_position(self, channel: int) -> int:
+        # Just reading the position will not return the correct values... probably
+        # controller error? So actuate with 0V first
+        self.wait_busy()
+        self.set_pulse_train(channel, 1)
+        self.set_amplitude(channel, 0)
+        self.set_frequency(channel, 200)
+        self.set_direction(channel, 1)
+
+        self.mmsend(MMCommand.SENDSIGONCE, channel)
+        self.mmrecv()
+
+        return self.get_position(channel)
+
     def get_position(self, channel: int) -> int:
         """Return raw position integer."""
         self.wait_busy()

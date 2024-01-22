@@ -403,7 +403,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def refresh_position(self, channel: int):
         if self.is_channel_enabled(channel):
             self.mmthread.reset(channel)
-            self.mmthread.get_position(channel)
+            self.mmthread.get_refreshed_position(channel)
 
     @QtCore.Slot()
     def target_current_all(self):
