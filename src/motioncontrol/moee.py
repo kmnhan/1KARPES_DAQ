@@ -64,7 +64,7 @@ class MMThread(QtCore.QThread):
     sigMoveFinished = QtCore.Signal(int)
     sigCapRead = QtCore.Signal(int, float)
     sigPosRead = QtCore.Signal(int, int)
-    sigDeltaChanged = QtCore.Signal(int, object)
+    sigDeltaChanged = QtCore.Signal(int, object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -288,6 +288,7 @@ class MMThread(QtCore.QThread):
             self.set_frequency(self._channel, self._sigtime)
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
+            time_list: list[float] = [time.time()]
 
             pulse_reduced = 0
 
@@ -295,7 +296,7 @@ class MMThread(QtCore.QThread):
             direction: int | None = None
 
             while True:
-                self.sigDeltaChanged.emit(self._channel, delta_list)
+                self.sigDeltaChanged.emit(self._channel, time_list, delta_list)
                 if abs(delta_list[-1]) < self._threshold:
                     # position has converged
                     break
@@ -359,6 +360,7 @@ class MMThread(QtCore.QThread):
                 self.mmrecv()
                 pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
+                time_list.append(time.time() - time_list[0])
 
                 if self.stopped:
                     break

@@ -345,6 +345,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
         # setup plotting
         self.plot = MotionPlot()
+        self.plot.setLabel("bottom", text="Time", units="s")
+        self.plot.setLabel("left", text="Remaining", units="m", unitPrefix="m")
 
     @property
     def status(self) -> MMStatus:
@@ -415,10 +417,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.get_channel(channel).set_current_pos(pos)
 
     @QtCore.Slot(int, object)
-    def update_plot(self, channel: int, delta: list[float]):
+    def update_plot(self, channel: int, dt: list[float], delta: list[int]):
         delta_abs = -self.get_channel(channel).cal_A * np.asarray(delta)
-        # delta_abs = -np.asarray(delta)
-        self.plot.curve.setData(delta_abs)
+        self.plot.curve.setData(x=dt, y=delta_abs)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
