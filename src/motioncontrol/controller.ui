@@ -72,6 +72,7 @@
     <addaction name="actionreconnect"/>
     <addaction name="separator"/>
     <addaction name="actionreadpos"/>
+    <addaction name="actionreadavgpos"/>
     <addaction name="actionreadcap"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -142,6 +143,11 @@
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionreadavgpos">
+   <property name="text">
+    <string>Read Averaged Positions</string>
    </property>
   </action>
  </widget>

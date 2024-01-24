@@ -406,10 +406,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
             self.refresh_position(ch_num)
 
     @QtCore.Slot()
-    def refresh_position(self, channel: int):
+    def refresh_positions_averaged(self):
+        for ch_num in (1, 2, 3):
+            self.refresh_position(ch_num, navg=10)
+
+    @QtCore.Slot(int)
+    @QtCore.Slot(int, int)
+    def refresh_position(self, channel: int, navg: int = 1):
         if self.is_channel_enabled(channel):
             self.mmthread.reset(channel)
-            self.mmthread.get_refreshed_position(channel)
+            self.mmthread.get_refreshed_position(channel, navg)
 
     @QtCore.Slot()
     def target_current_all(self):

@@ -113,6 +113,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             self.actionstop.triggered.connect(con.stop)
             self.actiontargetcurr.triggered.connect(con.target_current_all)
             self.actionreadpos.triggered.connect(con.refresh_positions)
+            self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
 
             con.mmthread.sigMoveStarted.connect(self.move_started)
             con.mmthread.sigMoveFinished.connect(self.move_finished)
