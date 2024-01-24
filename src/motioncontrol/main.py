@@ -184,13 +184,15 @@ class MainWindow(*uic.loadUiType("controller.ui")):
                     return i, j + 1
         return None, None
 
-    def get_xy_axes(self) -> tuple[SingleChannelWidget, SingleChannelWidget] | None:
+    def get_xy_axes(
+        self,
+    ) -> tuple[SingleChannelWidget, SingleChannelWidget] | tuple[None, None]:
         chx, chy = self.get_axis("X"), self.get_axis("Y")
         if chx is None or chy is None:
             QtWidgets.QMessageBox.warning(
                 self, "Missing motor", "X or Y motor is not enabled."
             )
-            return
+            return None, None
         return chx, chy
 
     @property
@@ -224,6 +226,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot(float)
     def step_delta(self, value: float):
         chx, chy = self.get_xy_axes()
+        if chx is None or chy is None:
+            return
 
         beam_incidence = np.deg2rad(50)
         newx = chx.current_pos + value * np.sin(beam_incidence)
@@ -250,6 +254,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot()
     def move_delta(self):
         chx, chy = self.get_xy_axes()
+        if chx is None or chy is None:
+            return
         chx.move()
         chy.move()
 
