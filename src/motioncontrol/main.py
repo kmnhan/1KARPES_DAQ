@@ -230,8 +230,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             return
 
         beam_incidence = np.deg2rad(50)
-        newx = chx.current_pos + value * np.sin(beam_incidence)
-        newy = chy.current_pos + value * np.cos(beam_incidence)
+        newx = chx.target_spin.value() + value * np.cos(beam_incidence)
+        newy = chy.target_spin.value() + value * np.sin(beam_incidence)
 
         if not chx.minimum <= newx <= chx.maximum:
             QtWidgets.QMessageBox.warning(

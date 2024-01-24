@@ -253,6 +253,7 @@ class DeltaWidget(QtWidgets.QWidget):
         self.layout().addWidget(self.left_btn)
         self.layout().addWidget(self.step_spin)
         self.layout().addWidget(self.right_btn)
+        self.layout().addWidget(self.move_btn)
 
         self.left_btn.clicked.connect(self.step_down)
         self.right_btn.clicked.connect(self.step_up)
