@@ -15,8 +15,10 @@ class MMStatus(enum.IntEnum):
 
 
 class _PiezoMotor(Motor):
-    enabled = False
-    PORT: int = 42623
+    enabled = True
+    fix_delta = False
+    delta = 0.1
+    PORT: int = 42625
     AXIS: str | None = None  # motor name
 
     def pre_motion(self):

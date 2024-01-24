@@ -155,7 +155,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         elif request[0] == "MAX":
             self.sigReply.emit(self.get_axis(request[1]).maximum)
         else:
-            con_idx, channel = self.get_axis_index(request)
+            con_idx, channel = self.get_axis_index(request[0])
             if con_idx is None:
                 print("AXIS NOT FOUND")
                 self.sigReply.emit(np.nan)

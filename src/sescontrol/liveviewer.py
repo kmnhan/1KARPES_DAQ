@@ -224,11 +224,16 @@ class DataFetcher(QtCore.QRunnable):
         if not os.path.isfile(filename):
             print("File not found... skip display")
             return
-
-        if os.path.splitext(filename)[-1] == ".zip":
-            wave = erlab.io.da30.load_zip(filename)
-        else:
-            wave = erlab.io.load_experiment(filename)
+        while True:
+            try:
+                if os.path.splitext(filename)[-1] == ".zip":
+                    wave = erlab.io.da30.load_zip(filename)
+                else:
+                    wave = erlab.io.load_experiment(filename)
+            except PermissionError:
+                time.sleep(0.01)
+            else:
+                break
 
         if isinstance(wave, xr.Dataset):
             # select first sequence
@@ -248,7 +253,7 @@ class DataFetcher(QtCore.QRunnable):
             # reserve space for future scans
             wave = wave.expand_dims(
                 {name: coord for name, coord in self._motor_args},
-                axis=[wave.ndim + i for i in range(len(self._motor_args))],
+                # axis=[wave.ndim + i for i in range(len(self._motor_args))],
             ).copy()
 
             # fill reserved space with nan
