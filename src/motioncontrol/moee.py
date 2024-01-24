@@ -288,7 +288,9 @@ class MMThread(QtCore.QThread):
             self.set_frequency(self._channel, self._sigtime)
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
-            time_list: list[float] = [time.time()]
+
+            time_start = time.time()
+            time_list: list[float] = [time.time() - time_start]
 
             pulse_reduced = 0
 
@@ -360,7 +362,7 @@ class MMThread(QtCore.QThread):
                 self.mmrecv()
                 pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
-                time_list.append(time.time() - time_list[0])
+                time_list.append(time.time() - time_start)
 
                 if self.stopped:
                     break

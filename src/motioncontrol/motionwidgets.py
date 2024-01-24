@@ -419,7 +419,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def set_position(self, channel: int, pos: int):
         self.get_channel(channel).set_current_pos(pos)
 
-    @QtCore.Slot(int, object)
+    @QtCore.Slot(int, object, object)
     def update_plot(self, channel: int, dt: list[float], delta: list[int]):
         delta_abs = -self.get_channel(channel).cal_A * np.asarray(delta)
         self.plot.curve.setData(x=dt, y=delta_abs)
