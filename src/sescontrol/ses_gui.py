@@ -383,7 +383,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
                 lambda *, ind=i: self.motor_changed(ind)
             )
             motor.toggled.connect(lambda *, ind=i: self.motor_changed(ind))
-        # self.update_motor_list()
+        self.update_motor_list()
 
         self.start_btn.clicked.connect(self.start_scan)
 
@@ -421,13 +421,13 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         """Whether at least one motor is enabled."""
         return self.motors[0].isChecked() or self.motors[1].isChecked()
 
-    # def update_motor_list(self):
-    #     self.motors[1].combo.blockSignals(True)
-    #     self.motors[1].combo.clear()
-    #     self.motors[1].combo.addItems(self.valid_axes[1:])
-    #     self.motors[1].combo.setCurrentIndex(1)
-    #     self.motors[1].combo.blockSignals(False)
-    #     self.motors[1].combo.setCurrentIndex(0)
+    def update_motor_list(self):
+        for i, m in enumerate(self.motors):
+            m.combo.blockSignals(True)
+            m.combo.clear()
+            m.combo.addItems(self.valid_axes[1:])
+            m.combo.setCurrentIndex(i)
+            m.combo.blockSignals(False)
 
     def motor_changed(self, index):
         # apply motion limits
