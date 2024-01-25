@@ -14,7 +14,8 @@ class Motor:
     It must block (i.e., it must not return) until the motor has reached the target
     position. Place the .py file containing the inherited class in the plugins folder,
     and it will be automatically detected. The `__name__` of the inherited class will be
-    displayed on the motor selection window.
+    displayed on the motor selection window. Classes prefixed with an underscore are
+    hidden.
 
     See examples in `fakemotor.py` and `piezomotors.py`.
 

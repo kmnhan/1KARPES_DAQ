@@ -87,11 +87,11 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             self.start.setMaximum(maximum)
             self.end.setMaximum(maximum)
 
-    def set_default_delta(self, value: float, fixed: bool):
+    def set_default_delta(self, value: float):
+        """Set initial value for delta and whether to allow changes."""
         self.start.setSingleStep(value)
         self.end.setSingleStep(value)
         self.delta.setValue(value)
-        self.delta.setDisabled(fixed)
 
     @QtCore.Slot()
     def countchanged(self):

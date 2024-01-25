@@ -15,6 +15,8 @@ class MMStatus(enum.IntEnum):
 
 
 class _PiezoMotor(Motor):
+    """Base class for all piezomotors."""
+
     enabled = True
     fix_delta = False
     delta = 0.1
@@ -89,15 +91,15 @@ class Z(_PiezoMotor):
 
 
 class Polar(_PiezoMotor):
-    AXIS = "P"
+    AXIS = "Polar"
 
 
 class Tilt(_PiezoMotor):
-    AXIS = "T"
+    AXIS = "Tilt"
 
 
 class Azi(_PiezoMotor):
-    AXIS = "A"
+    AXIS = "Azi"
 
 
 class Beam(_PiezoMotor):

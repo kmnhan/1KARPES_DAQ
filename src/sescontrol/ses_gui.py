@@ -471,9 +471,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
             motor = self.motors[index]
             motor.set_limits(mn, mx)
             if plugin_instance.delta is not None:
-                motor.set_default_delta(
-                    float(plugin_instance.delta), plugin_instance.fix_delta
-                )
+                motor.set_default_delta(float(plugin_instance.delta))
+            motor.delta.setDisabled(plugin_instance.fix_delta)
 
             plugin_instance.post_motion()
 
