@@ -100,7 +100,7 @@ class Azi(_PiezoMotor):
     AXIS = "A"
 
 
-class Delta(_PiezoMotor):
+class Beam(_PiezoMotor):
     beam_incidence: float = math.radians(50)
 
     def pre_motion(self):

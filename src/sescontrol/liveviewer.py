@@ -25,14 +25,14 @@ class MotorThread(threading.Thread):
         motor = self.motor_cls()
         motor.pre_motion()
         motor.move(self.target)
-        if self.motor_cls.__name__ == "Delta":
+        if self.motor_cls.__name__ == "Beam":
             motor.post_motion(reset=False)
         else:
             motor.post_motion()
 
 
 class MotorControls(ItoolControlsBase):
-    quick_move_dims = ["X", "Y", "Z", "Polar", "Tilt", "Azi", "Delta"]
+    quick_move_dims = ["X", "Y", "Z", "Polar", "Tilt", "Azi", "Beam"]
 
     def __init__(self, *args, **kwargs):
         self.workers: list[MotorThread] = []

@@ -143,18 +143,24 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot(object)
     def parse_request(self, request: list[str]):
         if len(request) == 0:
+            # `?`
             self.sigReply.emit(
                 self.get_current_positions(0) + self.get_current_positions(1)
             )
         elif request[0] == "STATUS":
+            # `? STATUS`
             self.sigReply.emit(self.status)
         elif request[0] == "TOL":
+            # `? TOL`
             self.sigReply.emit(self.get_axis(request[1]).abs_tolerance)
         elif request[0] == "MIN":
+            # `? MIN`
             self.sigReply.emit(self.get_axis(request[1]).minimum)
         elif request[0] == "MAX":
+            # `? MAX`
             self.sigReply.emit(self.get_axis(request[1]).maximum)
         else:
+            # `? X`, `? Y`, etc.
             con_idx, channel = self.get_axis_index(request[0])
             if con_idx is None:
                 print("AXIS NOT FOUND")
