@@ -99,10 +99,10 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             self.boundschanged()
             return
         else:
-            self.motor_coord = np.arange(
-                self.start.value(),
-                self.start.value() + self.delta.value() * self.nstep.value(),
-                self.delta.value(),
+            delta = self.delta.value()
+            self.motor_coord = delta * np.arange(
+                self.start.value() / delta,
+                self.start.value() / delta + self.nstep.value(),
             )
             self._refresh_values()
 
