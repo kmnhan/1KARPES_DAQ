@@ -383,7 +383,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
                 lambda *, ind=i: self.motor_changed(ind)
             )
             motor.toggled.connect(lambda *, ind=i: self.motor_changed(ind))
-        self.update_motor_list()
+        # self.update_motor_list()
 
         self.start_btn.clicked.connect(self.start_scan)
 
@@ -403,52 +403,56 @@ class ScanType(*uic.loadUiType("scantype.ui")):
 
     @property
     def valid_axes(self) -> list[str]:
+        """Get all enabled motor plugins."""
         return [k for k, v in Motor.plugins.items() if v.enabled]
-
-    def update_motor_list(self):
-        self.motors[1].combo.blockSignals(True)
-        self.motors[1].combo.clear()
-        self.motors[1].combo.addItems(self.valid_axes[1:])
-        self.motors[1].combo.setCurrentIndex(1)
-        self.motors[1].combo.blockSignals(False)
-        self.motors[1].combo.setCurrentIndex(0)
 
     @property
     def motors(self) -> tuple[SingleMotorSetup, SingleMotorSetup]:
+        """Motor widgets."""
         return self.motor1, self.motor2
 
     @property
     def numpoints(self) -> int:
+        """Total number of acquisition points."""
         return self.motor1.npoints * self.motor2.npoints
 
     @property
     def has_motor(self) -> bool:
+        """Whether at least one motor is enabled."""
         return self.motors[0].isChecked() or self.motors[1].isChecked()
+
+    # def update_motor_list(self):
+    #     self.motors[1].combo.blockSignals(True)
+    #     self.motors[1].combo.clear()
+    #     self.motors[1].combo.addItems(self.valid_axes[1:])
+    #     self.motors[1].combo.setCurrentIndex(1)
+    #     self.motors[1].combo.blockSignals(False)
+    #     self.motors[1].combo.setCurrentIndex(0)
 
     def motor_changed(self, index):
         # apply motion limits
         self.update_motor_limits(index)
 
-        # make two comboboxes mutually exclusive
-        self.motors[1 - index].combo.blockSignals(True)
-        self.motors[1 - index].combo.clear()
-        if self.motors[index].isChecked():
-            self.motors[1 - index].combo.addItems(
-                [
-                    ax
-                    for ax in self.valid_axes
-                    if ax != self.motors[index].combo.currentText()
-                ]
-            )
-        else:
-            self.motors[1 - index].combo.addItems(self.valid_axes)
-        self.motors[1 - index].combo.blockSignals(False)
+        # # make two comboboxes mutually exclusive
+        # self.motors[1 - index].combo.blockSignals(True)
+        # self.motors[1 - index].combo.clear()
+        # if self.motors[index].isChecked():
+        #     self.motors[1 - index].combo.addItems(
+        #         [
+        #             ax
+        #             for ax in self.valid_axes
+        #             if ax != self.motors[index].combo.currentText()
+        #         ]
+        #     )
+        # else:
+        #     self.motors[1 - index].combo.addItems(self.valid_axes)
+        # self.motors[1 - index].combo.blockSignals(False)
 
         # apply motion limits to other combobox (selection may have changed)
-        self.update_motor_limits(1 - index)
+        # self.update_motor_limits(1 - index)
 
     def update_motor_limits(self, index: int):
-        # get motor limits from plugin
+        """Get motor limits from corresponding plugin and update values."""
         try:
             plugin = Motor.plugins[self.motors[index].combo.currentText()]
         except KeyError:
@@ -477,6 +481,15 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
         ]
+
+        if len(motor_args) == 2:
+            if motor_args[0][0] == motor_args[1][0]:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Duplicate Axes",
+                    "The second motor axes must be different from the first.",
+                )
+                return
 
         # get file information
         base_dir, base_file, valid_ext, _ = get_file_info()
