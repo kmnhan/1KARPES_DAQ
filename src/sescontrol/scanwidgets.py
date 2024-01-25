@@ -125,10 +125,9 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
         if self.delta.value() == 0:
             self.delta.setValue(1e-3)
             return
-        self.motor_coord = np.arange(
-            self.start.value(),
-            self.end.value() + self.delta.value(),
-            self.delta.value(),
+        delta = self.delta.value()
+        self.motor_coord = delta * np.arange(
+            self.start.value() / delta, self.end.value() / delta + 1
         )
         if len(self.motor_coord) == 1:
             self.motor_coord = np.array(
