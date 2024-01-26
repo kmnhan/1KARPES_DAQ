@@ -326,14 +326,14 @@ class LiveImageTool(BaseImageTool):
                 # if outer loop is odd, inner loop is reversed
                 indices[-1] = len(self._motor_args[-1][1]) - 1 - indices[-1]
 
-            self.array_slicer._obj.loc[
-                {
-                    name: self.array_slicer._obj.coords[name] == coord[ind]
-                    for ind, (name, coord) in zip(indices, self._motor_args)
-                }
-            ] = wave.assign_coords(
+            target_slices = {
+                name: self.array_slicer._obj.coords[name] == coord[ind]
+                for ind, (name, coord) in zip(indices, self._motor_args)
+            }
+            target = self.array_slicer._obj.loc[target_slices]
+            self.array_slicer._obj.loc[target_slices] = wave.assign_coords(
                 {d: self.array_slicer._obj.coords[d] for d in wave.dims}
-            )
+            ).transpose(*target.dims)
 
             for prop in (
                 "nanmax",

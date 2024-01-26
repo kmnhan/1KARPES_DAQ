@@ -39,13 +39,20 @@ class _PiezoMotor(Motor):
         self.socket.recv()
 
         # check if within tolerance
-        while True:
-            time.sleep(0.01)
-            if abs(self._get_pos(self.AXIS) - target) < self.tolerance:
-                break
+
+        # may be outside tolerance due to noise level... skip check and rely on move finish
+        # this will only work for single controller, single motor scan, fix later
+
+        # while True:
+        #     time.sleep(0.01)
+        #     if abs(self._get_pos(self.AXIS) - target) < self.tolerance:
+        #         break
 
         # wait for motion to completely finish
         self._wait_move_finish()  # this line may not be necessary
+        pos = self._get_pos(self.AXIS)
+
+        print(pos, target, abs(pos-target), self.tolerance)
 
         # get final position
         return self._get_pos(self.AXIS)
@@ -146,11 +153,11 @@ class Beam(_PiezoMotor):
         self.socket.recv()
 
         # check if both within tolerance
-        while True:
-            time.sleep(0.01)
-            if abs(self._get_pos("X") - target) < self.xtol:
-                if abs(self._get_pos("Y") - target) < self.ytol:
-                    break
+        # while True:
+        #     time.sleep(0.01)
+        #     if abs(self._get_pos("X") - target) < self.xtol:
+        #         if abs(self._get_pos("Y") - target) < self.ytol:
+        #             break
 
         # wait for motion to completely finish
         self._wait_move_finish()  # this line may not be necessary
