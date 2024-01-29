@@ -326,14 +326,27 @@ class LiveImageTool(BaseImageTool):
                 # if outer loop is odd, inner loop is reversed
                 indices[-1] = len(self._motor_args[-1][1]) - 1 - indices[-1]
 
+            # assign equal coordinates, energy axis might be mismatched in some cases
+            wave = wave.assign_coords({d: self.array_slicer._obj.coords[d] for d in wave.dims})
+
+            # assign motor coordinates
+            wave = wave.expand_dims(
+                {
+                    name: [coord[ind]]
+                    for ind, (name, coord) in zip(indices, self._motor_args)
+                }
+            )
+
+            # this will slice the target array at the coordinates we wish to insert the received data
             target_slices = {
                 name: self.array_slicer._obj.coords[name] == coord[ind]
                 for ind, (name, coord) in zip(indices, self._motor_args)
             }
+            # we want to know the dims of target array before assigning new values
             target = self.array_slicer._obj.loc[target_slices]
-            self.array_slicer._obj.loc[target_slices] = wave.assign_coords(
-                {d: self.array_slicer._obj.coords[d] for d in wave.dims}
-            ).transpose(*target.dims)
+
+            # transpose to target shape on assign
+            self.array_slicer._obj.loc[target_slices] = wave.transpose(*target.dims)
 
             for prop in (
                 "nanmax",
