@@ -428,7 +428,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
             m.combo.addItems(self.valid_axes)
             m.combo.setCurrentIndex(i)
             m.combo.blockSignals(False)
-        self.motors[-1].setChecked(False)
+            m.setChecked(False)
 
     def motor_changed(self, index):
         # apply motion limits
