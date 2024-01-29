@@ -253,7 +253,7 @@ class DataFetcher(QtCore.QRunnable):
             # reserve space for future scans
             wave = wave.expand_dims(
                 {name: coord for name, coord in self._motor_args},
-                # axis=[wave.ndim + i for i in range(len(self._motor_args))],
+                axis=[wave.ndim + i for i in range(len(self._motor_args))],
             ).copy()
 
             # fill reserved space with nan
