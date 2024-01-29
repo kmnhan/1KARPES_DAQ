@@ -142,10 +142,6 @@ class MainWindow(MainWindowGUI):
 
         try:
             self.load_data(update=False)
-            enabled = self.settings.value("enabled_names", [])
-            for i in range(self.legendtable.model().rowCount()):
-                if self.df.columns[i] in enabled:
-                    self.legendtable.set_enabled(i, True)
         except ValueError:
             pass
 
@@ -204,6 +200,14 @@ class MainWindow(MainWindowGUI):
             self.legendtable.set_items(self.df.columns)
         if self.pressure_check.isChecked():
             self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
+
+        enabled = self.settings.value("enabled_names", [])
+        colors = self.settings.value("colors", [])
+        for i in range(self.legendtable.model().rowCount()):
+            if self.df.columns[i] in enabled:
+                self.legendtable.set_enabled(i, True)
+            if len(colors) == self.legendtable.model().rowCount():
+                self.legendtable.set_color(i, colors[i])
         if update:
             self.update_plot()
 
@@ -228,6 +232,7 @@ class MainWindow(MainWindowGUI):
             self.settings.setValue(
                 "enabled_names", list(self.df.columns[self.legendtable.enabled])
             )
+            self.settings.setValue("colors", self.legendtable.colors)
             for i, on in enumerate(self.legendtable.enabled):
                 if on:
                     self.plot0.plot(
