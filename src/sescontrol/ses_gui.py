@@ -183,6 +183,10 @@ class ScanWorker(QtCore.QRunnable):
         """Stop after acquiring current motor point."""
         self._stop = True
 
+    def cancel_stop_after_point(self):
+        """Stop after acquiring current motor point."""
+        self._stop = False
+
     def force_stop(self):
         """Force stop now."""
         self._stop = True
@@ -374,6 +378,9 @@ class ScanWorker(QtCore.QRunnable):
 
 
 class ScanType(*uic.loadUiType("scantype.ui")):
+    sigStopPoint = QtCore.Signal()
+    sigCancelStopPoint = QtCore.Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -387,6 +394,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.update_motor_list()
 
         self.start_btn.clicked.connect(self.start_scan)
+        self.stop_point_btn.clicked.connect(self.handle_stop_point)
 
         self.pos_logger = MotorPosWriter()
         self.threadpool = QtCore.QThreadPool()
@@ -487,6 +495,15 @@ class ScanType(*uic.loadUiType("scantype.ui")):
 
             plugin_instance.post_motion()
 
+    @QtCore.Slot()
+    def handle_stop_point(self):
+        if self.stop_point_btn.text() == "Cancel Stop":
+            self.sigStopPoint.emit()
+            self.stop_point_btn.setText("Cancel Stop")
+        else:
+            self.sigCancelStopPoint.emit()
+            self.stop_point_btn.setText("Stop After Point")
+
     def start_scan(self):
         # get motor arguments only if enabled
         motor_args: list[tuple[str, np.ndarray]] = [
@@ -535,7 +552,9 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         scan_worker.signals.sigStepStarted.connect(self.step_started)
         scan_worker.signals.sigFinished.connect(self.post_process)
         self.stop_btn.clicked.connect(scan_worker.force_stop)
-        self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
+        # self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
+        self.sigStopPoint.connect(scan_worker.stop_after_point)
+        self.sigCancelStopPoint.connect(scan_worker.cancel_stop_after_point)
 
         self.current_file = scan_worker.data_name
 
@@ -619,6 +638,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.start_btn.setDisabled(False)
         self.damap_check.setDisabled(False)
         self.stop_btn.setDisabled(True)
+        self.stop_point_btn.setText("Stop After Point")
         self.stop_point_btn.setDisabled(True)
         if self.itool is not None:
             self.itool.set_busy(False)
