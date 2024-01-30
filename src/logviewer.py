@@ -234,7 +234,10 @@ class MainWindow(MainWindowGUI):
                 self.legendtable.colors,
             ):
                 if enabled:
-                    label += f'<br><span style="color: {color.name()};">{entry}: {row[entry].iloc[0]:.3f}</span>'
+                    label += f'<br><span style="color: {color.name()};">{entry}</span>'
+                    label += (
+                        f'<span style="color: #FFF;"> {row[entry].iloc[0]:.3f}</span>'
+                    )
                     # label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
             # self.line0.label.setText(label)
             self.line0.label.setHtml(label)
@@ -297,13 +300,15 @@ class MainWindow(MainWindowGUI):
     @staticmethod
     def _temperature_label(x: int, y: float):
         return (
-            datetime.datetime.fromtimestamp(x).strftime("%m/%d %H:%M:%S") + f"\n{y:.3f}"
+            datetime.datetime.fromtimestamp(x - UTC_OFFSET).strftime("%m/%d %H:%M:%S")
+            + f"\n{y:.3f}"
         )
 
     @staticmethod
     def _pressure_label(x: int, y: float):
         return (
-            datetime.datetime.fromtimestamp(x).strftime("%m/%d %H:%M:%S") + f"\n{y:.3g}"
+            datetime.datetime.fromtimestamp(x - UTC_OFFSET).strftime("%m/%d %H:%M:%S")
+            + f"\n{y:.3g}"
         )
 
     @QtCore.Slot()
