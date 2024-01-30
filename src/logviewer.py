@@ -396,6 +396,7 @@ class MainWindow(MainWindowGUI):
                         pen=pen,
                         target=target,
                         connect="finite",
+                        hoverable=self.actionsnap.isChecked(),
                     )
                     self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
                     self.plot1.sigRangeChanged.connect(
