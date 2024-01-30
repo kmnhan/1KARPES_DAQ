@@ -327,7 +327,9 @@ class LiveImageTool(BaseImageTool):
                 indices[-1] = len(self._motor_args[-1][1]) - 1 - indices[-1]
 
             # assign equal coordinates, energy axis might be mismatched in some cases
-            wave = wave.assign_coords({d: self.array_slicer._obj.coords[d] for d in wave.dims})
+            wave = wave.assign_coords(
+                {d: self.array_slicer._obj.coords[d] for d in wave.dims}
+            )
 
             # assign motor coordinates
             wave = wave.expand_dims(
@@ -346,7 +348,11 @@ class LiveImageTool(BaseImageTool):
             target = self.array_slicer._obj.loc[target_slices]
 
             # transpose to target shape on assign
-            self.array_slicer._obj.loc[target_slices] = wave.transpose(*target.dims)
+            self.array_slicer._obj.loc[target_slices] = wave.transpose(
+                *target.dims
+            ).values
+            # We take the values because coordinates on target array are float32,
+            # whereas we have assigned float64. This results in comparison failure.
 
             for prop in (
                 "nanmax",
