@@ -87,6 +87,21 @@ class SnapCurveItem(pg.PlotCurveItem):
             self.sigCurveHovered.emit(self, ev)
 
 
+class SnapCurvePlotDataItem(pg.PlotDataItem):
+    def __init__(
+        self,
+        *args,
+        hoverable: bool = True,
+        target: pg.TargetItem | None = None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.curve = SnapCurveItem(hoverable=hoverable, target=target)
+        self.curve.setParentItem(self)
+        self.curve.sigClicked.connect(self.curveClicked)
+        self.setData(*args, **kwargs)
+
+
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     def __init__(self):
         super().__init__()
@@ -340,7 +355,7 @@ class MainWindow(MainWindowGUI):
                         labelOpts=dict(fill=(200, 200, 200, 75)),
                     )
                     target.label().setFont(labelfont)
-                    curve = SnapCurveItem(
+                    plotdata = SnapCurvePlotDataItem(
                         self.df.index.values.astype(np.float64) * 1e-9,
                         self.df[self.df.columns[i]].values,
                         pen=pg.mkPen(self.legendtable.colors[i]),
@@ -348,9 +363,11 @@ class MainWindow(MainWindowGUI):
                         connect="finite",
                         hoverable=self.actionsnap.isChecked(),
                     )
-                    self.actionsnap.toggled.connect(curve.setHoverable)
-                    self.plot0.sigRangeChanged.connect(curve._reset_mouseshape_cache)
-                    self.plot0.addItem(curve)
+                    self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
+                    self.plot0.sigRangeChanged.connect(
+                        plotdata.curve._reset_mouseshape_cache
+                    )
+                    self.plot0.addItem(plotdata)
                     self.plot0.addItem(target)
 
         if self.pressure_check.isChecked():
@@ -373,16 +390,18 @@ class MainWindow(MainWindowGUI):
                         labelOpts=dict(fill=(200, 200, 200, 75)),
                     )
                     target.label().setFont(labelfont)
-                    curve = SnapCurveItem(
+                    plotdata = SnapCurvePlotDataItem(
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
                         self.df_mg15[self.df_mg15.columns[j]].values,
                         pen=pen,
                         target=target,
                         connect="finite",
                     )
-                    self.actionsnap.toggled.connect(curve.setHoverable)
-                    self.plot1.sigRangeChanged.connect(curve._reset_mouseshape_cache)
-                    self.plot1.addItem(curve)
+                    self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
+                    self.plot1.sigRangeChanged.connect(
+                        plotdata.curve._reset_mouseshape_cache
+                    )
+                    self.plot1.addItem(plotdata)
                     self.plot1.addItem(target)
 
         for pi in self.plot_items:
