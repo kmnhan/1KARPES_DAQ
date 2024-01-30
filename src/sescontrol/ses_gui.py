@@ -498,11 +498,11 @@ class ScanType(*uic.loadUiType("scantype.ui")):
     @QtCore.Slot()
     def handle_stop_point(self):
         if self.stop_point_btn.text() == "Cancel Stop":
-            self.sigStopPoint.emit()
-            self.stop_point_btn.setText("Cancel Stop")
-        else:
             self.sigCancelStopPoint.emit()
             self.stop_point_btn.setText("Stop After Point")
+        else:
+            self.sigStopPoint.emit()
+            self.stop_point_btn.setText("Cancel Stop")
 
     def start_scan(self):
         # get motor arguments only if enabled
