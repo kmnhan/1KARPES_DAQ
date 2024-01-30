@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # - name: Install UPX
     #   uses: crazy-max/ghaction-upx@v2
@@ -21,9 +21,9 @@ jobs:
     #     install-only: true
 
     - name: Install Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.11
+        python-version: '3.12'
 
     - name: Resolving dependencies...
       run: pip install -r requirements_webcam.txt pyinstaller
@@ -32,7 +32,7 @@ jobs:
       run: pyinstaller webcam.spec
 
     - name: Upload binary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Webcam Viewer
         path: dist/webcam/
