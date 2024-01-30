@@ -136,11 +136,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
-        # self.actionshowcursor.setChecked(True)
         self.actioncentercursor.triggered.connect(self.center_cursor)
         self.actionshowcursor.toggled.connect(self.toggle_cursor)
-
-        self.actionsnap.setChecked(True)
 
     def sync_cursors(self, line: pg.InfiniteLine):
         if line == self.line0:
@@ -225,13 +222,18 @@ class MainWindow(MainWindowGUI):
         dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
         if self.df is not None:
             row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
-            label = row.index[0].strftime("%m/%d %H:%M:%S")
-            for enabled, entry in zip(
-                self.legendtable.enabled, self.legendtable.entries
+            # label = row.index[0].strftime("%m/%d %H:%M:%S")
+            label = f'<span style="color: #FFF;">{row.index[0].strftime("%m/%d %H:%M:%S")}</span>'
+            for enabled, entry, color in zip(
+                self.legendtable.enabled,
+                self.legendtable.entries,
+                self.legendtable.colors,
             ):
                 if enabled:
-                    label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
-            self.line0.label.setText(label)
+                    label += f'<br><span style="color: {color.name()};">{entry}: {row[entry].iloc[0]:.3f}</span>'
+                    # label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
+            # self.line0.label.setText(label)
+            self.line0.label.setHtml(label)
         if self.df_mg15 is not None:
             row = self.df_mg15.iloc[
                 self.df_mg15.index.get_indexer([dt], method="nearest")
@@ -305,7 +307,7 @@ class MainWindow(MainWindowGUI):
         self.plot0.clearPlots()
 
         labelfont = QtGui.QFont()
-        labelfont.setPointSizeF(11.0)
+        labelfont.setPointSizeF(8.0)
 
         if self.df is not None:
             self.settings.setValue(
@@ -328,7 +330,7 @@ class MainWindow(MainWindowGUI):
                         pen=pg.mkPen(self.legendtable.colors[i]),
                         target=target,
                         connect="finite",
-                        # autoDownsample=True,
+                        hoverable=self.actionsnap.isChecked(),
                     )
                     self.actionsnap.toggled.connect(curve.setHoverable)
                     self.plot0.addItem(curve)
