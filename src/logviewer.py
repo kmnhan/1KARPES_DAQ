@@ -320,7 +320,7 @@ class MainWindow(MainWindowGUI):
         self.plot0.clearPlots()
         for it in self.plot0.items[:]:
             if it != self.line0:
-                self.removeItem(i)
+                self.plot0.plot1.removeItem(it)
 
         labelfont = QtGui.QFont()
         labelfont.setPointSizeF(8.0)
@@ -357,7 +357,7 @@ class MainWindow(MainWindowGUI):
             self.plot1.clearPlots()
             for it in self.plot1.items[:]:
                 if it != self.line1:
-                    self.removeItem(i)
+                    self.plot1.removeItem(it)
 
             if self.actiononlymain.isChecked():
                 pens = (pg.mkPen("c"),)
