@@ -41,7 +41,7 @@ class SnapCurveItem(pg.PlotCurveItem):
         super().__init__(*args, **kwargs)
         self.setTarget(self.target)
         self.setAcceptHoverEvents(True)
-        self.setClickable(True, 15)
+        self.setClickable(True, 20)
 
     def setTarget(self, target: pg.TargetItem | None):
         self.target = target
@@ -109,7 +109,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             angle=90,
             movable=True,
             label="",
-            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 50)),
+            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 75)),
         )
         self.line0.sigPositionChanged.connect(self.sync_cursors)
         self.line0.setZValue(100)
@@ -117,7 +117,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             angle=90,
             movable=True,
             label="",
-            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 50)),
+            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 75)),
         )
         self.line1.sigPositionChanged.connect(self.sync_cursors)
 
@@ -227,14 +227,14 @@ class MainWindow(MainWindowGUI):
         if self.df is not None:
             row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
             # label = row.index[0].strftime("%m/%d %H:%M:%S")
-            label = f'<span style="color: #FFF;">{row.index[0].strftime("%m/%d %H:%M:%S")}</span>'
+            label = f'<span style="color: #FFF; font-weight: 600;">{row.index[0].strftime("%m/%d %H:%M:%S")}</span>'
             for enabled, entry, color in zip(
                 self.legendtable.enabled,
                 self.legendtable.entries,
                 self.legendtable.colors,
             ):
                 if enabled:
-                    label += f'<br><span style="color: {color.name()};">{entry}</span>'
+                    label += f'<br><span style="color: {color.name()}; font-weight: 600;">{entry}</span>'
                     label += (
                         f'<span style="color: #FFF;"> {row[entry].iloc[0]:.3f}</span>'
                     )
@@ -300,14 +300,18 @@ class MainWindow(MainWindowGUI):
     @staticmethod
     def _temperature_label(x: int, y: float):
         return (
-            datetime.datetime.fromtimestamp(x - UTC_OFFSET).strftime("%m/%d %H:%M:%S")
+            datetime.datetime.fromtimestamp(max(x - UTC_OFFSET, 0)).strftime(
+                "%m/%d %H:%M:%S"
+            )
             + f"\n{y:.3f}"
         )
 
     @staticmethod
     def _pressure_label(x: int, y: float):
         return (
-            datetime.datetime.fromtimestamp(x - UTC_OFFSET).strftime("%m/%d %H:%M:%S")
+            datetime.datetime.fromtimestamp(max(x - UTC_OFFSET, 0)).strftime(
+                "%m/%d %H:%M:%S"
+            )
             + f"\n{y:.3g}"
         )
 
@@ -330,7 +334,7 @@ class MainWindow(MainWindowGUI):
                         movable=False,
                         label=lambda x, y, *, ind=i: f"{self.df.columns[ind]}\n"
                         + self._temperature_label(x, y),
-                        labelOpts=dict(fill=(200, 200, 200, 50)),
+                        labelOpts=dict(fill=(200, 200, 200, 75)),
                     )
                     target.label().setFont(labelfont)
                     curve = SnapCurveItem(
@@ -359,7 +363,7 @@ class MainWindow(MainWindowGUI):
                         movable=False,
                         label=lambda x, y, *, ind=j: f"{self.df_mg15.columns[ind]}\n"
                         + self._pressure_label(x, y),
-                        labelOpts=dict(fill=(200, 200, 200, 50)),
+                        labelOpts=dict(fill=(200, 200, 200, 75)),
                     )
                     target.label().setFont(labelfont)
                     curve = SnapCurveItem(
