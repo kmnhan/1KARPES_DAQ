@@ -73,6 +73,10 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             return 1
 
     @property
+    def name(self) -> str:
+        return self.combo.currentText()
+
+    @property
     def motor_properties(self) -> tuple[str, np.ndarray] | None:
         if self.isChecked():
             return (self.combo.currentText(), self.motor_coord)

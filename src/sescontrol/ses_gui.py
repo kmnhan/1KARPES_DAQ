@@ -1,4 +1,5 @@
 import csv
+import datetime
 import glob
 import os
 import sys
@@ -21,6 +22,7 @@ try:
 except:
     pass
 
+import humanize
 import numpy as np
 import pywinauto
 import pywinauto.win32functions
@@ -391,6 +393,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.threadpool.start(self.pos_logger)
 
         self.current_file: str | None = None
+        self.start_time: float | None = None
+        self.step_times: list[float] = []
 
         self._itools: list[LiveImageTool | None] = []
 
@@ -421,6 +425,12 @@ class ScanType(*uic.loadUiType("scantype.ui")):
     def has_motor(self) -> bool:
         """Whether at least one motor is enabled."""
         return self.motors[0].isChecked() or self.motors[1].isChecked()
+
+    @property
+    def time_per_step(self) -> float:
+        if len(self.step_times) <= 1:
+            return np.inf
+        return np.mean(np.diff(self.step_times))
 
     def update_motor_list(self):
         for i, m in enumerate(self.motors):
@@ -456,7 +466,7 @@ class ScanType(*uic.loadUiType("scantype.ui")):
     def update_motor_limits(self, index: int):
         """Get motor limits from corresponding plugin and update values."""
         try:
-            plugin = Motor.plugins[self.motors[index].combo.currentText()]
+            plugin = Motor.plugins[self.motors[index].name]
         except KeyError:
             return
         else:
@@ -529,15 +539,44 @@ class ScanType(*uic.loadUiType("scantype.ui")):
 
         self.current_file = scan_worker.data_name
 
+        self.start_time = time.perf_counter()
+        self.step_times.append(0.0)
         self.threadpool.start(scan_worker)
+
+    @QtCore.Slot(int)
+    def step_started(self, niter: int):
+        text: str = f"{self.current_file}"
+        if niter == 1:
+            text += " started"
+        else:
+            steptime: float = self.time_per_step
+            timeleft: float = (self.numpoints - (niter - 1)) * steptime
+
+            timeleft: str = humanize.naturaldelta(datetime.timedelta(seconds=timeleft))
+            steptime: str = humanize.precisedelta(datetime.timedelta(seconds=steptime))
+
+            text += " | "
+            text += f"{timeleft} left ({steptime} per point)"
+        self.line.setText(text)
 
     @QtCore.Slot(int, object, object)
     def step_finished(self, niter: int, pos0, pos1):
-        # display status
-        self.line.setText(
-            f"{self.current_file} {niter}/{self.numpoints} Finished, v1={pos0}, v2={pos1}"
-        )
+        self.step_times.append(time.perf_counter() - self.start_time)
 
+        # display status
+        text: str = f"{self.current_file} | "
+
+        motor_info: list[str] = []
+        for pos, motor in zip((pos0, pos1), self.motors):
+            if pos is not None:
+                motor_info.append(f"{motor.name} = {pos0:.3f}")
+        text += ", ".join(motor_info)
+        text += " done"
+        if niter < self.numpoints:
+            text += ", moving to next point..."
+
+        self.line.setText(text)
+        self.progress.setValue(niter)
         if self.has_motor:
             # enter log entry
             entry = [niter, np.float32(pos0)]
@@ -565,8 +604,16 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         if self.itool is not None:
             self.itool.set_busy(True)
 
+        self.progress.setRange(0, self.numpoints)
+        self.progress.setTextVisible(True)
+
     @QtCore.Slot()
     def post_process(self):
+        total_time = humanize.precisedelta(
+            datetime.timedelta(seconds=time.perf_counter() - self.start_time)
+        )
+        self.line.setText(f"{self.current_file} | Finished in {total_time}")
+
         for m in self.motors:
             m.setDisabled(False)
         self.start_btn.setDisabled(False)
@@ -575,11 +622,12 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.stop_point_btn.setDisabled(True)
         if self.itool is not None:
             self.itool.set_busy(False)
-        self.current_file = None
 
-    @QtCore.Slot(int)
-    def step_started(self, niter: int):
-        self.line.setText(f"{self.current_file} {niter}/{self.numpoints} Started")
+        self.current_file = None
+        self.progress.reset()
+        self.progress.setTextVisible(False)
+        self.start_time = None
+        self.step_times = []
 
     def initialize_logging(
         self,
