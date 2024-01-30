@@ -320,7 +320,7 @@ class MainWindow(MainWindowGUI):
         self.plot0.clearPlots()
         for it in self.plot0.items[:]:
             if it != self.line0:
-                self.plot0.plot1.removeItem(it)
+                self.plot0.removeItem(it)
 
         labelfont = QtGui.QFont()
         labelfont.setPointSizeF(8.0)
