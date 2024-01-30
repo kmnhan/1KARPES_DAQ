@@ -290,11 +290,19 @@ class MainWindow(MainWindowGUI):
 
         enabled = self.settings.value("enabled_names", [])
         colors = self.settings.value("colors", [])
-        for i in range(self.legendtable.model().rowCount()):
+        # for i in range(self.legendtable.model().rowCount()):
+        #     if self.df.columns[i] in enabled:
+        #         self.legendtable.set_enabled(i, True)
+        #     if len(colors) == self.legendtable.model().rowCount():
+        #         self.legendtable.set_color(i, colors[i])
+
+        colors_old = self.legendtable.colors
+        for i, color_old in enumerate(colors_old):
             if self.df.columns[i] in enabled:
                 self.legendtable.set_enabled(i, True)
-            if len(colors) == self.legendtable.model().rowCount():
-                self.legendtable.set_color(i, colors[i])
+            if len(colors) == len(colors_old):
+                if color_old.name() != colors[i].name():
+                    self.legendtable.set_color(i, colors[i])
         if update:
             self.update_plot()
 
@@ -333,19 +341,13 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def update_plot(self):
         self.plot0.clearPlots()
-        for it in self.plot0.items[:]:
-            if it != self.line0:
-                self.plot0.removeItem(it)
-
         labelfont = QtGui.QFont()
         labelfont.setPointSizeF(8.0)
 
         if self.df is not None:
-            self.settings.setValue(
-                "enabled_names", list(self.df.columns[self.legendtable.enabled])
-            )
-            self.settings.setValue("colors", self.legendtable.colors)
-            for i, on in enumerate(self.legendtable.enabled):
+            for i, (on, color) in enumerate(
+                zip(self.legendtable.enabled, self.legendtable.colors)
+            ):
                 if on:
                     target = pg.TargetItem(
                         size=6,
@@ -358,7 +360,7 @@ class MainWindow(MainWindowGUI):
                     plotdata = SnapCurvePlotDataItem(
                         self.df.index.values.astype(np.float64) * 1e-9,
                         self.df[self.df.columns[i]].values,
-                        pen=pg.mkPen(self.legendtable.colors[i]),
+                        pen=pg.mkPen(color),
                         target=target,
                         connect="finite",
                         hoverable=self.actionsnap.isChecked(),
@@ -367,15 +369,11 @@ class MainWindow(MainWindowGUI):
                     self.plot0.sigRangeChanged.connect(
                         plotdata.curve._reset_mouseshape_cache
                     )
+                    target.setParentItem(plotdata.curve)
                     self.plot0.addItem(plotdata)
-                    self.plot0.addItem(target)
 
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
-            for it in self.plot1.items[:]:
-                if it != self.line1:
-                    self.plot1.removeItem(it)
-
             if self.actiononlymain.isChecked():
                 pens = (pg.mkPen("c"),)
             else:
@@ -402,8 +400,8 @@ class MainWindow(MainWindowGUI):
                     self.plot1.sigRangeChanged.connect(
                         plotdata.curve._reset_mouseshape_cache
                     )
+                    target.setParentItem(plotdata.curve)
                     self.plot1.addItem(plotdata)
-                    self.plot1.addItem(target)
 
         for pi in self.plot_items:
             pi.getViewBox().setLimits(
@@ -427,6 +425,14 @@ class MainWindow(MainWindowGUI):
     @property
     def end_datetime(self) -> datetime.datetime:
         return datetime.datetime.fromtimestamp(self.end_datetime_timestamp - UTC_OFFSET)
+
+    def closeEvent(self, *args, **kwargs):
+        if self.df is not None:
+            self.settings.setValue(
+                "enabled_names", list(self.df.columns[self.legendtable.enabled])
+            )
+            self.settings.setValue("colors", self.legendtable.colors)
+        super().closeEvent(*args, **kwargs)
 
 
 if __name__ == "__main__":
