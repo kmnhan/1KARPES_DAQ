@@ -22,6 +22,67 @@ except:
 UTC_OFFSET: int = -time.timezone
 
 
+class SnapCurveItem(pg.PlotCurveItem):
+    # adapted from https://stackoverflow.com/a/68857695
+    # when a TargetItem is linked, it snaps to the point in the curve near the cursor.
+
+    sigCurveHovered = QtCore.Signal(object, object)
+    sigCurveNotHovered = QtCore.Signal(object, object)
+
+    def __init__(
+        self,
+        *args,
+        hoverable: bool = True,
+        target: pg.TargetItem | None = None,
+        **kwargs,
+    ):
+        self.target = target
+        self.hoverable = hoverable
+        super().__init__(*args, **kwargs)
+        self.setTarget(self.target)
+        self.setAcceptHoverEvents(True)
+        self.setClickable(True, 15)
+
+    def setTarget(self, target: pg.TargetItem | None):
+        self.target = target
+        if self.target is not None:
+            self.target.movable = False
+            self.setPen(self.opts["pen"])
+
+        # refresh target visibility state
+        self.setHoverable(self.hoverable)
+
+    def setPen(self, *args, **kargs):
+        super().setPen(*args, **kargs)
+
+        # apply same color to target
+        if self.target is not None:
+            self.target.setPen(*args, **kargs)
+            if self.target.label() is not None:
+                self.target.label().setColor(self.target.pen.color())
+
+    @QtCore.Slot(bool)
+    def setHoverable(self, hoverable: bool):
+        self.hoverable = hoverable
+        if self.target is not None:
+            if not self.hoverable:
+                self.target.setVisible(False)
+
+    def hoverEvent(self, ev):
+        if not self.hoverable:
+            return
+        if ev.isExit() or not self.mouseShape().contains(ev.pos()):
+            if self.target is not None:
+                self.target.setVisible(False)
+            self.sigCurveNotHovered.emit(self, ev)
+        else:
+            if self.target is not None:
+                ind = np.argmin(np.abs(self.xData - ev.pos().x()))
+                self.target.setPos(self.xData[ind], self.yData[ind])
+                self.target.setVisible(True)
+            self.sigCurveHovered.emit(self, ev)
+
+
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     def __init__(self):
         super().__init__()
@@ -75,9 +136,11 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
-        self.actionshowcursor.setChecked(True)
+        # self.actionshowcursor.setChecked(True)
         self.actioncentercursor.triggered.connect(self.center_cursor)
         self.actionshowcursor.toggled.connect(self.toggle_cursor)
+
+        self.actionsnap.setChecked(True)
 
     def sync_cursors(self, line: pg.InfiniteLine):
         if line == self.line0:
@@ -162,7 +225,7 @@ class MainWindow(MainWindowGUI):
         dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
         if self.df is not None:
             row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
-            label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
+            label = row.index[0].strftime("%m/%d %H:%M:%S")
             for enabled, entry in zip(
                 self.legendtable.enabled, self.legendtable.entries
             ):
@@ -173,7 +236,7 @@ class MainWindow(MainWindowGUI):
             row = self.df_mg15.iloc[
                 self.df_mg15.index.get_indexer([dt], method="nearest")
             ]
-            label = row.index[0].strftime("%Y-%m-%d %H:%M:%S")
+            label = row.index[0].strftime("%m/%d %H:%M:%S")
             entries = ["IG Main"]
             if not self.actiononlymain.isChecked():
                 entries += ["IG Middle"]
@@ -225,9 +288,25 @@ class MainWindow(MainWindowGUI):
     def toggle_temperature(self, value: bool):
         self.plot0.setVisible(value)
 
+    @staticmethod
+    def _temperature_label(x: int, y: float):
+        return (
+            datetime.datetime.fromtimestamp(x).strftime("%m/%d %H:%M:%S") + f"\n{y:.3f}"
+        )
+
+    @staticmethod
+    def _pressure_label(x: int, y: float):
+        return (
+            datetime.datetime.fromtimestamp(x).strftime("%m/%d %H:%M:%S") + f"\n{y:.3g}"
+        )
+
     @QtCore.Slot()
     def update_plot(self):
         self.plot0.clearPlots()
+
+        labelfont = QtGui.QFont()
+        labelfont.setPointSizeF(11.0)
+
         if self.df is not None:
             self.settings.setValue(
                 "enabled_names", list(self.df.columns[self.legendtable.enabled])
@@ -235,12 +314,26 @@ class MainWindow(MainWindowGUI):
             self.settings.setValue("colors", self.legendtable.colors)
             for i, on in enumerate(self.legendtable.enabled):
                 if on:
-                    self.plot0.plot(
+                    target = pg.TargetItem(
+                        size=6,
+                        movable=False,
+                        label=lambda x, y, *, ind=i: f"{self.df.columns[ind]}\n"
+                        + self._temperature_label(x, y),
+                        labelOpts=dict(fill=(200, 200, 200, 50)),
+                    )
+                    target.label().setFont(labelfont)
+                    curve = SnapCurveItem(
                         self.df.index.values.astype(np.float64) * 1e-9,
                         self.df[self.df.columns[i]].values,
                         pen=pg.mkPen(self.legendtable.colors[i]),
-                        autoDownsample=True,
+                        target=target,
+                        connect="finite",
+                        # autoDownsample=True,
                     )
+                    self.actionsnap.toggled.connect(curve.setHoverable)
+                    self.plot0.addItem(curve)
+                    self.plot0.addItem(target)
+
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
             if self.actiononlymain.isChecked():
@@ -249,12 +342,24 @@ class MainWindow(MainWindowGUI):
                 pens = (pg.mkPen("c"), pg.mkPen("m"))
             if self.df_mg15 is not None:
                 for j, pen in enumerate(pens):
-                    self.plot1.plot(
+                    target = pg.TargetItem(
+                        size=6,
+                        movable=False,
+                        label=lambda x, y, *, ind=j: f"{self.df_mg15.columns[ind]}\n"
+                        + self._pressure_label(x, y),
+                        labelOpts=dict(fill=(200, 200, 200, 50)),
+                    )
+                    target.label().setFont(labelfont)
+                    curve = SnapCurveItem(
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
                         self.df_mg15[self.df_mg15.columns[j]].values,
                         pen=pen,
-                        autoDownsample=True,
+                        target=target,
+                        connect="finite",
                     )
+                    self.actionsnap.toggled.connect(curve.setHoverable)
+                    self.plot1.addItem(curve)
+                    self.plot1.addItem(target)
 
         for pi in self.plot_items:
             pi.getViewBox().setLimits(

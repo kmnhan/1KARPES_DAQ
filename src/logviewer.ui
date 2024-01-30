@@ -169,6 +169,7 @@
     </property>
     <addaction name="actionshowcursor"/>
     <addaction name="actioncentercursor"/>
+    <addaction name="actionsnap"/>
     <addaction name="separator"/>
     <addaction name="actiononlymain"/>
    </widget>
@@ -194,6 +195,14 @@
    </property>
    <property name="text">
     <string>Show only main pressure</string>
+   </property>
+  </action>
+  <action name="actionsnap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Snap to points</string>
    </property>
   </action>
  </widget>
