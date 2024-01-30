@@ -318,6 +318,9 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def update_plot(self):
         self.plot0.clearPlots()
+        for it in self.plot0.items[:]:
+            if it != self.line0:
+                self.removeItem(i)
 
         labelfont = QtGui.QFont()
         labelfont.setPointSizeF(8.0)
@@ -352,6 +355,10 @@ class MainWindow(MainWindowGUI):
 
         if self.pressure_check.isChecked():
             self.plot1.clearPlots()
+            for it in self.plot1.items[:]:
+                if it != self.line1:
+                    self.removeItem(i)
+
             if self.actiononlymain.isChecked():
                 pens = (pg.mkPen("c"),)
             else:
