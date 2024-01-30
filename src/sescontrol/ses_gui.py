@@ -147,6 +147,10 @@ class ScanWorker(QtCore.QRunnable):
         self._stop: bool = False
         self._stopnow: bool = False
 
+    @property
+    def data_name(self) -> str:
+        return f"{self.base_file}{str(self.data_idx).zfill(4)}"
+
     def check_finished(self) -> bool:
         """Returns whether if sequence is finished."""
         path = (
@@ -204,10 +208,7 @@ class ScanWorker(QtCore.QRunnable):
         if self.has_da:
             # DA maps take time to save even after scan ends, let's try to wait
             timeout_start = time.monotonic()
-            fname = os.path.join(
-                self.base_dir,
-                f"{self.base_file}{str(self.data_idx).zfill(4)}.zip",
-            )
+            fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
             while True:
                 time.sleep(0.2)
                 if os.path.isfile(fname) and os.stat(fname).st_size != 0:
@@ -281,9 +282,7 @@ class ScanWorker(QtCore.QRunnable):
 
         """
         for ext in self.valid_ext:
-            f = os.path.join(
-                self.base_dir, f"{self.base_file}{str(self.data_idx).zfill(4)}{ext}"
-            )
+            f = os.path.join(self.base_dir, f"{self.data_name}{ext}")
             new = os.path.join(
                 self.base_dir,
                 "_scan_"
@@ -390,6 +389,8 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.pos_logger = MotorPosWriter()
         self.threadpool = QtCore.QThreadPool()
         self.threadpool.start(self.pos_logger)
+
+        self.current_file: str | None = None
 
         self._itools: list[LiveImageTool | None] = []
 
@@ -526,12 +527,16 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.stop_btn.clicked.connect(scan_worker.force_stop)
         self.stop_point_btn.clicked.connect(scan_worker.stop_after_point)
 
+        self.current_file = scan_worker.data_name
+
         self.threadpool.start(scan_worker)
 
     @QtCore.Slot(int, object, object)
     def step_finished(self, niter: int, pos0, pos1):
         # display status
-        self.line.setText(f"{niter}/{self.numpoints} Finished, v1={pos0}, v2={pos1}")
+        self.line.setText(
+            f"{self.current_file} {niter}/{self.numpoints} Finished, v1={pos0}, v2={pos1}"
+        )
 
         if self.has_motor:
             # enter log entry
@@ -570,10 +575,11 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         self.stop_point_btn.setDisabled(True)
         if self.itool is not None:
             self.itool.set_busy(False)
+        self.current_file = None
 
     @QtCore.Slot(int)
     def step_started(self, niter: int):
-        self.line.setText(f"{niter}/{self.numpoints} Started")
+        self.line.setText(f"{self.current_file} {niter}/{self.numpoints} Started")
 
     def initialize_logging(
         self,
