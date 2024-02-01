@@ -1,0 +1,5 @@
+pyqtgraph
+numpy
+pymodbus
+pyqt6<=6.5.3
+qtpy
