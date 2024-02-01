@@ -13,6 +13,7 @@ import pyqtgraph as pg
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
 import mg15
 
 try:
@@ -137,6 +138,7 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setWindowTitle("MG15")
 
         # Read config file
         self.config = configparser.ConfigParser()
@@ -308,7 +310,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
 
     qapp = QtWidgets.QApplication(sys.argv)
-    # qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
+    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
 
     while not valid_config():
         configdialog = ConfigFileDialog()
