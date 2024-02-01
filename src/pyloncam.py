@@ -491,9 +491,9 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(bool)
     def toggle_autosave(self, value: bool):
         if value:
-            self.log_timer.start()
+            self.autosave_timer.start()
         else:
-            self.log_timer.stop()
+            self.autosave_timer.stop()
 
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
