@@ -483,6 +483,18 @@ class MainWindow(MainWindowGUI):
         self.save_img_btn.clicked.connect(self.save_image)
         self.save_profile_btn.setDisabled(True)  # not implemented
 
+        self.autosave_timer = QtCore.QTimer(self)
+        self.autosave_timer.setInterval(300000)
+        self.autosave_timer.timeout.connect(self.save_image)
+        self.autosave_check.toggled.connect(self.toggle_autosave)
+
+    @QtCore.Slot(bool)
+    def toggle_autosave(self, value: bool):
+        if value:
+            self.log_timer.start()
+        else:
+            self.log_timer.stop()
+
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
         self.frame_grabber.wait(2000)
