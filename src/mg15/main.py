@@ -6,7 +6,6 @@ import multiprocessing
 import os
 import sys
 import time
-from PySide6.QtGui import QCloseEvent
 
 import numpy as np
 import pymodbus
@@ -14,7 +13,6 @@ import pyqtgraph as pg
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
-
 import mg15
 
 try:
@@ -118,7 +116,7 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
     ):
         if isinstance(self.plotItem.getAxis("bottom"), pg.DateAxisItem):
             if self.relative_check.isChecked():
-                self.plotItem.setAxisItems({"bottom": pg.AxisItem()})
+                self.plotItem.setAxisItems({"bottom": pg.AxisItem("bottom")})
         elif not self.relative_check.isChecked():
             self.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
 
@@ -184,6 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Connect to MG15
         self.mg15 = mg15.MG15(address)
         self.mg15.sigUpdated.connect(self.update_values)
+        self.mg15.connect()
 
         # Setup log writing process
         self.log_writer = LoggingProc(log_dir)
@@ -193,6 +192,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log_timer = QtCore.QTimer(self)
         self.set_logging_interval(log_interval, update_config=False)
         self.log_timer.timeout.connect(self.write_log)
+        self.toggle_updates(True)
 
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):

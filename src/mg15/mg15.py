@@ -106,7 +106,6 @@ class MG15Connection(QtCore.QThread):
 
     def run(self):
         self.mutex = QtCore.QMutex()
-        self.set_value(None)
         self.stopped.clear()
 
         client = ModbusTcpClient(self.address, 502)  # Create client object
