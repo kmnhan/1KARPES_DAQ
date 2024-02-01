@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>360</width>
+    <height>343</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,9 +36,13 @@
        <widget class="QLabel" name="label1">
         <property name="font">
          <font>
-          <pointsize>30</pointsize>
+          <family>Arial</family>
+          <pointsize>35</pointsize>
           <bold>true</bold>
          </font>
+        </property>
+        <property name="text">
+         <string>0+000E−00</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter|Qt::AlignHCenter|Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -77,9 +81,13 @@
        <widget class="QLabel" name="label2">
         <property name="font">
          <font>
-          <pointsize>30</pointsize>
+          <family>Arial</family>
+          <pointsize>35</pointsize>
           <bold>true</bold>
          </font>
+        </property>
+        <property name="text">
+         <string>0+000E−00</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter|Qt::AlignHCenter|Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -118,12 +126,13 @@
        <widget class="QLabel" name="label3">
         <property name="font">
          <font>
-          <pointsize>30</pointsize>
+          <family>Arial</family>
+          <pointsize>35</pointsize>
           <bold>true</bold>
          </font>
         </property>
         <property name="text">
-         <string/>
+         <string>0+000E−00</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter|Qt::AlignHCenter|Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

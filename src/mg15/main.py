@@ -139,6 +139,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("MG15")
+        self.resize(400, 400)
 
         # Read config file
         self.config = configparser.ConfigParser()
