@@ -366,7 +366,8 @@ class MMThread(QtCore.QThread):
                     if pulse_reduced < 2:
                         self.set_pulse_train(self._channel, 1)
                         pulse_reduced += 1
-
+                if pulse_reduced == 2 and absdelta < 5 * self._threshold:
+                    pulse_reduced += 1  # high precision mode
                     # factor = absdelta / (20 * self._threshold)
                     # vmin, vmax = 20, self._amplitudes[direction]
                     # decay_rate = 0.5
@@ -389,13 +390,12 @@ class MMThread(QtCore.QThread):
                 self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
                 self.mmrecv()
 
-                # if pulse_reduced == 2:
-                #     # precise mode
-                #     pos = self.get_refreshed_position_live(
-                #         self._channel, navg=10, pulse_train=1, direction=direction
-                #     )
-                # else:
-                pos = self.get_position(self._channel)
+                if pulse_reduced == 3:
+                    pos = self.get_refreshed_position_live(
+                        self._channel, navg=10, pulse_train=1, direction=direction
+                    )
+                else:
+                    pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
                 time_list.append(time.time() - time_start)
 
