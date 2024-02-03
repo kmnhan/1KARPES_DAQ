@@ -538,7 +538,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
             return
 
         # Set motion parameters
-        kwargs["tolerance"] = ch.tolerance
+        kwargs["threshold"] = ch.tolerance
         if ch.abs_tolerance < 1.0:
             kwargs["high_precision"] = True
         else:
