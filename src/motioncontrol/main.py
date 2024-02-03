@@ -127,7 +127,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             self.actionreadpos.triggered.connect(con.refresh_positions)
             self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
             self.actionreadavgpos100.triggered.connect(
-                lambda: con.refresh_positions(navg=100)
+                lambda *, ctrl=con: ctrl.refresh_positions(navg=100)
             )
 
             con.mmthread.sigMoveStarted.connect(self.move_started)
