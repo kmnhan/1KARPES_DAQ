@@ -467,7 +467,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
         # Write log
         ch = self.get_channel(channel)
-        self.write_log(["Moved", ch.name, f"{ch.current_pos:.4f}"])
+        self.write_log(["Moved", ch.name, f"{ch.current_pos:.5f}"])
 
         # Return channels to normal state
         for ch in self.channels:
@@ -523,7 +523,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         ch = self.get_channel(kwargs["channel"])
 
         # Write motion start log
-        self.write_log(["Start", ch.name, f"{ch.convert_pos(kwargs['target']):.4f}"])
+        self.write_log(["Start", ch.name, f"{ch.convert_pos(kwargs['target']):.5f}"])
 
         # Various sanity checks
         if not self.is_channel_enabled(kwargs["channel"]):
