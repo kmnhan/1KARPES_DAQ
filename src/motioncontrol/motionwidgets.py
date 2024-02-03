@@ -538,9 +538,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
             return
 
         # Set motion parameters
-        self.mmthread.initialize_parameters(
-            **kwargs, threshold=self.get_channel(kwargs["channel"]).tolerance
-        )
+        kwargs["tolerance"] = ch.tolerance
+        if ch.abs_tolerance < 1.0:
+            kwargs["high_precision"] = True
+        else:
+            kwargs["high_precision"] = False
+        self.mmthread.initialize_parameters(**kwargs)
+
         # Start motion
         self.mmthread.start()
 

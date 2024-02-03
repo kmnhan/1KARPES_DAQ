@@ -274,7 +274,6 @@ class MMThread(QtCore.QThread):
 
     #     np.save("D:/MotionController/freqtest2.npy", vals)
 
-    @QtCore.Slot(int, int, int, int, int)
     def initialize_parameters(
         self,
         channel: int,
@@ -282,6 +281,7 @@ class MMThread(QtCore.QThread):
         frequency: int,
         amplitude: tuple[int, int],
         threshold: int,
+        high_precision: bool,
     ):
         log.info(
             f"Initializing parameters {channel} {target} {frequency} {amplitude} {threshold}"
@@ -291,6 +291,7 @@ class MMThread(QtCore.QThread):
         self._sigtime = frequency
         self._amplitudes = amplitude
         self._threshold = int(abs(threshold))
+        self._high_precision = high_precision
         self.initialized = True
 
     def run(self):
@@ -366,8 +367,9 @@ class MMThread(QtCore.QThread):
                     if pulse_reduced < 2:
                         self.set_pulse_train(self._channel, 1)
                         pulse_reduced += 1
-                if pulse_reduced == 2 and absdelta < 5 * self._threshold:
+                if pulse_reduced == 2 and absdelta < 10 * self._threshold:
                     pulse_reduced += 1  # high precision mode
+
                     # factor = absdelta / (20 * self._threshold)
                     # vmin, vmax = 20, self._amplitudes[direction]
                     # decay_rate = 0.5
@@ -390,7 +392,7 @@ class MMThread(QtCore.QThread):
                 self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
                 self.mmrecv()
 
-                if pulse_reduced == 3:
+                if self._high_precision and pulse_reduced == 3:
                     pos = self.get_refreshed_position_live(
                         self._channel, navg=10, pulse_train=1, direction=direction
                     )
