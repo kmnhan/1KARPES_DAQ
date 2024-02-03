@@ -389,13 +389,13 @@ class MMThread(QtCore.QThread):
                 self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
                 self.mmrecv()
 
-                if pulse_reduced == 2:
-                    # precise mode
-                    pos = self.get_refreshed_position_live(
-                        self._channel, navg=10, pulse_train=1, direction=direction
-                    )
-                else:
-                    pos = self.get_position(self._channel)
+                # if pulse_reduced == 2:
+                #     # precise mode
+                #     pos = self.get_refreshed_position_live(
+                #         self._channel, navg=10, pulse_train=1, direction=direction
+                #     )
+                # else:
+                pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
                 time_list.append(time.time() - time_start)
 
