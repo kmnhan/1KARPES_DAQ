@@ -449,7 +449,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(int, object, object)
     def update_plot(self, channel: int, dt: list[float], delta: list[int]):
         delta_abs = -self.get_channel(channel).cal_A * np.asarray(delta)
-        self.plot.curve.setData(x=dt, y=delta_abs * 1e3)
+        self.plot.curve.setData(x=dt, y=delta_abs * 1e-3)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
