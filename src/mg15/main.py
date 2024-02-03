@@ -183,6 +183,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotting.interval_spin.setValue(log_interval)
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.plotting.plotItem.getAxis("left").setLabel(f"Pressure ({self.log_units})")
+        self.plotting.plotItem.getAxis("left").enableAutoSIPrefix(False)
+
         d2.addWidget(self.plotting)
 
         # Setup data array
