@@ -101,14 +101,42 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+
+        # Add multiaxes plots
+        pg.AxisItem
+        self.p2 = pg.ViewBox()
+        self.plotItem.showAxis("right")
+        self.plotItem.scene().addItem(self.p2)
+        self.plotItem.getAxis("right").linkToView(self.p2)
+        self.p2.setXLink(self.plotItem)
+        # self.plotItem.getAxis('right').setLabel('axis2', color='#0000ff')
+
+        self.p3 = pg.ViewBox()
+        ax3 = pg.AxisItem("right")
+        self.plotItem.layout.addItem(ax3, 2, 3)
+        self.plotItem.scene().addItem(self.p3)
+        ax3.linkToView(self.p3)
+        self.p3.setXLink(self.plotItem)
+        ax3.setZValue(-10000)
+        # ax3.setLabel('axis 3', color='#ff0000')
+
+        self.updateViews()
+        self.plotItem.vb.sigResized.connect(self.updateViews)
+
         self.plots = (
             pg.PlotDataItem(pen="c"),
             pg.PlotDataItem(pen="m"),
             pg.PlotDataItem(pen="y"),
         )
-        for plot in self.plots:
-            self.plotItem.addItem(plot)
+        for pi, plot in zip((self.plotItem, self.p2, self.p3), self.plots):
+            pi.addItem(plot)
         self.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
+
+    def updateViews(self):
+        self.p2.setGeometry(self.plotItem.vb.sceneBoundingRect())
+        self.p3.setGeometry(self.plotItem.vb.sceneBoundingRect())
+        self.p2.linkedViewChanged(self.plotItem.vb, self.p2.XAxis)
+        self.p3.linkedViewChanged(self.plotItem.vb, self.p3.XAxis)
 
     def set_data(
         self,
