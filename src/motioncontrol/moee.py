@@ -203,14 +203,17 @@ class MMThread(QtCore.QThread):
         self.set_frequency(channel, 500)
         self.set_direction(channel, 1)
 
-        val: int = 0
+        vals: list[int] = []
         for _ in range(navg):
             self.mmsend(MMCommand.SENDSIGONCE, channel)
             self.mmrecv()
-            val += self.get_position(channel, emit=False)
-        val = round(val / navg)
-        self.sigPosRead.emit(channel, val)
-        return val
+            vals.append(self.get_position(channel, emit=False))
+        avg = sum(vals) / len(vals)
+        std = (sum([abs(v - avg) ** 2 for v in vals]) / len(vals)) ** (1 / 2)
+        log.info(f"Read pos {avg:.2f} ± {std:.2f}")
+        avg = round(avg)
+        self.sigPosRead.emit(channel, avg)
+        return avg
 
     def get_refreshed_position_live(
         self, channel: int, navg: int, pulse_train: int, direction: int
