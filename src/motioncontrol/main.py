@@ -126,6 +126,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             self.actiontargetcurr.triggered.connect(con.target_current_all)
             self.actionreadpos.triggered.connect(con.refresh_positions)
             self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
+            self.actionreadavgpos100.triggered.connect(
+                lambda: con.refresh_positions(navg=100)
+            )
 
             con.mmthread.sigMoveStarted.connect(self.move_started)
             con.mmthread.sigMoveFinished.connect(self.move_finished)
@@ -326,12 +329,14 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def move_started(self):
         self.actionreadpos.setDisabled(True)
         self.actionreadavgpos.setDisabled(True)
+        self.actionreadavgpos100.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
     @QtCore.Slot()
     def move_finished(self):
         self.actionreadpos.setDisabled(False)
         self.actionreadavgpos.setDisabled(False)
+        self.actionreadavgpos100.setDisabled(False)
         self.actionreadcap.setDisabled(False)
 
     @QtCore.Slot()

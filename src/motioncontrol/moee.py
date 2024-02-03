@@ -397,7 +397,7 @@ class MMThread(QtCore.QThread):
 
                 if self._high_precision and pulse_reduced == 3:
                     pos = self.get_refreshed_position_live(
-                        self._channel, navg=10, pulse_train=1, direction=direction
+                        self._channel, navg=20, pulse_train=1, direction=direction
                     )
                 else:
                     pos = self.get_position(self._channel)

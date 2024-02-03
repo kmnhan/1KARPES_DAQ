@@ -94,6 +94,7 @@
     <addaction name="separator"/>
     <addaction name="actionreadpos"/>
     <addaction name="actionreadavgpos"/>
+    <addaction name="actionreadavgpos100"/>
     <addaction name="actionreadcap"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -168,12 +169,20 @@
   </action>
   <action name="actionreadavgpos">
    <property name="text">
-    <string>Read Averaged Positions</string>
+    <string>Read Averaged Positions (× 10)</string>
    </property>
   </action>
   <action name="actionstopcurrent">
    <property name="text">
     <string>Abort Current Motion</string>
+   </property>
+  </action>
+  <action name="actionreadavgpos100">
+   <property name="text">
+    <string>Read Averaged Positions (× 100)</string>
+   </property>
+   <property name="toolTip">
+    <string>Read Averaged Positions (× 100)</string>
    </property>
   </action>
  </widget>
