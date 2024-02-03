@@ -151,7 +151,7 @@ class MMThread(QtCore.QThread):
             sigtime = round(50000000 / frequency)
         else:
             sigtime = int(50000000 / 200)
-        log.debug(f"setting frequency to {50000000 / sigtime}")
+        log.info(f"setting frequency to {50000000 / sigtime}")
         self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
         return self.mmrecv()
 
@@ -163,22 +163,22 @@ class MMThread(QtCore.QThread):
 
     def set_amplitude(self, channel: int, amplitude: int | float):
         sigamp = min((65535, round(amplitude * 65535 / 60)))
-        log.debug(f"setting amplitude to {sigamp / 65535 * 60.0:.2f}")
+        log.info(f"setting amplitude to {sigamp / 65535 * 60.0:.2f}")
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
-        log.debug(f"setting direction to {direction}")
+        log.info(f"setting direction to {direction}")
         self.mmsend(MMCommand.SETSIGDIR, int(channel), int(direction))
         return self.mmrecv()
 
     def set_pulse_train(self, channel: int, train: int):
-        log.debug(f"setting pulse train {train}")
+        log.info(f"setting pulse train {train}")
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
     def reset(self, channel: int | None = None):
-        log.debug(f"resetting channel {channel}")
+        log.info(f"resetting channel {channel}")
         if channel is None:
             self.mmsend(MMCommand.RESET)
         else:
@@ -210,7 +210,7 @@ class MMThread(QtCore.QThread):
             vals.append(self.get_position(channel, emit=False))
         avg = sum(vals) / len(vals)
         if navg == 1:
-            log.info(f"Read pos {avg}")
+            log.info(f"Read pos {avg:.2f}")
         else:
             std = (sum([abs(v - avg) ** 2 for v in vals]) / len(vals)) ** (1 / 2)
             log.info(f"Read pos {avg:.2f} ± {std:.2f}")
