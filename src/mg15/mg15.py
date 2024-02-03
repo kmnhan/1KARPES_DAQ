@@ -70,6 +70,9 @@ PASSIVE_GAUGE_TYPE: dict[int, str] = {
     8: "User Defined Passive Vacuum Gauge",
     9: "BARION basic II",
 }
+MBAR_TO_TORR: float = 76000 / 101325
+MBAR_TO_PA: float = 100.0
+MBAR_TO_PSIA: float = MBAR_TO_PA * (0.0254**2) / (0.45359237 * 9.80665)
 
 
 def uint16_to_boolean_array(uint16_value):
@@ -144,6 +147,20 @@ class MG15(QtCore.QObject):
     def pressures(self) -> list[float]:
         return [self.get_pressure(ch) for ch in range(1, 7 + 1)]
 
+    pressures_mbar = pressures
+
+    @property
+    def pressures_torr(self) -> list[float]:
+        return [self.get_pressure_torr(ch) for ch in range(1, 7 + 1)]
+
+    @property
+    def pressures_pa(self) -> list[float]:
+        return [self.get_pressure_pa(ch) for ch in range(1, 7 + 1)]
+
+    @property
+    def pressures_psia(self) -> list[float]:
+        return [self.get_pressure_psia(ch) for ch in range(1, 7 + 1)]
+
     @property
     def states(self) -> list[str]:
         return [self.get_state(ch) for ch in range(1, 7 + 1)]
@@ -163,6 +180,17 @@ class MG15(QtCore.QObject):
     def get_pressure(self, channel: int) -> float:
         idx = channel - 1
         return uint8_to_ieee754(self.registers[3 * idx : 3 * idx + 2])
+
+    get_pressure_mbar = get_pressure
+
+    def get_pressure_torr(self, channel: int) -> float:
+        return self.get_pressure(channel) * MBAR_TO_TORR
+
+    def get_pressure_pa(self, channel: int) -> float:
+        return self.get_pressure(channel) * MBAR_TO_PA
+
+    def get_pressure_psia(self, channel: int) -> float:
+        return self.get_pressure(channel) * MBAR_TO_PSIA
 
     def get_state(self, channel: int) -> str:
         idx = channel - 1

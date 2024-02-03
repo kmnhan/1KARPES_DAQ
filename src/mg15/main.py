@@ -152,6 +152,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.channel_names: list[str] = [
             self.config.get("Section 2", f"MG15 CH{i+1} Name")[1:-1] for i in range(7)
         ]
+        self.disp_units: str = (
+            self.config.get("Python", "Display Units", fallback="torr").strip().lower()
+        )
+        self.log_units: str = (
+            self.config.get("Python", "Logging Units", fallback="torr").strip().lower()
+        )
         log_dir: str = self.config.get(
             "Python", "Logging Directory", fallback="D:\\MG15_Log"
         )
@@ -163,7 +169,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Setup frontend docks
         area = DockArea()
         self.setCentralWidget(area)
-        d1 = Dock("Pressures", size=(500, 400))
+        d1 = Dock(f"Pressures ({self.disp_units})", size=(500, 400))
         d2 = Dock("Plot", size=(500, 400))
         area.addDock(d2, "left")
         area.addDock(d1, "above", d2)
@@ -176,6 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotting = PlottingWidget()
         self.plotting.interval_spin.setValue(log_interval)
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
+        self.plotting.plotItem.getAxis("right").setLabel(f"Pressure ({self.log_units})")
         d2.addWidget(self.plotting)
 
         # Setup data array
@@ -207,7 +214,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def write_log(self):
         updated: datetime.datetime = self.mg15.updated
-        pressures: list[float] = [p * MBAR_TO_TORR for p in self.mg15.pressures]
+        pressures: list[float] = getattr(self.mg15, f"pressures_{self.log_units}")
         self.log_writer.append(updated, pressures)
 
         # Setup plotting
@@ -234,13 +241,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def update_values(self):
+        pressure_func = getattr(self.mg15, f"get_pressure_{self.disp_units}")
         for i, ch in enumerate(self.main_gauges):
             status: str = self.mg15.get_state(ch)
             if status == mg15.GAUGE_STATE[0]:
                 value = (
-                    np.format_float_scientific(
-                        self.mg15.get_pressure(ch) * MBAR_TO_TORR, 3
-                    )
+                    np.format_float_scientific(pressure_func(ch), 3)
                     .replace("e", "E")
                     .replace("-", "−")
                 )
