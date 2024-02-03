@@ -70,6 +70,9 @@ class MotorStatus(StautsIconWidget):
 
 
 class SingleChannelWidget(*uic.loadUiType("channel.ui")):
+    """Widget for a single channel. Internally, all positions are `raw` positions before
+    applying calibration factors. This widget handles the necessary conversions."""
+
     sigMoveRequested = QtCore.Signal(int, int, object)
 
     def __init__(self, parent=None):
@@ -88,12 +91,12 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.right_btn.clicked.connect(self.step_up)
         self.move_btn.clicked.connect(self.move)
 
-        # internal variables
+        # internal variable to store raw position
         self.raw_position: int | None = None
 
         # read configuration & populate combobox
         with open(CONFIG_FILE, "rb") as f:
-            self.config = tomllib.load(f)
+            self.config: dict = tomllib.load(f)
 
         self.combobox.clear()
         for k in self.config.keys():
@@ -159,6 +162,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
     @QtCore.Slot()
     def refresh_enabled(self):
+        """Refresh the enabled state of widgets."""
         self.set_channel_disabled(not self.enabled)
 
     def set_channel_disabled(self, value: bool):
@@ -171,6 +175,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.move_btn.setDisabled(value)
 
     def set_motion_busy(self, value: bool):
+        """Disable some widgets during motion."""
         self.combobox.setDisabled(value)
         self.left_btn.setDisabled(value)
         self.right_btn.setDisabled(value)
@@ -181,6 +186,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.amp_fwd_spin.setDisabled(value)
 
     def update_motor(self):
+        """Refresh calibration factors and set motion bounds."""
         self.cal_A = float(self.current_config.get("a", 1.0))
         self.cal_B = float(self.current_config.get("b", 0.0))
         self.cal_B -= float(self.current_config.get("origin", 0.0))
@@ -200,9 +206,11 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             self.set_current_pos(self.raw_position)
 
     def convert_pos(self, pos: int) -> float:
+        """Convert raw position integer to calibrated position."""
         return self.cal_A * pos + self.cal_B
 
     def convert_pos_inv(self, value: float) -> int:
+        """Convert position value into nearest raw position integer."""
         return round((value - self.cal_B) / self.cal_A)
 
     @QtCore.Slot(int)
@@ -228,6 +236,8 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
 
 class DeltaWidget(QtWidgets.QWidget):
+    """Widget for movement along beam direction."""
+
     sigStepped = QtCore.Signal(float)
     sigMoved = QtCore.Signal()
 
@@ -320,37 +330,47 @@ class MotionPlot(pg.PlotWidget):
 
 
 class SingleControllerWidget(QtWidgets.QWidget):
+    """Widget for a single controller that consists of three channels. Handles
+    connection and communication with the controller, as well as plotting and queuing.
+
+    On move, the motion parameters are placed in a queue. Each motion in the queue will
+    be executed in the order it was placed. Checking for motion execution happens twice:
+    when a new motion is added to the queue, and when a previous motion is finished.
+    """
+
     writeLog = QtCore.Signal(object)
 
-    def __init__(self, parent=None, address: str = "192.168.0.210"):
+    def __init__(self, parent=None, *, address: str):
         self.address = address
 
         super().__init__(parent)
         self.setLayout(QtWidgets.QVBoxLayout(self))
 
+        # Add channels
         self.ch1 = SingleChannelWidget(self)
         self.ch2 = SingleChannelWidget(self)
         self.ch3 = SingleChannelWidget(self)
         for i, ch in enumerate(self.channels):
             self.layout().addWidget(ch)
             ch.checkbox.setText(f"Ch{i+1}")
-
         self.ch1.sigMoveRequested.connect(self.move_ch1)
         self.ch2.sigMoveRequested.connect(self.move_ch2)
         self.ch3.sigMoveRequested.connect(self.move_ch3)
 
+        # Initialize thread object and connect appropriate signals
         self.mmthread = MMThread()
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
         self.mmthread.sigDeltaChanged.connect(self.update_plot)
 
+        # Initialize motion queue
         self.queue = queue.Queue()
 
-        # setup plotting
+        # Setup plotting
         self.plot = MotionPlot()
         self.plot.setLabel("bottom", text="Time", units="s")
-        self.plot.setLabel("left", text="Remaining", units="m", unitPrefix="m")
+        self.plot.setLabel("left", text="Remaining", units="m")
 
     @property
     def status(self) -> MMStatus:
@@ -401,14 +421,14 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return res
 
     @QtCore.Slot()
-    def refresh_positions(self):
+    @QtCore.Slot(int)
+    def refresh_positions(self, navg: int = 1):
         for ch_num in (1, 2, 3):
-            self.refresh_position(ch_num)
+            self.refresh_position(ch_num, navg=navg)
 
     @QtCore.Slot()
     def refresh_positions_averaged(self):
-        for ch_num in (1, 2, 3):
-            self.refresh_position(ch_num, navg=10)
+        self.refresh_positions(navg=10)
 
     @QtCore.Slot(int)
     @QtCore.Slot(int, int)
@@ -429,24 +449,32 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(int, object, object)
     def update_plot(self, channel: int, dt: list[float], delta: list[int]):
         delta_abs = -self.get_channel(channel).cal_A * np.asarray(delta)
-        self.plot.curve.setData(x=dt, y=delta_abs)
+        self.plot.curve.setData(x=dt, y=delta_abs * 1e3)
 
     @QtCore.Slot(int)
     def move_started(self, channel: int):
+        # Disable input on channels
         for ch in self.channels:
             ch.set_motion_busy(True)
+
+        # Display loading icon on running channel
         self.get_channel(channel).status.setState(True)
 
     @QtCore.Slot(int)
     def move_finished(self, channel: int):
+        # Mark motion as finished in queue
         self.queue.task_done()
+
+        # Write log
         ch = self.get_channel(channel)
         self.write_log(["Moved", ch.name, f"{ch.current_pos:.4f}"])
 
+        # Return channels to normal state
         for ch in self.channels:
             ch.set_motion_busy(False)
         self.get_channel(channel).status.setState(False)
 
+        # If queue has remaining items, move
         if not self.queue.empty():
             self._move()
 
@@ -475,6 +503,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def move(
         self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
     ):
+        # Place motion parameters in queue
         self.queue.put(
             dict(
                 channel=channel,
@@ -483,31 +512,41 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 amplitude=amplitude,
             )
         )
-        if not self.mmthread.isRunning():
+        # If not busy, go on
+        if self.status != MMStatus.Moving:
             self._move()
 
     @QtCore.Slot()
     def _move(self):
+        # Get motion parameters from first item in queue
         kwargs = self.queue.get()
         ch = self.get_channel(kwargs["channel"])
+
+        # Write motion start log
         self.write_log(["Start", ch.name, f"{ch.convert_pos(kwargs['target']):.4f}"])
+
+        # Various sanity checks
         if not self.is_channel_enabled(kwargs["channel"]):
-            # warnings.warn("Move called on a disabled channel ignored.")
+            # This may happen when the channel is disabled after the motion was queued.
             print("Move called on a disabled channel ignored.")
             self.queue.task_done()
             return
         if self.mmthread.isRunning():
-            # warnings.warn("Motion already in progress.")
+            # This normally should not happen, but exists as a safety check.
             print("Motion already in progress.")
             self.queue.task_done()
             return
+
+        # Set motion parameters
         self.mmthread.initialize_parameters(
             **kwargs, threshold=self.get_channel(kwargs["channel"]).tolerance
         )
+        # Start motion
         self.mmthread.start()
 
     @QtCore.Slot()
     def connect(self):
+        """Connect to motor controller. Displays a message box on failure."""
         while True:
             try:
                 self.mmthread.connect(self.address)
@@ -525,6 +564,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def connect_raise(self):
+        """Connect to motor controller. Raises an exception on failure."""
         while True:
             try:
                 self.mmthread.connect(self.address)
@@ -535,7 +575,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 break
 
     @QtCore.Slot()
-    def stop(self):
+    def empty_queue(self):
+        """Clear all queued motion."""
         while not self.queue.empty():
             try:
                 self.queue.get(block=False)
@@ -543,6 +584,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 continue
             else:
                 self.queue.task_done()
+
+    @QtCore.Slot()
+    def stop(self):
+        """Empty all items in queue and stop current motion."""
+        self.empty_queue()
+        self.stop_current()
+
+    @QtCore.Slot()
+    def stop_current(self):
+        """Stops current motion. Will move on to the next queued motion."""
         self.mmthread.stopped = True
         self.mmthread.wait(2000)
 

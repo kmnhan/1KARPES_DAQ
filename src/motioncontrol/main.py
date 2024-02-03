@@ -1,4 +1,5 @@
 """GUI for the 1K ARPES 6-axis manipulator"""
+
 import csv
 import datetime
 import multiprocessing
@@ -85,6 +86,14 @@ class LoggingProc(multiprocessing.Process):
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
+    """Combines two controlller widgets to form a complete GUI. On connection failure,
+    the controller will be greyed out instead of displaying a message.
+
+    On initialization, starts a server so that motion can be controlled by other
+    programs.
+
+    """
+
     sigReply = QtCore.Signal(object)
 
     def __init__(self):
@@ -93,15 +102,17 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.setWindowTitle("Motion Control")
 
         self.stop_btn.setDefaultAction(self.actionstop)
+        self.stopcurrent_btn.setDefaultAction(self.actionstopcurrent)
         self.readpos_btn.setDefaultAction(self.actionreadpos)
+        self.readavgpos_btn.setDefaultAction(self.actionreadavgpos)
 
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.actionreadcap.triggered.connect(self.check_capacitance)
 
         # initialize controllers
         self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = (
-            SingleControllerWidget(self, "192.168.0.210"),
-            SingleControllerWidget(self, "192.168.0.211"),
+            SingleControllerWidget(self, address="192.168.0.210"),
+            SingleControllerWidget(self, address="192.168.0.211"),
         )
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
@@ -111,6 +122,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             # self.actiondisconnect.triggered.connect(con.disconnect)
             self.actionreconnect.triggered.connect(con.reconnect)
             self.actionstop.triggered.connect(con.stop)
+            self.actionstopcurrent.triggered.connect(con.stop_current)
             self.actiontargetcurr.triggered.connect(con.target_current_all)
             self.actionreadpos.triggered.connect(con.refresh_positions)
             self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
@@ -120,24 +132,24 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
             con.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
 
-        # add delta control
+        # Add delta control
         self.delta_widget = DeltaWidget()
         self.delta_widget.sigStepped.connect(self.step_delta)
         self.delta_widget.sigMoved.connect(self.move_delta)
         self.verticalLayout.addWidget(self.delta_widget)
 
-        # setup logging
+        # Setup logging
         self.log_writer = LoggingProc(LOG_DIR)
         self.log_writer.start()
 
-        # setup server
+        # Setup server
         self.server = ManiServer()
         self.server.sigRequest.connect(self.parse_request)
         self.server.sigMove.connect(self.parse_move)
         self.sigReply.connect(self.server.set_value)
         self.server.start()
 
-        # connect to controllers
+        # Connect to controllers
         self.connect()
 
     @QtCore.Slot(object)
@@ -151,13 +163,13 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             # `? STATUS`
             self.sigReply.emit(self.status)
         elif request[0] == "TOL":
-            # `? TOL`
+            # `? X TOL`
             self.sigReply.emit(self.get_axis(request[1]).abs_tolerance)
         elif request[0] == "MIN":
-            # `? MIN`
+            # `? Y MIN`
             self.sigReply.emit(self.get_axis(request[1]).minimum)
         elif request[0] == "MAX":
-            # `? MAX`
+            # `? Z MAX`
             self.sigReply.emit(self.get_axis(request[1]).maximum)
         else:
             # `? X`, `? Y`, etc.
@@ -173,9 +185,11 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         ch = self.get_axis(axis)
         if ch is None:
             print("AXIS NOT FOUND")
+            self.sigReply.emit(1)
             return
         ch.set_target(value)
         ch.move()
+        self.sigReply.emit(0)
 
     def get_axis(self, axis: str) -> SingleChannelWidget | None:
         for con in self.controllers:
@@ -269,13 +283,13 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def get_current_positions(self, con_idx: int) -> list[float]:
         con = self.controllers[con_idx]
         if con.status != MMStatus.Moving:
-            con.refresh_positions()
+            con.refresh_positions(navg=10)
         return [ch.current_pos for ch in con.channels]
 
     def get_current_position(self, con_idx: int, channel: int) -> float:
         con = self.controllers[con_idx]
         if con.status != MMStatus.Moving:
-            con.refresh_position(channel)
+            con.refresh_position(channel, navg=10)
         return con.get_channel(channel).current_pos
 
     def connect(self):
@@ -311,11 +325,13 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot()
     def move_started(self):
         self.actionreadpos.setDisabled(True)
+        self.actionreadavgpos.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
     @QtCore.Slot()
     def move_finished(self):
         self.actionreadpos.setDisabled(False)
+        self.actionreadavgpos.setDisabled(False)
         self.actionreadcap.setDisabled(False)
 
     @QtCore.Slot()

@@ -1,4 +1,5 @@
 """Python interface for the MMC1 piezomotor controller"""
+
 import enum
 import logging
 import socket
@@ -132,7 +133,7 @@ class MMThread(QtCore.QThread):
     def get_capacitance(self, channel: int) -> float:
         """Return capacitance in uF."""
         self.mmsend(MMCommand.MESCAP, channel)
-        time.sleep(1)
+        time.sleep(0.7)
         self.mmrecv()
         self.mmsend(MMCommand.READCAP, channel)
         val = self.mmrecv() / 0.89 * 1e-3
@@ -197,7 +198,6 @@ class MMThread(QtCore.QThread):
     ) -> int:
         # Just reading the position will not return the correct values... probably
         # controller error? So actuate with 0V first
-        self.wait_busy()
         self.set_pulse_train(channel, 1)
         self.set_amplitude(channel, 0)
         self.set_frequency(channel, 500)
@@ -210,6 +210,24 @@ class MMThread(QtCore.QThread):
             val += self.get_position(channel, emit=False)
         val = round(val / navg)
         self.sigPosRead.emit(channel, val)
+        return val
+
+    def get_refreshed_position_live(
+        self, channel: int, navg: int, pulse_train: int, direction: int
+    ) -> int:
+        """Restore actuation parameters after fine position reading."""
+        amp = self.get_amplitude(channel)
+        freq = self.get_frequency(channel)
+
+        val = self.get_refreshed_position(channel, navg)
+
+        if pulse_train > 1:
+            self.set_pulse_train(channel, pulse_train)
+        if direction != 1:
+            self.set_direction(channel, direction)
+        self.set_amplitude(channel, amp)
+        self.set_frequency(channel, freq)
+
         return val
 
     def get_position(self, channel: int, emit: bool = True) -> int:
@@ -370,7 +388,14 @@ class MMThread(QtCore.QThread):
                 # send signal & read position
                 self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
                 self.mmrecv()
-                pos = self.get_position(self._channel)
+
+                if pulse_reduced == 2:
+                    # precise mode
+                    pos = self.get_refreshed_position_live(
+                        self._channel, navg=10, pulse_train=1, direction=direction
+                    )
+                else:
+                    pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
                 time_list.append(time.time() - time_start)
 

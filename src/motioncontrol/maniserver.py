@@ -1,5 +1,30 @@
-"""Server side script that communicates with SES"""
+"""Server side script. The commands are arbitrary and do not follow any standard (sorry)
 
+There are two types of commands. One is a query which is prefixed with `?`. The other is
+a motion command which is prefixed with `MOVE`. Some exmample commands and replies are
+shown below. `[motor]` can be replaced by any character in `['X', 'Y', 'Z', 'P', 'T',
+'Z']` that represents one of 6 axes. Values for disabled channels or disconnected axes
+will be returned as `nan`. Motion commands will reply with an empty string.
+
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query              | Description                                                                                                                                                                          |
++====================+======================================================================================================================================================================================+
+| ?                  | List of length 6 that contains positions of all 6 channels.                                                                                                                          |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ? STATUS           | Current status of the controller. For more information, see the docstring for MainWindow.status.                                                                                     |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ? [motor]          | Get current position of motor in mm.                                                                                                                                                 |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ? [motor] TOL      | Get tolerance of motor in mm.                                                                                                                                                        |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ? [motor] MIN      | Get minimum position of motor in mm.                                                                                                                                                 |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ? [motor] MAX      | Get minimum position of motor in mm.                                                                                                                                                 |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| MOVE [motor] 0.123 | Queues the motion to move the specified axis to the specified value. Replies with 0 when added to queue. When the given axis cannot be found among enabled channels, replies with 1. |
++--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+"""
 
 import threading
 import time
@@ -58,7 +83,6 @@ class ManiServer(QtCore.QThread):
                     self.sigRequest.emit(message)
                 elif message[0] == "MOVE":
                     self.sigMove.emit(message[1], float(message[2]))
-                    self.set_value("")
                 else:
                     self.set_value("")
 
