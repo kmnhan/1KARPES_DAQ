@@ -182,7 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotting = PlottingWidget()
         self.plotting.interval_spin.setValue(log_interval)
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
-        self.plotting.plotItem.getAxis("right").setLabel(f"Pressure ({self.log_units})")
+        self.plotting.plotItem.getAxis("left").setLabel(f"Pressure ({self.log_units})")
         d2.addWidget(self.plotting)
 
         # Setup data array
