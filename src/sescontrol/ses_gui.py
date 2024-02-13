@@ -57,7 +57,7 @@ class MotorPosWriter(QtCore.QRunnable):
     def run(self):
         self._stopped = False
         while not self._stopped:
-            time.sleep(0.2)
+            time.sleep(0.02)
             if len(self.messages) == 0:
                 continue
             msg = self.messages.popleft()
@@ -276,7 +276,7 @@ class ScanWorker(QtCore.QRunnable):
 
         This function adjusts file names to maintain a constant file number during
         scans. File names are temporarily modified during scanning by adding a prefix,
-        which is later restored using `restore_filenames` when all scans are completed.
+        which is later restored using `_restore_filenames` when all scans are completed.
 
         This is possible because SES determines the sequence number by parsing the name
         of the files in the data directory.
