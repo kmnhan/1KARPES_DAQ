@@ -34,14 +34,19 @@ class _PiezoMotor(Motor):
         self.tolerance = self._query_float(f"? TOL {self.AXIS}")
 
     def move(self, target: float) -> float:
-        # send move command
+        # Send move command
         self.socket.send(f"MOVE {self.AXIS} {target}".encode())
         self.socket.recv()
 
-        # check if within tolerance
+        # Check if within tolerance
 
-        # may be outside tolerance due to noise level... skip check and rely on move finish
-        # this will only work for single controller, single motor scan, fix later
+        # May be outside tolerance due to noise level and roundoff...
+        # Skip check and rely on move finish
+        # This will only work for single controller (single motor) scan, fix when we get
+        # a new controller
+        # Possible fix: query controller number of given channel, check if that
+        # controller is busy -> this will still not work when there are queued motions
+        # Need to recap how tolerance is really calculated in moee.py
 
         # while True:
         #     time.sleep(0.01)
@@ -55,7 +60,11 @@ class _PiezoMotor(Motor):
         print(pos, target, abs(pos-target), self.tolerance)
 
         # get final position
-        return self._get_pos(self.AXIS)
+        # return self._get_pos(self.AXIS)
+        
+        # log the target position instead of the real position, target position should
+        # be added to data header
+        return target
 
     def post_motion(self):
         self._disconnect()
