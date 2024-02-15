@@ -101,6 +101,7 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self.plotItem.showGrid(x=True, y=True, alpha=1.0)
         self.plots = (
             pg.PlotDataItem(pen="c"),
             pg.PlotDataItem(pen="m"),
