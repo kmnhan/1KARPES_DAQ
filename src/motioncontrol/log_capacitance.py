@@ -78,7 +78,7 @@ class Widget(QtWidgets.QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.plotwidget = pg.PlotWidget()
-
+        self.plotwidget.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
         self.plots = (
             pg.PlotDataItem(pen="c"),
             pg.PlotDataItem(pen="m"),
