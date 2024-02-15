@@ -107,7 +107,7 @@ class Widget(QtWidgets.QWidget):
 
         self.timer = QtCore.QTimer(self)
         # self.timer.setInterval(1000 * 2 * 60)  # 2 minutes
-        self.timer.setInterval(1000 * 5)  # 5 secs
+        self.timer.setInterval(1000 * 7)  # 7 secs
         self.timer.timeout.connect(self.update_data)
 
         self.soc = MMThread()
@@ -119,6 +119,7 @@ class Widget(QtWidgets.QWidget):
     @QtCore.Slot()
     def toggle_logging(self):
         if self.check.isChecked():
+            self.update_data()
             self.timer.start()
         else:
             self.timer.stop()
