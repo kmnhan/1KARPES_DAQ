@@ -75,15 +75,16 @@ class LoggingProc(multiprocessing.Process):
 class Widget(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setWindowTitle("Capacitance logger")
         self.setLayout(QtWidgets.QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.plotwidget = pg.PlotWidget()
         self.plotwidget.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
         self.plots = (
-            pg.PlotDataItem(pen="c"),
-            pg.PlotDataItem(pen="m"),
-            pg.PlotDataItem(pen="y"),
+            self.plotwidget.plot(pen="c", name="CH1"),
+            self.plotwidget.plot(pen="m", name="CH2"),
+            self.plotwidget.plot(pen="y", name="CH3"),
         )
         for plot in self.plots:
             self.plotwidget.plotItem.addItem(plot)
@@ -134,7 +135,8 @@ class Widget(QtWidgets.QWidget):
 
         for plot, cap in zip(self.plots, self.caplist):
             cap_arr = np.asarray(cap)
-            cap_arr[cap_arr < 0.0025] = np.nan
+            # Discard invalid readings from plot
+            cap_arr[cap_arr < 0.0023] = np.nan
             plot.setData([t.timestamp() for t in self.datetimes], cap_arr)
 
     def closeEvent(self, *args, **kwargs):
