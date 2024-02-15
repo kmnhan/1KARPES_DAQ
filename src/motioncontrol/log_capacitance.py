@@ -117,9 +117,9 @@ class Widget(QtWidgets.QWidget):
     @QtCore.Slot()
     def toggle_logging(self):
         if self.check.isChecked():
-            self.log_timer.start()
+            self.timer.start()
         else:
-            self.log_timer.stop()
+            self.timer.stop()
 
     def update_data(self):
         self.datetimes.append(datetime.datetime.now())
