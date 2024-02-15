@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 import datetime
 import multiprocessing
 import os
@@ -132,7 +133,9 @@ class Widget(QtWidgets.QWidget):
         )
 
         for plot, cap in zip(self.plots, self.caplist):
-            plot.setData([t.timestamp() for t in self.datetimes], cap)
+            cap_arr = np.asarray(cap)
+            cap_arr[cap_arr < 0.0025] = np.nan
+            plot.setData([t.timestamp() for t in self.datetimes], cap_arr)
 
     def closeEvent(self, *args, **kwargs):
         self.soc.disconnect()
