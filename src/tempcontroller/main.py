@@ -45,12 +45,12 @@ class MainWindow(*uic.loadUiType("main.ui")):
         self.readings_218_0 = ReadingWidget(
             inputs=tuple(str(i) for i in range(1, 5)),
             names=list(self.config["config"]["names_218"])[:4],
-            hide_srdg=False,
+            hide_srdg=True,
         )
         self.readings_218_1 = ReadingWidget(
             inputs=tuple(str(i) for i in range(5, 9)),
             names=list(self.config["config"]["names_218"])[4:],
-            hide_srdg=False,
+            hide_srdg=True,
         )
 
         readings_218_combined = QtWidgets.QWidget()
@@ -60,7 +60,7 @@ class MainWindow(*uic.loadUiType("main.ui")):
         readings_218_combined.layout().addWidget(QVLine())
         readings_218_combined.layout().addWidget(self.readings_218_1)
         self.readings_331 = ReadingWidget(
-            inputs=(" ",), names=self.config["config"]["names_331"], hide_srdg=False
+            inputs=(" ",), names=self.config["config"]["names_331"], hide_srdg=True
         )
 
         self.group0.layout().addWidget(self.readings_336)
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
-    qapp.setStyle("Windows")
+    # qapp.setStyle("Fusion")
 
     while not valid_config():
         configdialog = ConfigFileDialog()
