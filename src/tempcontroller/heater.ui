@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>187</width>
-    <height>202</height>
+    <width>217</width>
+    <height>221</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,11 +25,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
          </property>
          <property name="text">
           <string>Setpoint [K]</string>
@@ -69,11 +64,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
          </property>
          <property name="text">
           <string>Target [K]</string>
@@ -140,7 +130,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>7</pointsize>
         </font>
        </property>
        <property name="text">
@@ -180,7 +170,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>7</pointsize>
         </font>
        </property>
        <property name="text">
@@ -208,11 +198,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
          </property>
          <property name="text">
           <string>Output</string>
@@ -249,11 +234,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
          </property>
          <property name="text">
           <string>Range</string>

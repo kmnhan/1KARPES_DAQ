@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>226</width>
-    <height>52</height>
+    <width>221</width>
+    <height>57</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -79,11 +79,6 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>TextLabel</string>
      </property>
@@ -142,11 +137,6 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string>[K]</string>
        </property>
@@ -159,11 +149,6 @@
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
        </property>
        <property name="text">
         <string>[V]</string>
