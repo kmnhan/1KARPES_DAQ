@@ -223,7 +223,6 @@ class MainWindow(MainWindowGUI):
         self.log_timer = QtCore.QTimer(self)
         self.set_logging_interval(log_interval, update_config=False)
         self.log_timer.timeout.connect(self.write_log)
-        self.toggle_updates(True)
 
         # Start acquiring & logging
         self.refresh_timer.start()
@@ -246,7 +245,7 @@ class MainWindow(MainWindowGUI):
             rdng.trigger_update()
 
     def write_log(self):
-        dt =  datetime.datetime.now()
+        dt = datetime.datetime.now()
         # self.log_writer.append(dt, )
         pass
 
