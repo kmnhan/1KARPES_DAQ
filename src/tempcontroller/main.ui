@@ -110,13 +110,25 @@
      <string>View</string>
     </property>
     <addaction name="actionheaters"/>
+    <addaction name="actioncommand"/>
+    <addaction name="actionvoltage"/>
    </widget>
    <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionheaters">
    <property name="text">
-    <string>Heaters</string>
+    <string>Show Heaters</string>
+   </property>
+  </action>
+  <action name="actionvoltage">
+   <property name="text">
+    <string>Toggle Voltages</string>
+   </property>
+  </action>
+  <action name="actioncommand">
+   <property name="text">
+    <string>Show Command Window</string>
    </property>
   </action>
  </widget>
