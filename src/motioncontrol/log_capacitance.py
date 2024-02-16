@@ -107,7 +107,7 @@ class Widget(QtWidgets.QWidget):
 
         self.timer = QtCore.QTimer(self)
         # self.timer.setInterval(1000 * 2 * 60)  # 2 minutes
-        self.timer.setInterval(1000 * 7)  # 7 secs
+        self.timer.setInterval(1000 * 30)  # 30 secs
         self.timer.timeout.connect(self.update_data)
 
         self.soc = MMThread()
