@@ -218,12 +218,15 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
 
         boldfont = QtGui.QFont()
         boldfont.setBold(True)
+        smallfont = QtGui.QFont()
+        smallfont.setPointSize(8)
 
         for i, input in enumerate(self.inputs):
             input_label = QtWidgets.QLabel(input)
             input_label.setFont(boldfont)
 
             name_label = QtWidgets.QLabel()
+            name_label.setFont(smallfont)
             name_label.setWordWrap(True)
 
             krdg_spin = QtWidgets.QDoubleSpinBox()
@@ -232,6 +235,7 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             krdg_spin.setRange(0.0, 500.0)
             krdg_spin.setButtonSymbols(krdg_spin.ButtonSymbols.NoButtons)
             krdg_spin.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+            krdg_spin.setMinimumWidth(55)
 
             srdg_spin = QtWidgets.QDoubleSpinBox()
             srdg_spin.setReadOnly(True)
