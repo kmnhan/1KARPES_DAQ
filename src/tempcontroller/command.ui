@@ -14,6 +14,9 @@
        <height>30</height>
       </size>
      </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
     </widget>
    </item>
    <item>
@@ -23,6 +26,9 @@
        <width>100</width>
        <height>30</height>
       </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
      </property>
      <property name="horizontalScrollBarPolicy">
       <enum>Qt::ScrollBarAsNeeded</enum>
