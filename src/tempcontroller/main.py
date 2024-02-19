@@ -324,8 +324,7 @@ class MainWindow(MainWindowGUI):
 
     def write_log(self):
         dt = datetime.datetime.now()
-        self.log_writer.append(
-            dt,
+        values = (
             self.readings_336.krdg_raw
             + self.readings_218_0.krdg_raw
             + self.readings_218_1.krdg_raw
@@ -341,8 +340,10 @@ class MainWindow(MainWindowGUI):
                 self.heater2.htr_raw,
                 self.heater3.setp_raw,
                 self.heater3.htr_raw,
-            ],
+            ]
         )
+        values = [v.lstrip("+") for v in values]
+        self.log_writer.append(dt, values)
 
     def closeEvent(self, *args, **kwargs):
         self.stop_threads()

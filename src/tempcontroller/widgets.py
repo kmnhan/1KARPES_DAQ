@@ -342,7 +342,7 @@ class ReadingWidget(ReadingWidgetGUI):
 
     @QtCore.Slot(str)
     def update_krdg(self, message):
-        self.krdg_raw: list[str] = message.split(",")
+        self.krdg_raw: list[str] = message.strip().split(",")
         vals = [float(t) for t in self.krdg_raw]
         if self.indexer is not None:
             vals = vals[self.indexer]
@@ -350,7 +350,7 @@ class ReadingWidget(ReadingWidgetGUI):
 
     @QtCore.Slot(str)
     def update_srdg(self, message):
-        self.srdg_raw: list[str] = message.split(",")
+        self.srdg_raw: list[str] = message.strip().split(",")
         vals = [float(t) for t in self.srdg_raw]
         if self.indexer is not None:
             vals = vals[self.indexer]
