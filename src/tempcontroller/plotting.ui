@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>456</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="LegendTableView" name="legendtable"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>620</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actioncursor"/>
+    <addaction name="actionsnap"/>
+    <addaction name="actioncentercursor"/>
+    <addaction name="separator"/>
+    <addaction name="actionlogy1"/>
+    <addaction name="actionlogy2"/>
+   </widget>
+   <addaction name="menuView"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actioncursor">
+   <property name="text">
+    <string>Toggle Cursor</string>
+   </property>
+  </action>
+  <action name="actionsnap">
+   <property name="text">
+    <string>Toggle Snap</string>
+   </property>
+  </action>
+  <action name="actionlogy1">
+   <property name="text">
+    <string>Toggle Primary Y Axis Log Scale</string>
+   </property>
+  </action>
+  <action name="actionlogy2">
+   <property name="text">
+    <string>Toggle Secondary Y Axis Log Scale</string>
+   </property>
+  </action>
+  <action name="actioncentercursor">
+   <property name="text">
+    <string>Center Cursor</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LegendTableView</class>
+   <extends>QTableView</extends>
+   <header>qt_extensions.legendtable</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

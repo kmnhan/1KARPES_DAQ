@@ -17,7 +17,7 @@ from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from connection import LakeshoreThread
-from widgets import CommandWidget, HeaterWidget, QHLine, QVLine, ReadingWidget
+from widgets import CommandWidget, HeaterWidget, QVLine, ReadingWidget, PlottingWidget
 
 try:
     os.chdir(sys._MEIPASS)
@@ -180,6 +180,8 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.commands.addTab(self.command218, "218")
         self.commands.addTab(self.command331, "331")
 
+        self.plotwindow = PlottingWidget()
+
         self.actionheaters.triggered.connect(self.show_heaters)
         self.actioncommand.triggered.connect(self.show_commands)
         self.actionsensorunit.triggered.connect(self.toggle_sensorunits)
@@ -271,8 +273,15 @@ class MainWindow(MainWindowGUI):
 
         # Setup plotting
         refresh_time = float(self.config["acquisition"]["refresh_time"])
-        minutes = self.config["acquisition"].get("plot_size_minutes", 30)
-        maxlen = (minutes * 60) / refresh_time
+        minutes = self.config["plotting"].get("range_minutes", 30)
+        maxlen = round((minutes * 60) / refresh_time)
+        self.plot_values: list[collections.deque] = [
+            collections.deque(maxlen=maxlen) for _ in range(len(self.all_names) + 1)
+        ]
+        self.plotwindow.plotItem.set_labels(self.all_names)
+        self.plotwindow.plotItem.set_twinx_labels(
+            self.config["plotting"].get("secondary_axes", [])
+        )
 
         # Setup refresh timer
         self.refresh_timer = QtCore.QTimer(self)
@@ -325,17 +334,19 @@ class MainWindow(MainWindowGUI):
             self.overwrite_config()
 
     def update(self):
+        dt = datetime.datetime.now()
         # Trigger updates
         self.sigUpdate.emit()
+
+        self.plot_values[0].append(dt.timestamp())
+        for dq, val in zip(self.plot_values[1:], self.kelvin_values):
+            dq.append(float(val))
+        self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
 
     @property
     def header(self) -> list[str]:
         header = ["Time"]
-        all_names: list[str] = (
-            self.config["general"]["names_336"]
-            + self.config["general"]["names_218"]
-            + self.config["general"]["names_331"]
-        )
+        all_names = self.all_names
         header += all_names
         header += [n + " (SU)" for n in all_names]
         header += [
@@ -347,6 +358,23 @@ class MainWindow(MainWindowGUI):
             "331 Heater (%)",
         ]
         return header
+
+    @property
+    def all_names(self) -> list[str]:
+        return (
+            self.config["general"]["names_336"]
+            + self.config["general"]["names_218"]
+            + self.config["general"]["names_331"]
+        )
+
+    @property
+    def kelvin_values(self) -> list[str]:
+        return (
+            self.readings_336.krdg_raw
+            + self.readings_218_0.krdg_raw
+            + self.readings_218_1.krdg_raw
+            + self.readings_331.krdg_raw
+        )
 
     @property
     def values(self) -> list[str]:
