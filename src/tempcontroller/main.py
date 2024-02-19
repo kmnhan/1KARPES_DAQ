@@ -1,3 +1,4 @@
+import collections
 import configparser
 import csv
 import datetime
@@ -16,7 +17,7 @@ from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from connection import LakeshoreThread
-from widgets import HeaterWidget, QHLine, QVLine, ReadingWidget, CommandWidget
+from widgets import CommandWidget, HeaterWidget, QHLine, QVLine, ReadingWidget
 
 try:
     os.chdir(sys._MEIPASS)
@@ -215,6 +216,8 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
 
 class MainWindow(MainWindowGUI):
+    sigUpdate = QtCore.Signal()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -223,6 +226,7 @@ class MainWindow(MainWindowGUI):
         self.lake331 = LakeshoreThread("GPIB0::15::INSTR", baud_rate=9600)
         self.lake336 = LakeshoreThread("GPIB0::18::INSTR", baud_rate=57600)
 
+        # Link reading, command, and heater widgets to corresponding thread
         self.readings_331.instrument = self.lake331
         self.readings_218_0.instrument = self.lake218
         self.readings_218_1.instrument = self.lake218
@@ -240,6 +244,16 @@ class MainWindow(MainWindowGUI):
         self.heater2.curr_spin = self.readings_336.krdg_spins[2]
         self.heater3.curr_spin = self.readings_331.krdg_spins[0]
 
+        # Connect update signal
+        self.sigUpdate.connect(self.readings_331.trigger_update)
+        self.sigUpdate.connect(self.readings_218_0.trigger_update)
+        self.sigUpdate.connect(self.readings_218_1.trigger_update)
+        self.sigUpdate.connect(self.readings_336.trigger_update)
+        self.sigUpdate.connect(self.heater1.trigger_update)
+        self.sigUpdate.connect(self.heater2.trigger_update)
+        self.sigUpdate.connect(self.heater3.trigger_update)
+
+        # Start threads
         self.start_threads()
 
         # Reset based on config
@@ -255,8 +269,12 @@ class MainWindow(MainWindowGUI):
         self.lake336.request_write("HTRSET 1,1,2,0,2")
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
 
-        # Setup refresh timer
+        # Setup plotting
         refresh_time = float(self.config["acquisition"]["refresh_time"])
+        minutes = self.config["acquisition"].get("plot_size_minutes", 30)
+        maxlen = (minutes * 60) / refresh_time
+
+        # Setup refresh timer
         self.refresh_timer = QtCore.QTimer(self)
         self.refresh_timer.setInterval(round(refresh_time * 1000))
         self.refresh_timer.timeout.connect(self.update)
@@ -282,6 +300,7 @@ class MainWindow(MainWindowGUI):
         self.lake218.start()
         self.lake331.start()
         self.lake336.start()
+        # Wait until all threads are ready
         while not all(
             (
                 hasattr(self.lake218, "queue"),
@@ -306,40 +325,32 @@ class MainWindow(MainWindowGUI):
             self.overwrite_config()
 
     def update(self):
-        for rdng in (
-            self.readings_331,
-            self.readings_218_0,
-            self.readings_218_1,
-            self.readings_336,
-        ):
-            rdng.trigger_update()
-        for htr in (self.heater1, self.heater2, self.heater3):
-            htr.trigger_update()
+        # Trigger updates
+        self.sigUpdate.emit()
 
     @property
     def header(self) -> list[str]:
         header = ["Time"]
-        header += self.config["general"]["names_336"]
-        header += self.config["general"]["names_218"]
-        header += self.config["general"]["names_331"]
-        header += [n + " (SU)" for n in self.config["general"]["names_336"]]
-        header += [n + " (SU)" for n in self.config["general"]["names_218"]]
-        header += [n + " (SU)" for n in self.config["general"]["names_331"]]
+        all_names: list[str] = (
+            self.config["general"]["names_336"]
+            + self.config["general"]["names_218"]
+            + self.config["general"]["names_331"]
+        )
+        header += all_names
+        header += [n + " (SU)" for n in all_names]
         header += [
             "336 Setpoint1 (K)",
             "336 Heater1 (%)",
             "336 Setpoint2 (K)",
             "336 Heater2 (%)",
-        ]
-        header += [
             "331 Setpoint (K)",
             "331 Heater (%)",
         ]
         return header
 
-    def write_log(self):
-        dt = datetime.datetime.now()
-        values = (
+    @property
+    def values(self) -> list[str]:
+        return (
             self.readings_336.krdg_raw
             + self.readings_218_0.krdg_raw
             + self.readings_218_1.krdg_raw
@@ -357,8 +368,10 @@ class MainWindow(MainWindowGUI):
                 self.heater3.htr_raw,
             ]
         )
-        values = [v.lstrip("+") for v in values]
-        self.log_writer.append(dt, values)
+
+    def write_log(self):
+        dt = datetime.datetime.now()
+        self.log_writer.append(dt, [v.lstrip("+") for v in self.values])
 
     def closeEvent(self, *args, **kwargs):
         self.stop_threads()
