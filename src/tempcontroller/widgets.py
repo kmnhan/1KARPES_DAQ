@@ -234,8 +234,8 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
 
             srdg_spin = QtWidgets.QDoubleSpinBox()
             srdg_spin.setReadOnly(True)
-            srdg_spin.setDecimals(decimals)
-            srdg_spin.setRange(0.0, 500.0)
+            srdg_spin.setDecimals(5)
+            srdg_spin.setRange(0.0, 10000.0)
             srdg_spin.setButtonSymbols(srdg_spin.ButtonSymbols.NoButtons)
 
             krdg_unit = QtWidgets.QLabel("[K]")
