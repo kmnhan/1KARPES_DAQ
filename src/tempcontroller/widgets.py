@@ -692,6 +692,7 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent)
         self.setupUi(self)
+        self.setWindowTitle("1KARPES Temperature Controller")
         self.plotwidget = pg.PlotWidget(
             plotItem=DynamicPlotItemTwiny(
                 legendtableview=self.legendtable,
