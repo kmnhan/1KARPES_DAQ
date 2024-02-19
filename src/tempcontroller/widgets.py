@@ -612,8 +612,8 @@ class DynamicPlotItem(pg.PlotItem):
             self.plots, ylist, self.legendtable.colors, self.legendtable.enabled
         ):
             plot.setVisible(enabled)
-            plot.setPen(color)
             plot.setData(x, y, **kwargs)
+            plot.setPen(color)
         self.vline.setBounds((min(x), max(x)))
 
     def set_datadict(

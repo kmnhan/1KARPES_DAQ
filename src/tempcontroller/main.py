@@ -220,6 +220,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
     def closeEvent(self, *args, **kwargs):
         self.heaters.close()
         self.commands.close()
+        self.plotwindow.close()
         super().closeEvent(*args, **kwargs)
 
 
