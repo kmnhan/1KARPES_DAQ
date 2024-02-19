@@ -77,13 +77,13 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
     @QtCore.Slot(str)
     def update_setpoint(self, value: str | float):
-        self.setp_raw = str(value)
-        self.setpoint_spin.setValue(float(value))
+        self.setp_raw = str(value).strip()
+        self.setpoint_spin.setValue(float(self.setp_raw))
 
     @QtCore.Slot(str)
     def update_output(self, value: str | float):
-        self.htr_raw = str(value)
-        self.pbar.setValue(round(float(value) * 100))
+        self.htr_raw = str(value).strip()
+        self.pbar.setValue(round(float(self.htr_raw) * 100))
 
     @QtCore.Slot(str)
     def update_range(self, value: str | int):
