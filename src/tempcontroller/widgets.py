@@ -75,21 +75,21 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     def sigUpdateTarget(self):
         return self.current_btn.clicked
 
-    @QtCore.Slot(object)
+    @QtCore.Slot(str)
     def update_setpoint(self, value: str | float):
         self.setpoint_spin.setValue(float(value))
 
-    @QtCore.Slot(object)
+    @QtCore.Slot(str)
     def update_output(self, value: str | float):
         self.pbar.setValue(round(float(value) * 100))
 
-    @QtCore.Slot(object)
+    @QtCore.Slot(str)
     def update_range(self, value: str | int):
         self.combo.blockSignals(True)
         self.combo.setCurrentIndex(int(value))
         self.combo.blockSignals(False)
 
-    @QtCore.Slot(object)
+    @QtCore.Slot(str)
     def update_rampst(self, value: str | int):
         self.ramp_check.blockSignals(True)
         if int(value) == 0:
@@ -98,7 +98,7 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
             self.ramp_check.setChecked(True)
         self.ramp_check.blockSignals(False)
 
-    @QtCore.Slot(object)
+    @QtCore.Slot(str)
     def update_ramprate(self, value: str | float):
         self.rate_spin.blockSignals(True)
         self.rate_spin.setValue(float(value))
