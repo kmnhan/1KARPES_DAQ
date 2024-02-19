@@ -29,7 +29,7 @@ class LoggingProc(multiprocessing.Process):
         super().__init__()
         self.log_dir = log_dir
         self._stopped = multiprocessing.Event()
-        self.queue = multiprocessing.Queue()
+        self.queue = multiprocessing.Manager().Queue()
 
     def run(self):
         self._stopped.clear()
@@ -83,6 +83,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
+        self.setGeometry(600, 400, 300, 200)
         self.setWindowTitle("1KARPES Temperature Controller")
 
         # Read config file
@@ -93,17 +94,17 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.readings_336 = ReadingWidget(
             inputs=("A", "B", "C", "D"),
-            names=self.config["config"]["names_336"],
+            names=self.config["general"]["names_336"],
             decimals=3,
         )
         self.readings_218_0 = ReadingWidget(
             inputs=tuple(str(i) for i in range(1, 5)),
-            names=list(self.config["config"]["names_218"])[:4],
+            names=list(self.config["general"]["names_218"])[:4],
             indexer=slice(0, 4),
         )
         self.readings_218_1 = ReadingWidget(
             inputs=tuple(str(i) for i in range(5, 9)),
-            names=list(self.config["config"]["names_218"])[4:],
+            names=list(self.config["general"]["names_218"])[4:],
             indexer=slice(4, 8),
         )
 
@@ -115,7 +116,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         readings_218_combined.layout().addWidget(self.readings_218_1)
         self.readings_331 = ReadingWidget(
             inputs=(" ",),
-            names=self.config["config"]["names_331"],
+            names=self.config["general"]["names_331"],
             hide_srdg=True,
             krdg_command="KRDG? B",
             srdg_command="SRDG? B",
@@ -134,9 +135,9 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.heaters = DockArea()
         self.heaters.setWindowTitle("Heaters")
-        self.heater1 = HeaterWidget()
-        self.heater2 = HeaterWidget()
-        self.heater3 = HeaterWidget()
+        self.heater1 = HeaterWidget(output="1")
+        self.heater2 = HeaterWidget(output="2")
+        self.heater3 = HeaterWidget(output="", loop="1")
         d1 = Dock(f"336 Heater1 (D) Control", widget=self.heater1)
         d2 = Dock(f"336 Heater2 (C) Control", widget=self.heater2)
         d3 = Dock(f"331 Heater Control", widget=self.heater3)
@@ -144,23 +145,21 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.heaters.addDock(d1, "right", d2)
         self.heaters.addDock(d3, "right", d1)
 
-        self.commands = DockArea()
-        # self.commands.setWindowTitle("")
+        # self.commands = DockArea()
+        self.commands = QtWidgets.QTabWidget()
+        self.commands.setGeometry(400, 400, 200, 200)
+        self.commands.setWindowTitle("Command")
         self.command336 = CommandWidget()
         self.command218 = CommandWidget()
         self.command331 = CommandWidget()
-        d4 = Dock(f"336 Command", widget=self.command336)
-        d5 = Dock(f"218 Command", widget=self.command218)
-        d6 = Dock(f"331 Command", widget=self.command331)
-        self.heaters.addDock(d5, "left")
-        self.heaters.addDock(d4, "right", d5)
-        self.heaters.addDock(d6, "right", d4)
+
+        self.commands.addTab(self.command336, "336")
+        self.commands.addTab(self.command218, "218")
+        self.commands.addTab(self.command331, "331")
 
         self.actionheaters.triggered.connect(lambda: self.heaters.show())
         self.actioncommand.triggered.connect(lambda: self.commands.show())
-        self.actionvoltage.triggered.connect(self.toggle_voltages)
-
-        self.resize(100, 100)
+        self.actionsensorunit.triggered.connect(self.toggle_sensorunits)
 
     def overwrite_config(self):
         with open(
@@ -168,7 +167,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         ) as f:
             tomlkit.dump(self.config, f)
 
-    def toggle_voltages(self):
+    def toggle_sensorunits(self):
         for rw in (
             self.readings_336,
             self.readings_218_0,
@@ -201,12 +200,33 @@ class MainWindow(MainWindowGUI):
         self.command218.instrument = self.lake218
         self.command331.instrument = self.lake331
 
+        self.heater1.instrument = self.lake336
+        self.heater2.instrument = self.lake336
+        self.heater3.instrument = self.lake331
+
+        self.heater1.curr_spin = self.readings_336.krdg_spins[3]
+        self.heater2.curr_spin = self.readings_336.krdg_spins[2]
+        self.heater3.curr_spin = self.readings_331.krdg_spins[0]
+
         self.lake218.start()
         self.lake331.start()
         self.lake336.start()
 
+        # Reset based on config
+        if self.config["acquisition"].get("reset_336", True):
+            self.lake336.request_write("*RST")
+        if self.config["acquisition"].get("reset_331", True):
+            self.lake331.request_write("*RST")
+        if self.config["acquisition"].get("reset_218", True):
+            self.lake218.request_write("*RST")
+
+        # Set heater options
+        # Max current 0.1 A for pump is hardcoded to protect the GL4.
+        self.lake336.request_write("HTRSET 1,1,2,0,2")
+        self.lake336.request_write("HTRSET 2,2,0,0.1,2")
+
         # Setup refresh timer
-        refresh_time = float(self.config["config"]["refresh_time"])
+        refresh_time = float(self.config["acquisition"]["refresh_time"])
         self.refresh_timer = QtCore.QTimer(self)
         self.refresh_timer.setInterval(round(refresh_time * 1000))
         self.refresh_timer.timeout.connect(self.update)
@@ -235,7 +255,6 @@ class MainWindow(MainWindowGUI):
             self.overwrite_config()
 
     def update(self):
-        # UPDATE HEATERS HERE
         for rdng in (
             self.readings_331,
             self.readings_218_0,
@@ -243,11 +262,15 @@ class MainWindow(MainWindowGUI):
             self.readings_336,
         ):
             rdng.trigger_update()
+        for htr in (self.heater1, self.heater2, self.heater3):
+            htr.trigger_update()
 
     def write_log(self):
         dt = datetime.datetime.now()
         # self.log_writer.append(dt, )
         pass
+
+    # def write_header(self):
 
     def closeEvent(self, *args, **kwargs):
         self.lake218.stopped.set()

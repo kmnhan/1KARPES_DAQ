@@ -111,7 +111,7 @@
     </property>
     <addaction name="actionheaters"/>
     <addaction name="actioncommand"/>
-    <addaction name="actionvoltage"/>
+    <addaction name="actionsensorunit"/>
    </widget>
    <addaction name="menuView"/>
   </widget>
@@ -121,9 +121,9 @@
     <string>Show Heaters</string>
    </property>
   </action>
-  <action name="actionvoltage">
+  <action name="actionsensorunit">
    <property name="text">
-    <string>Toggle Voltages</string>
+    <string>Toggle Sensor Unit Readings</string>
    </property>
   </action>
   <action name="actioncommand">
