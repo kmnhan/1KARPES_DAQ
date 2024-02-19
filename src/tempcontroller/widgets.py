@@ -64,7 +64,8 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
         # palette.setColor(QtGui.QPalette.ColorRole.Highlight,QtGui.QColor("crimson"))
         # self.pbar.setPalette(palette)
 
-        self.ramp_check.toggled.connect(self.ramp_toggled)
+        self.rate_spin.valueChanged.connect(self.apply_ramp)
+        self.ramp_check.toggled.connect(self.apply_ramp)
         self.go_btn.clicked.connect(self.apply_setpoint)
 
     @property
@@ -107,7 +108,7 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
         self.rate_spin.blockSignals(False)
 
     @QtCore.Slot()
-    def ramp_toggled(self):
+    def apply_ramp(self):
         self.sigRampChanged.emit(
             int(self.ramp_check.isChecked()), self.rate_spin.value()
         )
