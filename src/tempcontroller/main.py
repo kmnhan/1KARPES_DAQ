@@ -199,7 +199,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
     def show_plotwindow(self):
         rect = self.geometry()
-        self.plotwindow.setGeometry(rect.x() + rect.width(), rect.y(), 400, 300)
+        self.plotwindow.setGeometry(rect.x() + rect.width(), rect.y(), 1000, 600)
         self.plotwindow.show()
 
     def overwrite_config(self):

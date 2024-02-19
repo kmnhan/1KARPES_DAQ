@@ -707,6 +707,9 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
         self.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
         self.plotItem.setup_twinx()
 
+        self.plotItem.getAxis("left").setLabel("Temperature")
+        self.plotItem.getAxis("right").setLabel("Pump & Shields")
+
         self.actioncursor.triggered.connect(self.plotItem.toggle_cursor)
         self.actioncentercursor.triggered.connect(self.plotItem.center_cursor)
         self.actionsnap.triggered.connect(self.plotItem.toggle_snap)
