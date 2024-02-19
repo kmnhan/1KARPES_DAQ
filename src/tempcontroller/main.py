@@ -208,9 +208,7 @@ class MainWindow(MainWindowGUI):
         self.heater2.curr_spin = self.readings_336.krdg_spins[2]
         self.heater3.curr_spin = self.readings_331.krdg_spins[0]
 
-        self.lake218.start()
-        self.lake331.start()
-        self.lake336.start()
+        self.start_threads()
 
         # Reset based on config
         if self.config["acquisition"].get("reset_336", True):
@@ -248,6 +246,27 @@ class MainWindow(MainWindowGUI):
         self.refresh_timer.start()
         self.log_timer.start()
 
+    def start_threads(self):
+        self.lake218.start()
+        self.lake331.start()
+        self.lake336.start()
+        while not all(
+            (
+                hasattr(self.lake218, "queue"),
+                hasattr(self.lake331, "queue"),
+                hasattr(self.lake336, "queue"),
+            )
+        ):
+            time.sleep(1e-3)
+
+    def stop_threads(self):
+        self.lake218.stopped.set()
+        self.lake331.stopped.set()
+        self.lake336.stopped.set()
+        self.lake218.wait()
+        self.lake331.wait()
+        self.lake336.wait()
+
     def set_logging_interval(self, value: float, update_config: bool = True):
         self.log_timer.setInterval(round(value * 1000))
         if update_config:
@@ -273,12 +292,7 @@ class MainWindow(MainWindowGUI):
     # def write_header(self):
 
     def closeEvent(self, *args, **kwargs):
-        self.lake218.stopped.set()
-        self.lake331.stopped.set()
-        self.lake336.stopped.set()
-        self.lake218.wait()
-        self.lake331.wait()
-        self.lake336.wait()
+        self.stop_threads()
         pyvisa.ResourceManager().close()
         self.log_writer.stop()
         super().closeEvent(*args, **kwargs)
