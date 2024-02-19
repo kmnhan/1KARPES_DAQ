@@ -77,10 +77,12 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
     @QtCore.Slot(str)
     def update_setpoint(self, value: str | float):
+        self.setp_raw = str(value)
         self.setpoint_spin.setValue(float(value))
 
     @QtCore.Slot(str)
     def update_output(self, value: str | float):
+        self.htr_raw = str(value)
         self.pbar.setValue(round(float(value) * 100))
 
     @QtCore.Slot(str)
@@ -268,19 +270,19 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
     def srdg_enabled(self) -> bool:
         return self.srdg_spins[0].isVisible()
 
-    @property
-    def krdg_dict(self) -> dict[str, float]:
-        return {
-            label.text(): spin.value()
-            for label, spin in zip(self.name_labels, self.krdg_spins)
-        }
+    # @property
+    # def krdg_dict(self) -> dict[str, float]:
+    #     return {
+    #         label.text(): spin.value()
+    #         for label, spin in zip(self.name_labels, self.krdg_spins)
+    #     }
 
-    @property
-    def srdg_dict(self) -> dict[str, float]:
-        return {
-            f"{label.text()} (SU)": spin.value()
-            for label, spin in zip(self.name_labels, self.srdg_spins)
-        }
+    # @property
+    # def srdg_dict(self) -> dict[str, float]:
+    #     return {
+    #         f"{label.text()} (SU)": spin.value()
+    #         for label, spin in zip(self.name_labels, self.srdg_spins)
+    #     }
 
     def set_srdg_visible(self, visible: bool):
         for i in range(len(self.krdg_spins)):
@@ -340,14 +342,16 @@ class ReadingWidget(ReadingWidgetGUI):
 
     @QtCore.Slot(str)
     def update_krdg(self, message):
-        vals = [float(t) for t in message.split(",")]
+        self.krdg_raw: list[str] = message.split(",")
+        vals = [float(t) for t in self.krdg_raw]
         if self.indexer is not None:
             vals = vals[self.indexer]
         super().update_krdg(vals)
 
     @QtCore.Slot(str)
     def update_srdg(self, message):
-        vals = [float(t) for t in message.split(",")]
+        self.srdg_raw: list[str] = message.split(",")
+        vals = [float(t) for t in self.srdg_raw]
         if self.indexer is not None:
             vals = vals[self.indexer]
         super().update_srdg(vals)

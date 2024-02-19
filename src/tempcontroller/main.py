@@ -24,15 +24,35 @@ except:
     pass
 
 
+def header_changed(filename, header: list[str]) -> bool:
+    """Check log file and determine whether new header needs to be appended."""
+
+    if not os.path.isfile(filename):
+        return True
+
+    last_header = ""
+    with open(filename, "r") as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if line.startswith("Time"):
+                last_header = lines[i]
+    if last_header.strip().split(",") == header:
+        return False
+    else:
+        return True
+
+
 class LoggingProc(multiprocessing.Process):
-    def __init__(self, log_dir: str | os.PathLike):
+    def __init__(self, log_dir: str | os.PathLike, header: list[str]):
         super().__init__()
         self.log_dir = log_dir
+        self.header = header
         self._stopped = multiprocessing.Event()
         self.queue = multiprocessing.Manager().Queue()
 
     def run(self):
         self._stopped.clear()
+
         while not self._stopped.is_set():
             time.sleep(0.02)
 
@@ -40,22 +60,20 @@ class LoggingProc(multiprocessing.Process):
                 continue
 
             # retrieve message from queue
-            dt, msg, is_header = self.queue.get()
+            dt, msg = self.queue.get()
+            filename = os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv")
             try:
-                with open(
-                    os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
-                    "a",
-                    newline="",
-                ) as f:
+                # Check whether to add header before writing message
+                need_header = header_changed(filename, self.header)
+                with open(filename, "a", newline="") as f:
                     writer = csv.writer(f)
-                    if is_header:
-                        writer.writerow(msg)
-                    else:
-                        writer.writerow([dt.isoformat()] + msg)
+                    if need_header:
+                        writer.writerow(self.header)
+                    writer.writerow([dt.isoformat()] + msg)
             except PermissionError:
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
-                self.queue.put((dt, msg, is_header))
+                self.queue.put((dt, msg))
                 for _ in range(n_left):
                     self.queue.put(self.queue.get())
                 continue
@@ -73,10 +91,10 @@ class LoggingProc(multiprocessing.Process):
         self._stopped.set()
         self.join()
 
-    def append(self, timestamp: datetime.datetime, content, is_header: bool = False):
+    def append(self, timestamp: datetime.datetime, content: str | list[str]):
         if isinstance(content, str):
             content = [content]
-        self.queue.put((timestamp, content, is_header))
+        self.queue.put((timestamp, content))
 
 
 class MainWindowGUI(*uic.loadUiType("main.ui")):
@@ -145,7 +163,6 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.heaters.addDock(d1, "right", d2)
         self.heaters.addDock(d3, "right", d1)
 
-        # self.commands = DockArea()
         self.commands = QtWidgets.QTabWidget()
         self.commands.setGeometry(400, 400, 200, 200)
         self.commands.setWindowTitle("Command")
@@ -234,7 +251,7 @@ class MainWindow(MainWindowGUI):
         log_interval = float(self.config["logging"]["interval"])
 
         # Setup log writing process
-        self.log_writer = LoggingProc(log_dir)
+        self.log_writer = LoggingProc(log_dir, header=self.header)
         self.log_writer.start()
 
         # Setup logging timer
@@ -284,12 +301,48 @@ class MainWindow(MainWindowGUI):
         for htr in (self.heater1, self.heater2, self.heater3):
             htr.trigger_update()
 
+    @property
+    def header(self) -> list[str]:
+        header = ["Time"]
+        header += self.config["general"]["names_336"]
+        header += self.config["general"]["names_218"]
+        header += self.config["general"]["names_331"]
+        header += [n + " (SU)" for n in self.config["general"]["names_336"]]
+        header += [n + " (SU)" for n in self.config["general"]["names_218"]]
+        header += [n + " (SU)" for n in self.config["general"]["names_331"]]
+        header += [
+            "336 Setpoint1 (K)",
+            "336 Heater1 (%)",
+            "336 Setpoint2 (K)",
+            "336 Heater2 (%)",
+        ]
+        header += [
+            "331 Setpoint (K)",
+            "331 Heater (%)",
+        ]
+        return header
+
     def write_log(self):
         dt = datetime.datetime.now()
-        # self.log_writer.append(dt, )
-        pass
-
-    # def write_header(self):
+        self.log_writer.append(
+            dt,
+            self.readings_336.krdg_raw
+            + self.readings_218_0.krdg_raw
+            + self.readings_218_1.krdg_raw
+            + self.readings_331.krdg_raw
+            + self.readings_336.srdg_raw
+            + self.readings_218_0.srdg_raw
+            + self.readings_218_1.srdg_raw
+            + self.readings_331.srdg_raw
+            + [
+                self.heater1.setp_raw,
+                self.heater1.htr_raw,
+                self.heater2.setp_raw,
+                self.heater2.htr_raw,
+                self.heater3.setp_raw,
+                self.heater3.htr_raw,
+            ],
+        )
 
     def closeEvent(self, *args, **kwargs):
         self.stop_threads()
