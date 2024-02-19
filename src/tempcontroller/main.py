@@ -101,7 +101,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setGeometry(600, 400, 300, 200)
+        self.setGeometry(0, 0, 300, 200)
         self.setWindowTitle("1KARPES Temperature Controller")
 
         # Read config file
@@ -151,20 +151,25 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         # self.area.addDock(d2, "right", d1)
         # self.area.addDock(d3, "bottom", d1)
 
-        self.heaters = DockArea()
+        self.heaters = QtWidgets.QWidget()
+        self.heaters.setLayout(QtWidgets.QVBoxLayout())
         self.heaters.setWindowTitle("Heaters")
+        self.heaters.layout().setContentsMargins(3, 3, 3, 3)
+
+        area = DockArea()
+        self.heaters.layout().addWidget(area)
+
         self.heater1 = HeaterWidget(output="1")
         self.heater2 = HeaterWidget(output="2")
         self.heater3 = HeaterWidget(output="", loop="1")
         d1 = Dock(f"336 Heater1 (D) Control", widget=self.heater1)
         d2 = Dock(f"336 Heater2 (C) Control", widget=self.heater2)
         d3 = Dock(f"331 Heater Control", widget=self.heater3)
-        self.heaters.addDock(d2, "left")
-        self.heaters.addDock(d1, "right", d2)
-        self.heaters.addDock(d3, "right", d1)
+        area.addDock(d2, "left")
+        area.addDock(d1, "right", d2)
+        area.addDock(d3, "right", d1)
 
         self.commands = QtWidgets.QTabWidget()
-        self.commands.setGeometry(400, 400, 200, 200)
         self.commands.setWindowTitle("Command")
         self.command336 = CommandWidget()
         self.command218 = CommandWidget()
@@ -174,9 +179,19 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.commands.addTab(self.command218, "218")
         self.commands.addTab(self.command331, "331")
 
-        self.actionheaters.triggered.connect(lambda: self.heaters.show())
-        self.actioncommand.triggered.connect(lambda: self.commands.show())
+        self.actionheaters.triggered.connect(self.show_heaters)
+        self.actioncommand.triggered.connect(self.show_commands)
         self.actionsensorunit.triggered.connect(self.toggle_sensorunits)
+
+    def show_heaters(self):
+        rect = self.geometry()
+        self.heaters.setGeometry(rect.x() + rect.width(), rect.y(), 300, 150)
+        self.heaters.show()
+
+    def show_commands(self):
+        rect = self.geometry()
+        self.commands.setGeometry(rect.x() + rect.width(), rect.y(), 250, 200)
+        self.commands.show()
 
     def overwrite_config(self):
         with open(
