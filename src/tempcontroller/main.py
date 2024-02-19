@@ -344,8 +344,10 @@ class MainWindow(MainWindowGUI):
         dt = datetime.datetime.now()
         # Trigger updates
         self.sigUpdate.emit()
-
         self.plot_values[0].append(dt.timestamp())
+        QtCore.QTimer.singleShot(100, self.refresh_plot)
+
+    def refresh_plot(self):
         for dq, val in zip(self.plot_values[1:], self.kelvin_values):
             dq.append(float(val))
         self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
