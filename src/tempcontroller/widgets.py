@@ -382,7 +382,7 @@ class CommandWidget(*uic.loadUiType("command.ui")):
 if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
-    qapp.setStyle("Fusion")
+    # qapp.setStyle("Fusion")
 
     # win = HeaterWidget()
     win = CommandWidget()
