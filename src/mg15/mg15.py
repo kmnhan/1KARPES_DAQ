@@ -99,7 +99,7 @@ class MG15Connection(QtCore.QThread):
             self.mutex.lock()
         self.address = address
         if self.isRunning():
-            self.mutex.unlick()
+            self.mutex.unlock()
 
     # @QtCore.Slot(object)
     # def set_value(self, value):
