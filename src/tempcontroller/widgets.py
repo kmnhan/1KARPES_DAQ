@@ -60,9 +60,9 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
         self.setupUi(self)
 
         self.pbar.valueChanged.connect(self._format_output)
-        # palette = QtGui.QPalette(self.pbar.palette())
-        # palette.setColor(QtGui.QPalette.ColorRole.Highlight,QtGui.QColor("crimson"))
-        # self.pbar.setPalette(palette)
+        palette = QtGui.QPalette(self.pbar.palette())
+        palette.setColor(QtGui.QPalette.ColorRole.Highlight,QtGui.QColor("crimson"))
+        self.pbar.setPalette(palette)
 
         self.rate_spin.valueChanged.connect(self.apply_ramp)
         self.ramp_check.toggled.connect(self.apply_ramp)
