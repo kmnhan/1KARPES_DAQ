@@ -27,7 +27,6 @@ def parse_cryo_time(v: str | float) -> datetime.datetime:
         # convert labview timestamp
         return datetime.datetime.fromtimestamp(float(v) - 2082844800.0)
     except ValueError:
-        # for older data, time is given in iso format
         return datetime.datetime.fromisoformat(v)
 
 
@@ -62,13 +61,20 @@ def parse_single_mg15(filename):
 def parse_single_cryo(filename):
     """Read data from a cryocooler log file to a `pandas.DataFrame`."""
     header_rows = []
+    legacy = False
     with open(filename, "r") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
-            if line.startswith(lines[0][:10]):
+            if line.startswith(lines[0][:10]) or line.startswith("Time"):
                 header_rows.append(i)
+        if not lines[header_rows[-1]].startswith("Time"):
+            legacy = True
 
     # for now, discard data above the last header
+    if legacy:
+        time_col = 1
+    else:
+        time_col = 0
     return pd.read_csv(
         filename,
         skiprows=header_rows[-1],
@@ -76,7 +82,7 @@ def parse_single_cryo(filename):
         header=0,
         usecols=lambda x: x not in ["Running Time (s)", "Date&Time", "Clear"],
         skip_blank_lines=True,
-        converters={1: parse_cryo_time},
+        converters={time_col: parse_cryo_time},
     ).rename_axis("Time")
 
 
