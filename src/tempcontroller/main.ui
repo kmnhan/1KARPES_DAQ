@@ -111,6 +111,7 @@
     </property>
     <addaction name="actionheaters"/>
     <addaction name="actioncommand"/>
+    <addaction name="actionplot"/>
     <addaction name="actionsensorunit"/>
    </widget>
    <addaction name="menuView"/>
@@ -129,6 +130,11 @@
   <action name="actioncommand">
    <property name="text">
     <string>Show Command Window</string>
+   </property>
+  </action>
+  <action name="actionplot">
+   <property name="text">
+    <string>Show Plot</string>
    </property>
   </action>
  </widget>

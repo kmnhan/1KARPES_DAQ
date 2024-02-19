@@ -184,6 +184,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.actionheaters.triggered.connect(self.show_heaters)
         self.actioncommand.triggered.connect(self.show_commands)
+        self.actionplot.triggered.connect(self.show_plotwindow)
         self.actionsensorunit.triggered.connect(self.toggle_sensorunits)
 
     def show_heaters(self):
@@ -195,6 +196,11 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         rect = self.geometry()
         self.commands.setGeometry(rect.x() + rect.width(), rect.y(), 250, 200)
         self.commands.show()
+
+    def show_plotwindow(self):
+        rect = self.geometry()
+        self.plotwindow.setGeometry(rect.x() + rect.width(), rect.y(), 400, 300)
+        self.plotwindow.show()
 
     def overwrite_config(self):
         with open(
