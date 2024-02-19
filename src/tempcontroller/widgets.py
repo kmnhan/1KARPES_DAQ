@@ -342,19 +342,19 @@ class ReadingWidget(ReadingWidgetGUI):
 
     @QtCore.Slot(str)
     def update_krdg(self, message):
-        self.krdg_raw: list[str] = message.strip().split(",")
-        vals = [float(t) for t in self.krdg_raw]
+        krdg_raw: list[str] = message.strip().split(",")
         if self.indexer is not None:
-            vals = vals[self.indexer]
-        super().update_krdg(vals)
+            krdg_raw = krdg_raw[self.indexer]
+        self.krdg_raw = krdg_raw
+        super().update_krdg([float(t) for t in self.krdg_raw])
 
     @QtCore.Slot(str)
     def update_srdg(self, message):
-        self.srdg_raw: list[str] = message.strip().split(",")
-        vals = [float(t) for t in self.srdg_raw]
+        srdg_raw: list[str] = message.strip().split(",")
         if self.indexer is not None:
-            vals = vals[self.indexer]
-        super().update_srdg(vals)
+            srdg_raw = srdg_raw[self.indexer]
+        self.srdg_raw = srdg_raw
+        super().update_srdg([float(t) for t in self.srdg_raw])
 
 
 class CommandWidget(*uic.loadUiType("command.ui")):
