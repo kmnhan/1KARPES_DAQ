@@ -53,7 +53,7 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     """
 
     sigSetpChanged = QtCore.Signal(float)
-    sigRampChanged = QtCore.Signal(bool, float)
+    sigRampChanged = QtCore.Signal(int, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
