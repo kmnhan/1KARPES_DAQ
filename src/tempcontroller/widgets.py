@@ -25,25 +25,26 @@ class QVLine(QtWidgets.QFrame):
         self.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
 
 
-class HeaterWidget(*uic.loadUiType("heater.ui")):
+class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     """GUI for a single heater.
 
     The backend needs to connect signals and slots to appropriate SCPI commands.
 
     First, to populate the GUI with current values, some SCPI query outputs must be
     connected to appropriate slots; `SETP?` to `update_setpoint`, `HTR?` to
-    `update_output`, `RANGE?` to `update_range`, and `RAMPST?` to `update_rampst`.
+    `update_output`, `RANGE?` to `update_range`, and `RAMP?` to `update_rampst` and
+    `update_ramprate`.
 
     Next, GUI signals must be hooked up to appropriate SCPI commands. See below for
     details.
 
     Signals
     -------
-    sigSetp(float)
+    sigSetpChanged(float)
         Connect to SCPI command `SETP`.
-    sigRamp(int, float)
+    sigRampChanged(int, float)
         Connect to SCPI command `RAMP`.
-    sigRange(int)
+    sigRangeChanged(int)
         Connect to SCPI command `RANGE`.
     sigUpdateTarget()
         Connect to SCPI query `KRDG?`, whose output must be connected to the
@@ -51,8 +52,8 @@ class HeaterWidget(*uic.loadUiType("heater.ui")):
 
     """
 
-    sigSetp = QtCore.Signal(float)
-    sigRamp = QtCore.Signal(bool, float)
+    sigSetpChanged = QtCore.Signal(float)
+    sigRampChanged = QtCore.Signal(bool, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -67,29 +68,29 @@ class HeaterWidget(*uic.loadUiType("heater.ui")):
         self.go_btn.clicked.connect(self.apply_setpoint)
 
     @property
-    def sigRange(self):
+    def sigRangeChanged(self):
         return self.combo.currentIndexChanged
 
     @property
     def sigUpdateTarget(self):
         return self.current_btn.clicked
 
-    @QtCore.Slot(float)
-    def update_setpoint(self, value: float):
-        self.setpoint_spin.setValue(value)
+    @QtCore.Slot(object)
+    def update_setpoint(self, value: str | float):
+        self.setpoint_spin.setValue(float(value))
 
-    @QtCore.Slot(float)
-    def update_output(self, value: float):
-        self.pbar.setValue(round(value * 100))
+    @QtCore.Slot(object)
+    def update_output(self, value: str | float):
+        self.pbar.setValue(round(float(value) * 100))
 
-    @QtCore.Slot(int)
-    def update_range(self, value: int):
+    @QtCore.Slot(object)
+    def update_range(self, value: str | int):
         self.combo.blockSignals(True)
-        self.combo.setCurrentIndex(value)
+        self.combo.setCurrentIndex(int(value))
         self.combo.blockSignals(False)
 
-    @QtCore.Slot(int)
-    def update_rampst(self, value: int):
+    @QtCore.Slot(object)
+    def update_rampst(self, value: str | int):
         self.ramp_check.blockSignals(True)
         if int(value) == 0:
             self.ramp_check.setChecked(False)
@@ -97,13 +98,21 @@ class HeaterWidget(*uic.loadUiType("heater.ui")):
             self.ramp_check.setChecked(True)
         self.ramp_check.blockSignals(False)
 
+    @QtCore.Slot(object)
+    def update_ramprate(self, value: str | float):
+        self.rate_spin.blockSignals(True)
+        self.rate_spin.setValue(float(value))
+        self.rate_spin.blockSignals(False)
+
     @QtCore.Slot()
     def ramp_toggled(self):
-        self.sigRamp.emit(int(self.ramp_check.isChecked()), self.rate_spin.value())
+        self.sigRampChanged.emit(
+            int(self.ramp_check.isChecked()), self.rate_spin.value()
+        )
 
     @QtCore.Slot()
     def apply_setpoint(self):
-        self.sigSetp.emit(self.target_spin.value())
+        self.sigSetpChanged.emit(self.target_spin.value())
 
     @QtCore.Slot(float)
     def set_target(self, value: float):
@@ -114,73 +123,77 @@ class HeaterWidget(*uic.loadUiType("heater.ui")):
         self.pbar.setFormat(f"{value / 100:.2f}%")
 
 
-class SingleReadingWidget(*uic.loadUiType("reading.ui")):
+class HeaterWidget(HeaterWidgetGUI):
+
+    sigSETP = QtCore.Signal(str)
+    sigRAMP = QtCore.Signal(str)
+    sigHTR = QtCore.Signal(str)
+    sigRANGE = QtCore.Signal(str)
+    # sigRAMPST = QtCore.Signal(str)
+
     def __init__(
         self,
-        name: str | None = None,
-        input: str | None = None,
-        hide_srdg: bool = False,
-        parent=None,
+        *args,
+        instrument: LakeshoreThread | None = None,
+        output: str,
+        loop: str | None = None,
+        **kwargs,
     ):
-        super().__init__(parent)
-        self.setupUi(self)
+        super().__init__(*args, **kwargs)
+        self.instrument = instrument
+        self.output = output
+        if loop is None:
+            loop = self.output
+        self.loop = loop
 
-        if name is None:
-            name = ""
-        if input is None:
-            input = ""
+        self.curr_spin: QtWidgets.QDoubleSpinBox | None = None
 
-        # self.klabel.setText(f"K")
-        # self.slabel.setText(f"V")
+        self.sigSETP.connect(self.update_setpoint)
+        self.sigRAMP.connect(self.update_ramp)
+        self.sigHTR.connect(self.update_output)
+        self.sigRANGE.connect(self.update_range)
 
-        self.set_input(input)
-        self.set_name(name)
+        self.sigSetpChanged.connect(self.change_setpoint)
+        self.sigRampChanged.connect(self.change_ramp)
+        self.sigRangeChanged.connect(self.change_range)
+        self.sigUpdateTarget.connect(self.target_current)
 
-        if hide_srdg:
-            self.set_srdg_visible(False)
-
-    def set_name(self, name: str):
-        self.label.setText(name)
-
-    def set_input(self, input: str):
-        self.input: str = input
-        self.inputlabel.setText(f"{self.input}")
-        # self.klabel.setText(f"{self.input} [K]")
-        # self.slabel.setText(f"{self.input} [V]")
-
-    def set_srdg_visible(self, value: bool):
-        self.slabel.setVisible(value)
-        self.srdg.setVisible(value)
+    @QtCore.Slot(str)
+    def update_ramp(self, value: str):
+        st, rate = value.split(",")
+        self.update_rampst(st)
+        self.update_ramprate(rate)
 
     @QtCore.Slot(float)
-    def set_krdg(self, value: float):
-        self.krdg.setText(str(value))
+    def change_setpoint(self, value: float):
+        cmd = f"SETP "
+        cmd += ",".join([self.loop, str(value)])
+        self.instrument.request_write(cmd)
 
-    @QtCore.Slot(float)
-    def set_srdg(self, value: float):
-        self.srdg.setText(str(value))
+    @QtCore.Slot(int, float)
+    def change_ramp(self, state: int, rate: float):
+        cmd = f"RAMP "
+        cmd += ",".join([self.loop, str(state), str(rate)])
+        self.instrument.request_write(cmd)
 
+    @QtCore.Slot(int)
+    def change_range(self, value: int):
+        cmd = f"RANGE "
+        if len(self.output) > 0:
+            cmd += f"{self.output},"
+        cmd += str(value)
+        self.instrument.request_write(cmd)
 
-# class ReadingWidgetGUI(QtWidgets.QWidget):
-#     def __init__(
-#         self,
-#         *args,
-#         inputs: Sequence[str],
-#         names: Sequence[str] | None = None,
-#         hide_srdg: bool = False,
-#         **kwargs,
-#     ):
-#         super().__init__(*args, **kwargs)
-#         self.setLayout(QtWidgets.QVBoxLayout())
-#         self.readingwidgets: list[SingleReadingWidget] = []
-#         for input in inputs:
-#             self.readingwidgets.append(
-#                 SingleReadingWidget(input=input, hide_srdg=hide_srdg)
-#             )
-#             self.layout().addWidget(self.readingwidgets[-1])
+    @QtCore.Slot()
+    def target_current(self):
+        if self.curr_spin is not None:
+            self.set_target(self.curr_spin.value())
 
-#         if names is not None:
-#             self.update_names(names)
+    def trigger_update(self):
+        self.instrument.request_query(f"SETP? {self.loop}".strip(), self.sigSETP)
+        self.instrument.request_query(f"RAMP? {self.loop}".strip(), self.sigRAMP)
+        self.instrument.request_query(f"HTR? {self.output}".strip(), self.sigHTR)
+        self.instrument.request_query(f"RANGE? {self.output}".strip(), self.sigRANGE)
 
 
 class ReadingWidgetGUI(QtWidgets.QWidget):
@@ -194,6 +207,8 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.inputs = inputs
+
         self.setLayout(QtWidgets.QGridLayout())
         self.name_labels: list[QtWidgets.QLabel] = []
         self.krdg_spins: list[QtWidgets.QDoubleSpinBox] = []
@@ -204,7 +219,7 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
         boldfont = QtGui.QFont()
         boldfont.setBold(True)
 
-        for i, input in enumerate(inputs):
+        for i, input in enumerate(self.inputs):
             input_label = QtWidgets.QLabel(input)
             input_label.setFont(boldfont)
 
@@ -214,19 +229,17 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             krdg_spin = QtWidgets.QDoubleSpinBox()
             krdg_spin.setReadOnly(True)
             krdg_spin.setDecimals(decimals)
-            # krdg_spin.setSuffix(" K")
             krdg_spin.setRange(0.0, 500.0)
             krdg_spin.setButtonSymbols(krdg_spin.ButtonSymbols.NoButtons)
 
             srdg_spin = QtWidgets.QDoubleSpinBox()
             srdg_spin.setReadOnly(True)
             srdg_spin.setDecimals(decimals)
-            # srdg_spin.setSuffix(" V")
             srdg_spin.setRange(0.0, 500.0)
             srdg_spin.setButtonSymbols(srdg_spin.ButtonSymbols.NoButtons)
 
             krdg_unit = QtWidgets.QLabel("[K]")
-            srdg_unit = QtWidgets.QLabel("[V]")
+            srdg_unit = QtWidgets.QLabel("[SU]")
 
             self.layout().addWidget(input_label, 2 * i, 0, 2, 1)
             self.layout().addWidget(name_label, 2 * i, 1, 2, 3)
@@ -247,16 +260,21 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
 
     @property
     def srdg_enabled(self) -> bool:
-        # return self.readingwidgets[0].srdg.isVisible()
         return self.srdg_spins[0].isVisible()
 
     @property
-    def krdg(self) -> list[float]:
-        return [spin.value() for spin in self.krdg_spins]
+    def krdg_dict(self) -> dict[str, float]:
+        return {
+            label.text(): spin.value()
+            for label, spin in zip(self.name_labels, self.krdg_spins)
+        }
 
     @property
-    def srdg(self) -> list[float]:
-        return [spin.value() for spin in self.srdg_spins]
+    def srdg_dict(self) -> dict[str, float]:
+        return {
+            f"{label.text()} (SU)": spin.value()
+            for label, spin in zip(self.name_labels, self.srdg_spins)
+        }
 
     def set_srdg_visible(self, visible: bool):
         for i in range(len(self.krdg_spins)):
@@ -269,26 +287,18 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             else:
                 self.layout().addWidget(self.krdg_spins[i], 2 * i, 4, 2, 2)
                 self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 2, 1)
-        # for rw in self.readingwidgets:
-        # rw.set_srdg_visible(visible)
 
     def update_names(self, names: list[str]):
         for label, name in zip(self.name_labels, names):
             label.setText(name)
-        # for w, name in zip(self.readingwidgets, names):
-        # w.set_name(name)
 
     def update_krdg(self, readings: list[float]):
         for spin, value in zip(self.krdg_spins, readings):
             spin.setValue(value)
-        # for w, rdg in zip(self.readingwidgets, readings):
-        # w.set_krdg(rdg)
 
     def update_srdg(self, readings: list[float]):
         for spin, value in zip(self.srdg_spins, readings):
             spin.setValue(value)
-        # for w, rdg in zip(self.readingwidgets, readings):
-        #     w.set_srdg(rdg)
 
 
 class ReadingWidget(ReadingWidgetGUI):
@@ -352,20 +362,21 @@ class CommandWidget(*uic.loadUiType("command.ui")):
 
         self.sigReply.connect(self.set_reply)
 
+    @property
+    def input(self) -> str:
+        return self.text_in.toPlainText().strip()
+
     @QtCore.Slot(str)
     def set_reply(self, message: str):
         self.text_out.setPlainText(message)
 
     @QtCore.Slot()
     def write(self):
-        self.instrument.request_write(self.text_in.toPlainText())
+        self.instrument.request_write(self.input)
 
     @QtCore.Slot()
     def query(self):
-        self.instrument.request_query(self.text_in.toPlainText(), self.sigReply)
-
-    # def write(self):
-    # self.instrument.request_query()
+        self.instrument.request_query(self.input, self.sigReply)
 
 
 if __name__ == "__main__":
