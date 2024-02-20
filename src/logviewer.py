@@ -75,8 +75,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
         self.actioncentercursor.triggered.connect(self.plot0.center_cursor)
-        self.actionshowcursor.toggled.connect(self.plot0.toggle_cursor)
-        self.actionshowcursor.toggled.connect(self.plot1.toggle_cursor)
+        self.actionshowcursor.toggled.connect(self.plot0.vline.setVisible)
+        self.actionshowcursor.toggled.connect(self.plot1.vline.setVisible)
         self.actionsnap.toggled.connect(self.plot0.toggle_snap)
         self.actionsnap.toggled.connect(self.plot1.toggle_snap)
         self.actionlog0.triggered.connect(lambda: self.plot0.toggle_logy(twin=False))
