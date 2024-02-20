@@ -77,6 +77,9 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
 
         self.actioncentercursor.triggered.connect(self.plot0.center_cursor)
         self.actionshowcursor.toggled.connect(self.plot0.toggle_cursor)
+        self.actionshowcursor.toggled.connect(self.plot1.toggle_cursor)
+        self.actionsnap.toggled.connect(self.plot0.toggle_snap)
+        self.actionsnap.toggled.connect(self.plot1.toggle_snap)
 
     def sync_cursors(self, line: pg.InfiniteLine):
         if line == self.plot0.vline:
@@ -133,19 +136,18 @@ class MainWindow(MainWindowGUI):
 
         self.legendtable.model().sigCurveToggled.connect(self.curve_toggled)
 
+        # setup timer
+        self.update_timer = QtCore.QTimer(self)
+        self.update_timer.setInterval(round(self.updatetime_spin.value() * 1000))
+        self.update_timer.timeout.connect(self.update_time)
+        self.updatetime_spin.valueChanged.connect(
+            lambda val: self.update_timer.setInterval(round(val * 1000))
+        )
+        self.actiononlymain.toggled.connect(self.update_plot)
         try:
             self.load_data(update=False)
         except ValueError:
             pass
-
-        # setup timer
-        self.client_timer = QtCore.QTimer(self)
-        self.client_timer.setInterval(round(self.updatetime_spin.value() * 1000))
-        self.client_timer.timeout.connect(self.update_time)
-        self.updatetime_spin.valueChanged.connect(
-            lambda val: self.client_timer.setInterval(round(val * 1000))
-        )
-        self.actiononlymain.toggled.connect(self.update_plot)
 
     @QtCore.Slot()
     def curve_toggled(self):
@@ -157,9 +159,9 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):
         if value:
-            self.client_timer.start()
+            self.update_timer.start()
         else:
-            self.client_timer.stop()
+            self.update_timer.stop()
 
     @QtCore.Slot()
     def update_time(self):
