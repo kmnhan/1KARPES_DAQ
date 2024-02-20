@@ -130,10 +130,10 @@
                 <string> s</string>
                </property>
                <property name="minimum">
-                <double>10.000000000000000</double>
+                <double>1.000000000000000</double>
                </property>
                <property name="maximum">
-                <double>60.000000000000000</double>
+                <double>600.000000000000000</double>
                </property>
                <property name="value">
                 <double>10.000000000000000</double>

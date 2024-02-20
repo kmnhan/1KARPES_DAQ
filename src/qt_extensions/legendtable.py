@@ -3,15 +3,12 @@ __all__ = ["LegendTableView"]
 from collections.abc import Sequence
 
 import pyqtgraph as pg
-import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets
-
-from qt_extensions.colors import color_to_QColor
 
 
 class LegendTableModel(QtCore.QAbstractTableModel):
-    sigCurveToggled = QtCore.Signal(int)
-    sigColorChanged = QtCore.Signal(int)
+    sigCurveToggled = QtCore.Signal(int, bool)
+    sigColorChanged = QtCore.Signal(int, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -25,12 +22,14 @@ class LegendTableModel(QtCore.QAbstractTableModel):
 
     @entries.setter
     def entries(self, values: Sequence[str]):
+        if list(self._entries) == list(values):
+            return
         self.beginResetModel()
         entries_old = list(self._entries)
         enabled_old = list(self.enabled)
 
         self._entries = values
-        self.enabled = [False] * len(self._entries)
+        self.enabled = [True] * len(self._entries)
 
         for i, ent in enumerate(self._entries):
             try:
@@ -39,12 +38,11 @@ class LegendTableModel(QtCore.QAbstractTableModel):
             except ValueError:
                 pass
 
-        if len(self.colors) != len(self._entries):
-            self.colors = [
-                color_to_QColor(clr)
-                for clr in sns.color_palette("bright", len(self._entries))
-            ]
-
+        if len(self.colors) < len(self._entries):
+            n_required = len(self._entries) - len(self.colors)
+            self.colors += n_required * [QtGui.QColor("white")]
+        elif len(self.colors) > len(self._entries):
+            self.colors = self.colors[: len(self._entries)]
         self.endResetModel()
 
     def flags(self, index):
@@ -84,7 +82,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
                     self.enabled[index.row()] = True
                 else:
                     self.enabled[index.row()] = False
-                self.sigCurveToggled.emit(index.row())
+                self.sigCurveToggled.emit(index.row(), self.enabled[index.row()])
                 self.dataChanged.emit(
                     index, index, [QtCore.Qt.ItemDataRole.CheckStateRole]
                 )
@@ -92,7 +90,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.ItemDataRole.EditRole:
                 self.colors[index.row()] = value
                 self.dataChanged.emit(index, index, [QtCore.Qt.ItemDataRole.EditRole])
-                self.sigColorChanged.emit(index.row())
+                self.sigColorChanged.emit(index.row(), value)
         return True
 
     def rowCount(self, index=None):
@@ -165,9 +163,11 @@ class LegendTableView(QtWidgets.QTableView):
     def set_enabled(self, index: int, value: bool):
         self.model().setData(
             index=self.model().createIndex(index, 0),
-            value=QtCore.Qt.CheckState.Checked.value
-            if value
-            else QtCore.Qt.CheckState.Unchecked.value,
+            value=(
+                QtCore.Qt.CheckState.Checked.value
+                if value
+                else QtCore.Qt.CheckState.Unchecked.value
+            ),
             role=QtCore.Qt.ItemDataRole.CheckStateRole,
         )
 
