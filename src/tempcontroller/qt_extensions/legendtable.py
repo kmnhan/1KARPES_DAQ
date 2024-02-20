@@ -3,10 +3,7 @@ __all__ = ["LegendTableView"]
 from collections.abc import Sequence
 
 import pyqtgraph as pg
-import seaborn as sns
 from qtpy import QtCore, QtGui, QtWidgets
-
-from qt_extensions.colors import color_to_QColor
 
 
 class LegendTableModel(QtCore.QAbstractTableModel):
@@ -25,6 +22,8 @@ class LegendTableModel(QtCore.QAbstractTableModel):
 
     @entries.setter
     def entries(self, values: Sequence[str]):
+        if list(self._entries) == list(values):
+            return
         self.beginResetModel()
         entries_old = list(self._entries)
         enabled_old = list(self.enabled)
@@ -41,9 +40,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
 
         if len(self.colors) < len(self._entries):
             n_required = len(self._entries) - len(self.colors)
-            self.colors += [
-                color_to_QColor(clr) for clr in sns.color_palette("bright", n_required)
-            ]
+            self.colors += n_required * [QtGui.QColor("white")]
         elif len(self.colors) > len(self._entries):
             self.colors = self.colors[: len(self._entries)]
         self.endResetModel()

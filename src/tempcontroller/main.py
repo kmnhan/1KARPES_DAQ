@@ -308,7 +308,7 @@ class MainWindow(MainWindowGUI):
 
         # Initialize plot legend table
         self.plotwindow.plotItem.set_labels(self.all_names)
-        self.plotwindow.plotItem.set_twinx_labels(
+        self.plotwindow.plotItem.set_twiny_labels(
             self.config["plotting"].get("secondary_axes", [])
         )
 
