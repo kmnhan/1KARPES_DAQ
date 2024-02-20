@@ -6,12 +6,16 @@ import time
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-
-# os.environ["QT_API"] = "pyqt6"
+import tomlkit
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from logreader import get_cryocooler_log, get_pressure_log
 from qt_extensions.legendtable import LegendTableView
+from qt_extensions.plotting import (
+    DynamicPlotItem,
+    DynamicPlotItemTwiny,
+    XDateSnapCurvePlotDataItem,
+)
 
 try:
     os.chdir(sys._MEIPASS)
@@ -19,87 +23,11 @@ except:
     pass
 
 
-UTC_OFFSET: int = -time.timezone
+class PressureSnapCurvePlotDataItem(XDateSnapCurvePlotDataItem):
 
-
-class SnapCurveItem(pg.PlotCurveItem):
-    # adapted from https://stackoverflow.com/a/68857695
-    # when a TargetItem is linked, it snaps to the point in the curve near the cursor.
-
-    sigCurveHovered = QtCore.Signal(object, object)
-    sigCurveNotHovered = QtCore.Signal(object, object)
-
-    def __init__(
-        self,
-        *args,
-        hoverable: bool = True,
-        target: pg.TargetItem | None = None,
-        **kwargs,
-    ):
-        self.target = target
-        self.hoverable = hoverable
-        super().__init__(*args, **kwargs)
-        self.setTarget(self.target)
-        self.setAcceptHoverEvents(True)
-        self.setClickable(True, 20)
-
-    def setTarget(self, target: pg.TargetItem | None):
-        self.target = target
-        if self.target is not None:
-            self.target.movable = False
-            self.setPen(self.opts["pen"])
-
-        # refresh target visibility state
-        self.setHoverable(self.hoverable)
-
-    def setPen(self, *args, **kargs):
-        super().setPen(*args, **kargs)
-
-        # apply same color to target
-        if self.target is not None:
-            self.target.setPen(*args, **kargs)
-            if self.target.label() is not None:
-                self.target.label().setColor(self.target.pen.color())
-
-    @QtCore.Slot(bool)
-    def setHoverable(self, hoverable: bool):
-        self.hoverable = hoverable
-        if self.target is not None:
-            if not self.hoverable:
-                self.target.setVisible(False)
-
-    def viewRangeChanged(self):
-        super().viewRangeChanged()
-        self._mouseShape = None
-
-    def hoverEvent(self, ev):
-        if not self.hoverable:
-            return
-        if ev.isExit() or not self.mouseShape().contains(ev.pos()):
-            if self.target is not None:
-                self.target.setVisible(False)
-            self.sigCurveNotHovered.emit(self, ev)
-        else:
-            if self.target is not None:
-                ind = np.argmin(np.abs(self.xData - ev.pos().x()))
-                self.target.setPos(self.xData[ind], self.yData[ind])
-                self.target.setVisible(True)
-            self.sigCurveHovered.emit(self, ev)
-
-
-class SnapCurvePlotDataItem(pg.PlotDataItem):
-    def __init__(
-        self,
-        *args,
-        hoverable: bool = True,
-        target: pg.TargetItem | None = None,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.curve = SnapCurveItem(hoverable=hoverable, target=target)
-        self.curve.setParentItem(self)
-        self.curve.sigClicked.connect(self.curveClicked)
-        self.setData(*args, **kwargs)
+    @staticmethod
+    def format_y(y: float) -> str:
+        return f"{y:.3g}"
 
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
@@ -109,35 +37,28 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
 
         self.setWindowTitle("1KARPES Log Viewer")
 
-        # add plot and image
-        self.plot0: pg.PlotItem = self.graphics_layout.addPlot(
-            0, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=UTC_OFFSET / 3600)}
+        self.plot0 = DynamicPlotItemTwiny(
+            legendtableview=self.legendtable,
+            plot_cls=XDateSnapCurvePlotDataItem,
         )
-        self.plot1: pg.PlotItem = self.graphics_layout.addPlot(
-            1, 0, axisItems={"bottom": pg.DateAxisItem(utcOffset=UTC_OFFSET / 3600)}
+        self.graphics_layout.addItem(self.plot0, 0, 0)
+        self.plot0.setup_twiny()
+        self.plot0.setAxisItems({"bottom": pg.DateAxisItem()})
+        self.plot0.getAxis("left").setLabel("Temperature")
+        self.plot0.getAxis("right").setLabel("Pump & Shields")
+
+        self.plot1 = DynamicPlotItem(
+            legendtableview=LegendTableView(),
+            plot_cls=PressureSnapCurvePlotDataItem,
         )
+        self.graphics_layout.addItem(self.plot1, 1, 0)
+        self.plot1.setAxisItems({"bottom": pg.DateAxisItem()})
+
         self.plot1.setXLink(self.plot0)
         self.plot0.getAxis("bottom").setStyle(showValues=False)
-        self.plot0.setYRange(0, 300)
 
-        self.line0 = pg.InfiniteLine(
-            angle=90,
-            movable=True,
-            label="",
-            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 75)),
-        )
-        self.line0.sigPositionChanged.connect(self.sync_cursors)
-        self.line0.setZValue(100)
-        self.line1 = pg.InfiniteLine(
-            angle=90,
-            movable=True,
-            label="",
-            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 75)),
-        )
-        self.line1.sigPositionChanged.connect(self.sync_cursors)
-
-        self.plot0.addItem(self.line0)
-        self.plot1.addItem(self.line1)
+        self.plot0.vline.sigPositionChanged.connect(self.sync_cursors)
+        self.plot1.vline.sigPositionChanged.connect(self.sync_cursors)
 
         for pi in self.plot_items:
             pi.vb.setCursor(QtGui.QCursor(QtCore.Qt.CrossCursor))
@@ -155,33 +76,22 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
-        self.actioncentercursor.triggered.connect(self.center_cursor)
-        self.actionshowcursor.toggled.connect(self.toggle_cursor)
+        self.actioncentercursor.triggered.connect(self.plot0.center_cursor)
+        self.actionshowcursor.toggled.connect(self.plot0.toggle_cursor)
 
     def sync_cursors(self, line: pg.InfiniteLine):
-        if line == self.line0:
-            self.line1.blockSignals(True)
-            self.line1.setPos([line.getXPos(), 0])
-            self.line1.blockSignals(False)
+        if line == self.plot0.vline:
+            self.plot1.vline.blockSignals(True)
+            self.plot1.vline.setPos([line.getXPos(), 0])
+            self.plot1.vline.blockSignals(False)
         else:
-            self.line0.blockSignals(True)
-            self.line0.setPos([line.getXPos(), 0])
-            self.line0.blockSignals(False)
+            self.plot0.vline.blockSignals(True)
+            self.plot0.vline.setPos([line.getXPos(), 0])
+            self.plot0.vline.blockSignals(False)
 
     @property
     def plot_items(self) -> tuple[pg.PlotItem, pg.PlotItem]:
         return self.plot0, self.plot1
-
-    @QtCore.Slot(bool)
-    def toggle_cursor(self, value: bool):
-        self.line0.setVisible(value)
-        self.line1.setVisible(value)
-        self.actioncentercursor.setDisabled(not value)
-
-    @QtCore.Slot()
-    def center_cursor(self):
-        xmin, xmax = self.plot0.viewRange()[0]
-        self.line0.setValue((xmin + xmax) / 2)
 
     def mouse_moved(self, pos):
         if self.plot_items[0].sceneBoundingRect().contains(pos):
@@ -193,7 +103,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             return
         point = self.plot_items[index].vb.mapSceneToView(pos)
         try:
-            dt = datetime.datetime.fromtimestamp(point.x() - UTC_OFFSET)
+            dt = datetime.datetime.fromtimestamp(point.x())
         except OSError:
             return
         yval = point.y()
@@ -208,16 +118,21 @@ class MainWindow(MainWindowGUI):
     def __init__(self):
         super().__init__()
         self.settings = QtCore.QSettings("erlab", "1karpes_logviewer")
-        self.legendtable.model().sigCurveToggled.connect(self.update_plot)
-        self.legendtable.model().sigColorChanged.connect(self.update_plot)
+
         self.load_btn.clicked.connect(self.load_data)
         self.pressure_check.toggled.connect(self.toggle_pressure)
         self.temperature_check.toggled.connect(self.toggle_temperature)
         self.updatetime_check.toggled.connect(self.toggle_updates)
 
-        self.df = None
-        self.df_mg15 = None
+        self.df: pd.DataFrame | None = None
+        self.df_mg15: pd.DataFrame | None = None
+
         self.plot1.setVisible(False)
+        self.plot1.set_labels(["Main", "Middle"])
+        self.plot1.set_color(0, QtGui.QColor("cyan"))
+        self.plot1.set_color(1, QtGui.QColor("magenta"))
+
+        self.legendtable.model().sigCurveToggled.connect(self.curve_toggled)
 
         try:
             self.load_data(update=False)
@@ -231,42 +146,14 @@ class MainWindow(MainWindowGUI):
         self.updatetime_spin.valueChanged.connect(
             lambda val: self.client_timer.setInterval(round(val * 1000))
         )
-        self.line0.sigPositionChanged.connect(self.update_cursor_label)
-        self.line1.sigPositionChanged.connect(self.update_cursor_label)
-
         self.actiononlymain.toggled.connect(self.update_plot)
 
     @QtCore.Slot()
-    def update_cursor_label(self):
-        dt = datetime.datetime.fromtimestamp(self.line0.value() - UTC_OFFSET)
+    def curve_toggled(self):
         if self.df is not None:
-            row = self.df.iloc[self.df.index.get_indexer([dt], method="nearest")]
-            # label = row.index[0].strftime("%m/%d %H:%M:%S")
-            label = f'<span style="color: #FFF; font-weight: 600;">{row.index[0].strftime("%m/%d %H:%M:%S")}</span>'
-            for enabled, entry, color in zip(
-                self.legendtable.enabled,
-                self.legendtable.entries,
-                self.legendtable.colors,
-            ):
-                if enabled:
-                    label += f'<br><span style="color: {color.name()}; font-weight: 600;">{entry}</span>'
-                    label += (
-                        f'<span style="color: #FFF;"> {row[entry].iloc[0]:.3f}</span>'
-                    )
-                    # label += f"\n{entry}: {row[entry].iloc[0]:.3f}"
-            # self.line0.label.setText(label)
-            self.line0.label.setHtml(label)
-        if self.df_mg15 is not None:
-            row = self.df_mg15.iloc[
-                self.df_mg15.index.get_indexer([dt], method="nearest")
-            ]
-            label = row.index[0].strftime("%m/%d %H:%M:%S")
-            entries = ["IG Main"]
-            if not self.actiononlymain.isChecked():
-                entries += ["IG Middle"]
-            for entry in entries:
-                label += f"\n{entry}: {row[entry].iloc[0]:.3g}"
-            self.line1.label.setText(label)
+            self.settings.setValue(
+                "enabled_names", list(self.df.columns[self.legendtable.enabled])
+            )
 
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):
@@ -284,25 +171,27 @@ class MainWindow(MainWindowGUI):
     def load_data(self, *, update: bool = True):
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
         if self.df is not None:
-            self.legendtable.set_items(self.df.columns)
-        if self.pressure_check.isChecked():
-            self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
+            self.plot0.set_labels(self.df.columns)
 
-        enabled = self.settings.value("enabled_names", [])
-        colors = self.settings.value("colors", [])
-        # for i in range(self.legendtable.model().rowCount()):
-        #     if self.df.columns[i] in enabled:
-        #         self.legendtable.set_enabled(i, True)
-        #     if len(colors) == self.legendtable.model().rowCount():
-        #         self.legendtable.set_color(i, colors[i])
+            with open(
+                QtCore.QSettings("erlab", "tempcontroller").value("config_file"), "r"
+            ) as f:
+                plot_config = tomlkit.load(f)["plotting"]
+            self.plot0.set_twiny_labels(plot_config["secondary_axes"])
 
-        colors_old = self.legendtable.colors
-        for i, color_old in enumerate(colors_old):
-            if self.df.columns[i] in enabled:
-                self.legendtable.set_enabled(i, True)
-            if len(colors) == len(colors_old):
-                if color_old.name() != colors[i].name():
-                    self.legendtable.set_color(i, colors[i])
+            colors = [QtGui.QColor.fromRgb(*c) for c in plot_config["colors"]]
+            colors += [
+                QtGui.QColor.fromRgb(*list(c)[:3], 200) for c in plot_config["colors"]
+            ]
+            colors += 6 * [QtGui.QColor("white")]
+
+            enabled = self.settings.value("enabled_names", [])
+            for i, col in enumerate(self.df.columns):
+                self.plot0.set_enabled(i, col in enabled)
+                self.plot0.set_color(i, colors[i])
+
+        self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
+
         if update:
             self.update_plot()
 
@@ -310,122 +199,70 @@ class MainWindow(MainWindowGUI):
     def toggle_pressure(self, value: bool):
         self.plot1.setVisible(value)
         if value:
-            self.df_mg15 = get_pressure_log(self.start_datetime, self.end_datetime)
             self.update_plot()
-        else:
-            self.plot1.clearPlots()
-            self.df_mg15 = None
 
     @QtCore.Slot(bool)
     def toggle_temperature(self, value: bool):
         self.plot0.setVisible(value)
 
-    @staticmethod
-    def _temperature_label(x: int, y: float):
-        return (
-            datetime.datetime.fromtimestamp(max(x - UTC_OFFSET, 0)).strftime(
-                "%m/%d %H:%M:%S"
-            )
-            + f"\n{y:.3f}"
-        )
+    # @staticmethod
+    # def _temperature_label(x: int, y: float):
+    #     return (
+    #         datetime.datetime.fromtimestamp(max(x, 0)).strftime(
+    #             "%m/%d %H:%M:%S"
+    #         )
+    #         + f"\n{y:.3f}"
+    #     )
 
-    @staticmethod
-    def _pressure_label(x: int, y: float):
-        return (
-            datetime.datetime.fromtimestamp(max(x - UTC_OFFSET, 0)).strftime(
-                "%m/%d %H:%M:%S"
-            )
-            + f"\n{y:.3g}"
-        )
+    # @staticmethod
+    # def _pressure_label(x: int, y: float):
+    #     return (
+    #         datetime.datetime.fromtimestamp(max(x, 0)).strftime(
+    #             "%m/%d %H:%M:%S"
+    #         )
+    #         + f"\n{y:.3g}"
+    #     )
 
     @QtCore.Slot()
     def update_plot(self):
-        self.plot0.clearPlots()
-        labelfont = QtGui.QFont()
-        labelfont.setPointSizeF(8.0)
-
         if self.df is not None:
-            for i, (on, color) in enumerate(
-                zip(self.legendtable.enabled, self.legendtable.colors)
-            ):
-                if on:
-                    target = pg.TargetItem(
-                        size=6,
-                        movable=False,
-                        label=lambda x, y, *, ind=i: f"{self.df.columns[ind]}\n"
-                        + self._temperature_label(x, y),
-                        labelOpts=dict(fill=(200, 200, 200, 75)),
-                    )
-                    target.label().setFont(labelfont)
-                    plotdata = SnapCurvePlotDataItem(
-                        self.df.index.values.astype(np.float64) * 1e-9,
-                        self.df[self.df.columns[i]].values,
-                        pen=pg.mkPen(color),
-                        target=target,
-                        connect="finite",
-                        hoverable=self.actionsnap.isChecked(),
-                    )
-                    self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
-                    target.setParentItem(plotdata.curve)
-                    self.plot0.addItem(plotdata)
+            for i in range(len(self.df.columns)):
+                self.plot0.set_data(
+                    i,
+                    self.df.index.values.astype(np.float64) * 1e-9,
+                    self.df[self.df.columns[i]].values,
+                )
 
         if self.pressure_check.isChecked():
-            self.plot1.clearPlots()
-            if self.actiononlymain.isChecked():
-                pens = (pg.mkPen("c"),)
-            else:
-                pens = (pg.mkPen("c"), pg.mkPen("m"))
+            for i in range(1, 2):
+                self.plot1.legendtable.set_enabled(
+                    i, not self.actiononlymain.isChecked()
+                )
             if self.df_mg15 is not None:
-                for j, pen in enumerate(pens):
-                    target = pg.TargetItem(
-                        size=6,
-                        movable=False,
-                        label=lambda x, y, *, ind=j: f"{self.df_mg15.columns[ind]}\n"
-                        + self._pressure_label(x, y),
-                        labelOpts=dict(fill=(200, 200, 200, 75)),
-                    )
-                    target.label().setFont(labelfont)
-                    plotdata = SnapCurvePlotDataItem(
+                for i in range(2):
+                    self.plot1.set_data(
+                        i,
                         self.df_mg15.index.values.astype(np.float64) * 1e-9,
-                        self.df_mg15[self.df_mg15.columns[j]].values,
-                        pen=pen,
-                        target=target,
-                        connect="finite",
-                        hoverable=self.actionsnap.isChecked(),
+                        self.df_mg15[self.df_mg15.columns[i]].values,
                     )
-                    self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
-                    target.setParentItem(plotdata.curve)
-                    self.plot1.addItem(plotdata)
-
-        for pi in self.plot_items:
-            pi.getViewBox().setLimits(
-                xMin=self.start_datetime_timestamp, xMax=self.end_datetime_timestamp
-            )
 
     @property
     def start_datetime_timestamp(self) -> float:
-        return 1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch() + UTC_OFFSET
+        return 1e-3 * self.startdateedit.dateTime().toMSecsSinceEpoch()
 
     @property
     def end_datetime_timestamp(self) -> float:
-        return 1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch() + UTC_OFFSET
+        return 1e-3 * self.enddateedit.dateTime().toMSecsSinceEpoch()
 
     @property
     def start_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(
-            self.start_datetime_timestamp - UTC_OFFSET
-        )
+        return datetime.datetime.fromtimestamp(self.start_datetime_timestamp)
 
     @property
     def end_datetime(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(self.end_datetime_timestamp - UTC_OFFSET)
+        return datetime.datetime.fromtimestamp(self.end_datetime_timestamp)
 
     def closeEvent(self, *args, **kwargs):
-        if self.df is not None:
-            self.settings.setValue(
-                "enabled_names", list(self.df.columns[self.legendtable.enabled])
-            )
-            self.settings.setValue("colors", self.legendtable.colors)
         super().closeEvent(*args, **kwargs)
 
 

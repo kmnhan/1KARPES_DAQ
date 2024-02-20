@@ -150,10 +150,17 @@ class DynamicPlotItem(pg.PlotItem):
         self.vline.sigPositionChanged.connect(self.update_cursor_label)
 
         if xformat is None:
-            xformat = lambda x: f"{x:.3f}"
+            if hasattr(self.plot_cls, "format_x"):
+                xformat = self.plot_cls.format_x
+            else:
+                xformat = lambda x: f"{x:.3f}"
         self.xformat = xformat
+
         if yformat is None:
-            yformat = lambda x: f"{x:.3f}"
+            if hasattr(self.plot_cls, "format_y"):
+                yformat = self.plot_cls.format_y
+            else:
+                yformat = lambda y: f"{y:.3f}"
         self.yformat = yformat
 
         self.toggle_cursor()
