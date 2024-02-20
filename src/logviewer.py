@@ -68,8 +68,8 @@ class SnapCurveItem(pg.PlotCurveItem):
             if not self.hoverable:
                 self.target.setVisible(False)
 
-    @QtCore.Slot()
-    def _reset_mouseshape_cache(self):
+    def viewRangeChanged(self):
+        super().viewRangeChanged()
         self._mouseShape = None
 
     def hoverEvent(self, ev):
@@ -366,9 +366,6 @@ class MainWindow(MainWindowGUI):
                         hoverable=self.actionsnap.isChecked(),
                     )
                     self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
-                    self.plot0.sigRangeChanged.connect(
-                        plotdata.curve._reset_mouseshape_cache
-                    )
                     target.setParentItem(plotdata.curve)
                     self.plot0.addItem(plotdata)
 
@@ -397,9 +394,6 @@ class MainWindow(MainWindowGUI):
                         hoverable=self.actionsnap.isChecked(),
                     )
                     self.actionsnap.toggled.connect(plotdata.curve.setHoverable)
-                    self.plot1.sigRangeChanged.connect(
-                        plotdata.curve._reset_mouseshape_cache
-                    )
                     target.setParentItem(plotdata.curve)
                     self.plot1.addItem(plotdata)
 
