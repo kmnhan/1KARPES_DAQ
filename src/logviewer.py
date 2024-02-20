@@ -55,7 +55,6 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot1.setAxisItems({"bottom": pg.DateAxisItem()})
 
         self.plot1.setXLink(self.plot0)
-        self.plot0.getAxis("bottom").setStyle(showValues=False)
 
         self.plot0.vline.sigPositionChanged.connect(self.sync_cursors)
         self.plot1.vline.sigPositionChanged.connect(self.sync_cursors)
