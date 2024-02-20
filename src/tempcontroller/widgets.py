@@ -245,6 +245,8 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             krdg_spin.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
             krdg_spin.setMinimumWidth(55)
 
+            krdg_unit = QtWidgets.QLabel("[K]")
+
             srdg_spin = QtWidgets.QDoubleSpinBox()
             srdg_spin.setReadOnly(True)
             srdg_spin.setDecimals(5)
@@ -252,8 +254,18 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             srdg_spin.setButtonSymbols(srdg_spin.ButtonSymbols.NoButtons)
             srdg_spin.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
-            krdg_unit = QtWidgets.QLabel("[K]")
             srdg_unit = QtWidgets.QLabel("[SU]")
+
+            for w in (input_label, krdg_unit, srdg_unit):
+                w.setSizePolicy(
+                    QtWidgets.QSizePolicy.Policy.Maximum,
+                    QtWidgets.QSizePolicy.Policy.Preferred,
+                )
+            for w in (krdg_spin, srdg_spin):
+                w.setSizePolicy(
+                    QtWidgets.QSizePolicy.Policy.Maximum,
+                    QtWidgets.QSizePolicy.Policy.Fixed,
+                )
 
             self.layout().addWidget(input_label, i, 0, 1, 1)
             self.layout().addWidget(name_label, i, 1, 1, 3)
