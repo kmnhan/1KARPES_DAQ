@@ -529,6 +529,7 @@ class DynamicPlotItem(pg.PlotItem):
         legendtableview: LegendTableView,
         ncurves: int | None = None,
         plot_cls: type[pg.PlotDataItem] = pg.PlotDataItem,
+        pen_kw: dict | None = None,
         xformat: Callable[[float], str] | None = None,
         yformat: Callable[[float], str] | None = None,
         **kwargs,
@@ -539,6 +540,10 @@ class DynamicPlotItem(pg.PlotItem):
         self.plots: list[pg.PlotDataItem] = []
         if ncurves is not None:
             self.set_ncurves(ncurves)
+
+        if pen_kw is None:
+            pen_kw = dict()
+        self.pen_kw = pen_kw
 
         self.legendtable.model().sigCurveToggled.connect(self.update_visibility)
         self.legendtable.model().sigColorChanged.connect(self.update_color)
@@ -624,7 +629,7 @@ class DynamicPlotItem(pg.PlotItem):
 
     @QtCore.Slot(int, object)
     def update_color(self, index: int, color: QtGui.QColor):
-        self.plots[index].setPen(color)
+        self.plots[index].setPen(color=color, **self.pen_kw)
 
     def set_enabled(self, index: int, value: bool):
         self.legendtable.set_enabled(index, value)
@@ -634,8 +639,8 @@ class DynamicPlotItem(pg.PlotItem):
 
     def set_data(self, index: int, x: Sequence[float], y: Sequence[float], **kwargs):
         self.plots[index].setVisible(self.legendtable.enabled[index])
-        self.plots[index].setPen(self.legendtable.colors[index])
         self.plots[index].setData(x, y, **kwargs)
+        self.plots[index].setPen(color=self.legendtable.colors[index], **self.pen_kw)
 
     def set_datalist(
         self, x: Sequence[float], ylist: Sequence[Sequence[float]], **kwargs
@@ -645,7 +650,7 @@ class DynamicPlotItem(pg.PlotItem):
         ):
             plot.setVisible(enabled)
             plot.setData(x, y, **kwargs)
-            plot.setPen(color)
+            plot.setPen(color=color, **self.pen_kw)
         self.vline.setBounds((min(x), max(x)))
 
     def set_datadict(
@@ -656,8 +661,18 @@ class DynamicPlotItem(pg.PlotItem):
 
 
 class DynamicPlotItemTwiny(DynamicPlotItem):
-    def __init__(self, *args, twinx_labels: list[str] | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        pen_kw_twin: dict | None = None,
+        twinx_labels: list[str] | None = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+
+        if pen_kw_twin is None:
+            pen_kw_twin = dict()
+        self.pen_kw_twin = pen_kw_twin
 
         # Add another viewbox
         self.vbs = [self.vb, pg.ViewBox()]
@@ -711,6 +726,34 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
                 p.getViewBox().removeItem(p)
                 p.forgetViewBox()
             vb.addItem(p)
+
+    def set_data(self, index: int, x: Sequence[float], y: Sequence[float], **kwargs):
+        self.plots[index].setVisible(self.legendtable.enabled[index])
+        self.plots[index].setData(x, y, **kwargs)
+        if self.legendtable.entries[index] in self.twinx_labels:
+            pen_kw = self.pen_kw_twin
+        else:
+            pen_kw = self.pen_kw
+        self.plots[index].setPen(color=self.legendtable.colors[index], **pen_kw)
+
+    def set_datalist(
+        self, x: Sequence[float], ylist: Sequence[Sequence[float]], **kwargs
+    ):
+        for plot, y, color, enabled, label in zip(
+            self.plots,
+            ylist,
+            self.legendtable.colors,
+            self.legendtable.enabled,
+            self.legendtable.entries,
+        ):
+            plot.setVisible(enabled)
+            plot.setData(x, y, **kwargs)
+            if label in self.twinx_labels:
+                pen_kw = self.pen_kw_twin
+            else:
+                pen_kw = self.pen_kw
+            plot.setPen(color=color, **pen_kw)
+        self.vline.setBounds((min(x), max(x)))
 
 
 class TempControllerPlotDataItem(SnapCurvePlotDataItem):

@@ -190,7 +190,9 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.commands.addTab(self.command218, "218")
         self.commands.addTab(self.command331, "331")
 
-        self.plotwindow = PlottingWidget()
+        self.plotwindow = PlottingWidget(
+            pen_kw=dict(), pen_kw_twin=dict(width=2, style=QtCore.Qt.DashLine)
+        )
 
         self.actionheaters.triggered.connect(self.show_heaters)
         self.actioncommand.triggered.connect(self.show_commands)
