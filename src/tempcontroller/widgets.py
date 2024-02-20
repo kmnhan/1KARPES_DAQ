@@ -255,12 +255,19 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             krdg_unit = QtWidgets.QLabel("[K]")
             srdg_unit = QtWidgets.QLabel("[SU]")
 
-            self.layout().addWidget(input_label, 2 * i, 0, 2, 1)
-            self.layout().addWidget(name_label, 2 * i, 1, 2, 3)
-            self.layout().addWidget(krdg_spin, 2 * i, 4, 1, 2)
-            self.layout().addWidget(srdg_spin, 2 * i + 1, 4, 1, 2)
-            self.layout().addWidget(krdg_unit, 2 * i, 6, 1, 1)
-            self.layout().addWidget(srdg_unit, 2 * i + 1, 6, 1, 1)
+            self.layout().addWidget(input_label, i, 0, 1, 1)
+            self.layout().addWidget(name_label, i, 1, 1, 3)
+            self.layout().addWidget(krdg_spin, i, 4, 1, 2)
+            self.layout().addWidget(krdg_unit, i, 6, 1, 1)
+            self.layout().addWidget(srdg_spin, i, 7, 1, 2)
+            self.layout().addWidget(srdg_unit, i, 9, 1, 1)
+
+            # self.layout().addWidget(input_label, 2 * i, 0, 2, 1)
+            # self.layout().addWidget(name_label, 2 * i, 1, 2, 3)
+            # self.layout().addWidget(krdg_spin, 2 * i, 4, 1, 2)
+            # self.layout().addWidget(srdg_spin, 2 * i + 1, 4, 1, 2)
+            # self.layout().addWidget(krdg_unit, 2 * i, 6, 1, 1)
+            # self.layout().addWidget(srdg_unit, 2 * i + 1, 6, 1, 1)
 
             self.name_labels.append(name_label)
             self.krdg_spins.append(krdg_spin)
@@ -295,12 +302,12 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
 
             self.srdg_spins[i].setVisible(visible)
             self.srdg_units[i].setVisible(visible)
-            if visible:
-                self.layout().addWidget(self.krdg_spins[i], 2 * i, 4, 1, 2)
-                self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 1, 1)
-            else:
-                self.layout().addWidget(self.krdg_spins[i], 2 * i, 4, 2, 2)
-                self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 2, 1)
+            # if visible:
+            #     self.layout().addWidget(self.krdg_spins[i], 2 * i, 4, 1, 2)
+            #     self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 1, 1)
+            # else:
+            #     self.layout().addWidget(self.krdg_spins[i], 2 * i, 4, 2, 2)
+            #     self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 2, 1)
 
     def update_names(self, names: list[str]):
         for label, name in zip(self.name_labels, names):
