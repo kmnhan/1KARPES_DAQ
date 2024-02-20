@@ -15,8 +15,6 @@ class RequestHandler:
         self.inst = pyvisa.ResourceManager().open_resource(
             self.resource_name, **self._resource_kwargs
         )
-        if self._baud_rate is not None:
-            self.inst.baud_rate = self._baud_rate
         self._last_update = time.perf_counter_ns()
 
     def wait_time(self):

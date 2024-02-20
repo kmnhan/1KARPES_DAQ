@@ -241,9 +241,9 @@ class MainWindow(MainWindowGUI):
         super().__init__(*args, **kwargs)
 
         # Initialize temperature controller threads
-        self.lake218 = VISAThread("GPIB0::12::INSTR", baud_rate=9600)
-        self.lake331 = VISAThread("GPIB0::15::INSTR", baud_rate=9600)
-        self.lake336 = VISAThread("GPIB0::18::INSTR", baud_rate=57600)
+        self.lake218 = VISAThread("GPIB0::12::INSTR")
+        self.lake331 = VISAThread("GPIB0::15::INSTR")
+        self.lake336 = VISAThread("GPIB0::18::INSTR")
 
         # Initialize power supply thread
         self.mkpower = VISAThread("ASRL5::INSTR", baud_rate=9600, data_bits=8)
