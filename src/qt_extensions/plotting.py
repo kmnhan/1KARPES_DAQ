@@ -187,6 +187,8 @@ class DynamicPlotItem(pg.PlotItem):
             self.legendtable.entries,
             self.legendtable.colors,
         ):
+            if plot.xData is None:
+                continue
             if old_x is None or not np.allclose(old_x, plot.xData):
                 old_x = plot.xData
                 idx = (np.abs(plot.xData - xval)).argmin()

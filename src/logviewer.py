@@ -212,25 +212,19 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def update_plot(self):
         if self.df is not None:
-            for i in range(len(self.df.columns)):
-                self.plot0.set_data(
-                    i,
-                    self.df.index.values.astype(np.float64) * 1e-9,
-                    self.df[self.df.columns[i]].values,
-                )
-
+            self.plot0.set_datalist(
+                self.df.index.values.astype(np.float64) * 1e-9, self.df.values.T
+            )
         if self.pressure_check.isChecked():
             for i in range(1, 2):
                 self.plot1.legendtable.set_enabled(
                     i, not self.actiononlymain.isChecked()
                 )
             if self.df_mg15 is not None:
-                for i in range(2):
-                    self.plot1.set_data(
-                        i,
-                        self.df_mg15.index.values.astype(np.float64) * 1e-9,
-                        self.df_mg15[self.df_mg15.columns[i]].values,
-                    )
+                self.plot1.set_datalist(
+                    self.df_mg15.index.values.astype(np.float64) * 1e-9,
+                    self.df_mg15.values.T,
+                )
 
     @property
     def start_datetime_timestamp(self) -> float:
