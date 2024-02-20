@@ -86,12 +86,12 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         if line == self.plot0.vline:
             self.plot1.vline.blockSignals(True)
             self.plot1.vline.setPos([line.getXPos(), 0])
-            self.plot1.vline.update_cursor_label()
+            self.plot1.update_cursor_label()
             self.plot1.vline.blockSignals(False)
         else:
             self.plot0.vline.blockSignals(True)
             self.plot0.vline.setPos([line.getXPos(), 0])
-            self.plot0.vline.update_cursor_label()
+            self.plot0.update_cursor_label()
             self.plot0.vline.blockSignals(False)
 
     @property
