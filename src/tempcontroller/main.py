@@ -109,7 +109,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setGeometry(0, 0, 300, 200)
+        # self.setGeometry(0, 0, 300, 200)
         self.setWindowTitle("1KARPES Temperature Controller")
 
         # Read config file
@@ -199,7 +199,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
     def show_heaters(self):
         rect = self.geometry()
-        self.heaters.setGeometry(rect.x() + rect.width(), rect.y(), 300, 150)
+        self.heaters.setGeometry(rect.x() + rect.width(), rect.y(), 300, rect.height())
         self.heaters.show()
 
     def show_commands(self):
@@ -527,7 +527,7 @@ if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
-    # qapp.setStyle("Fusion")
+    qapp.setStyle("Fusion")
 
     while not valid_config():
         configdialog = ConfigFileDialog()

@@ -227,7 +227,9 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
         boldfont = QtGui.QFont()
         boldfont.setBold(True)
         smallfont = QtGui.QFont()
-        smallfont.setPointSize(8)
+        smallfont.setPointSize(9)
+        smallerfont = QtGui.QFont()
+        smallerfont.setPointSize(8)
 
         for i, input in enumerate(self.inputs):
             input_label = QtWidgets.QLabel(input)
@@ -236,6 +238,7 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             name_label = QtWidgets.QLabel()
             name_label.setFont(smallfont)
             name_label.setWordWrap(True)
+            name_label.setMinimumWidth(100)
 
             krdg_spin = QtWidgets.QDoubleSpinBox()
             krdg_spin.setReadOnly(True)
@@ -246,6 +249,7 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             krdg_spin.setMinimumWidth(55)
 
             krdg_unit = QtWidgets.QLabel("[K]")
+            krdg_unit.setFont(smallerfont)
 
             srdg_spin = QtWidgets.QDoubleSpinBox()
             srdg_spin.setReadOnly(True)
@@ -255,6 +259,12 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
             srdg_spin.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
             srdg_unit = QtWidgets.QLabel("[SU]")
+            srdg_unit.setFont(smallerfont)
+
+            name_label.setSizePolicy(
+                QtWidgets.QSizePolicy.Policy.MinimumExpanding,
+                QtWidgets.QSizePolicy.Policy.Preferred,
+            )
 
             for w in (input_label, krdg_unit, srdg_unit):
                 w.setSizePolicy(
@@ -766,6 +776,8 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         self.sigVSETRead.connect(self.update_vset)
         self.sigSTATUSRead.connect(self.update_status)
 
+        self.dial.setEnabled(self.check.isChecked())
+
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
         self.vout_spin.setValue(float(value))
@@ -791,6 +803,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         res: list[bool] = [bool((byte_value >> i) & 1) for i in range(8)]
 
         if res[6] != self.check.isChecked():
+            self.dial.setEnabled(res[6])
             self.check.blockSignals(True)
             self.check.setChecked(res[6])
             self.check.blockSignals(False)
@@ -812,6 +825,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         else:
             value = 0
         self.instrument.request_write(f"OUT{value}")
+        self.dial.setEnabled(self.check.isChecked())
         self.trigger_update()
 
     def trigger_update(self):
