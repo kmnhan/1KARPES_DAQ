@@ -79,8 +79,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.actionshowcursor.toggled.connect(self.plot1.toggle_cursor)
         self.actionsnap.toggled.connect(self.plot0.toggle_snap)
         self.actionsnap.toggled.connect(self.plot1.toggle_snap)
-        self.actionlog0.toggled.connect(lambda: self.plot0.toggle_logy(twin=False))
-        self.actionlog1.toggled.connect(lambda: self.plot0.toggle_logy(twin=True))
+        self.actionlog0.triggered.connect(lambda: self.plot0.toggle_logy(twin=False))
+        self.actionlog1.triggered.connect(lambda: self.plot0.toggle_logy(twin=True))
 
     def sync_cursors(self, line: pg.InfiniteLine):
         if line == self.plot0.vline:
