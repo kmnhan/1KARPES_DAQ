@@ -298,12 +298,22 @@ class MainWindow(MainWindowGUI):
         refresh_time = float(self.config["acquisition"]["refresh_time"])
         minutes = self.config["plotting"].get("range_minutes", 30)
         maxlen = round((minutes * 60) / refresh_time)
+
+        # Initialize plot data queue
         self.plot_values: list[collections.deque] = [
             collections.deque(maxlen=maxlen) for _ in range(len(self.all_names) + 1)
         ]
+
+        # Initialize plot legend table
         self.plotwindow.plotItem.set_labels(self.all_names)
         self.plotwindow.plotItem.set_twinx_labels(
             self.config["plotting"].get("secondary_axes", [])
+        )
+
+        for i, c in enumerate(self.config["plotting"]["colors"]):
+            self.plotwindow.legendtable.set_color(i, QtGui.QColor.fromRgb(*c))
+        self.plotwindow.legendtable.model().sigColorChanged.connect(
+            self.plotcolor_changed
         )
 
         # Setup refresh timer
@@ -395,6 +405,11 @@ class MainWindow(MainWindowGUI):
         for dq, val in zip(self.plot_values[1:], self.kelvin_values):
             dq.append(float(val))
         self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
+
+    @QtCore.Slot(int, object)
+    def plotcolor_changed(self, index: int, color: QtGui.QColor):
+        self.config["plotting"]["colors"][index] = list(color.getRgb())
+        self.overwrite_config()
 
     @property
     def header(self) -> list[str]:
