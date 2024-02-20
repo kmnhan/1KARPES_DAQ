@@ -10,7 +10,7 @@ from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qt_extensions.legendtable import LegendTableView
 
-from connection import LakeshoreThread
+from connection import VISAThread
 
 
 class QHLine(QtWidgets.QFrame):
@@ -139,7 +139,7 @@ class HeaterWidget(HeaterWidgetGUI):
     def __init__(
         self,
         *args,
-        instrument: LakeshoreThread | None = None,
+        instrument: VISAThread | None = None,
         output: str,
         loop: str | None = None,
         **kwargs,
@@ -174,12 +174,14 @@ class HeaterWidget(HeaterWidgetGUI):
         cmd = f"SETP "
         cmd += ",".join([self.loop, str(value)])
         self.instrument.request_write(cmd)
+        self.trigger_update()
 
     @QtCore.Slot(int, float)
     def change_ramp(self, state: int, rate: float):
         cmd = f"RAMP "
         cmd += ",".join([self.loop, str(state), str(rate)])
         self.instrument.request_write(cmd)
+        self.trigger_update()
 
     @QtCore.Slot(int)
     def change_range(self, value: int):
@@ -188,6 +190,7 @@ class HeaterWidget(HeaterWidgetGUI):
             cmd += f"{self.output},"
         cmd += str(value)
         self.instrument.request_write(cmd)
+        self.trigger_update()
 
     @QtCore.Slot()
     def target_current(self):
@@ -320,7 +323,7 @@ class ReadingWidget(ReadingWidgetGUI):
     def __init__(
         self,
         *args,
-        instrument: LakeshoreThread | None = None,
+        instrument: VISAThread | None = None,
         inputs: Sequence[str],
         indexer: slice | None = None,
         krdg_command: str | None = None,
@@ -365,7 +368,7 @@ class CommandWidget(*uic.loadUiType("command.ui")):
     sigQuery = QtCore.Signal(str)
     sigReply = QtCore.Signal(str)
 
-    def __init__(self, instrument: LakeshoreThread | None = None, parent=None):
+    def __init__(self, instrument: VISAThread | None = None, parent=None):
         super().__init__(parent)
         self.setupUi(self)
         self.instrument = instrument
@@ -725,31 +728,105 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
         return self.plotwidget.plotItem
 
 
+class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
+    sigVOUTRead = QtCore.Signal(str)
+    sigVSETRead = QtCore.Signal(str)
+    sigSTATUSRead = QtCore.Signal(str)
+
+    def __init__(self, instrument: VISAThread | None = None, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.instrument = instrument
+
+        self.check.toggled.connect(self.change_output)
+
+        self.dial.valueChanged.connect(self.dial_changed)
+        self.apply_btn.clicked.connect(self.change_vset)
+
+        self.sigVOUTRead.connect(self.update_vout)
+        self.sigVSETRead.connect(self.update_vset)
+        self.sigSTATUSRead.connect(self.update_status)
+
+    @QtCore.Slot(str)
+    def update_vout(self, value: str | float):
+        self.vout_spin.setValue(float(value))
+        self.dial.blockSignals(True)
+        self.dial.setValue(round(float(value) * 100))
+        self.dial.blockSignals(False)
+
+    @QtCore.Slot(str)
+    def update_vset(self, value: str | float):
+        self.vset_spin.setValue(float(value))
+
+    @QtCore.Slot(str)
+    def update_status(self, message: str):
+        # 0: 0 CC, 1 CV (when output is on)
+        # 4: Beep
+        # 5: OCP
+        # 6: Output
+        # 7: OVP
+
+        # Char to integer ASCII
+        byte_value = ord(message[0])
+        # Bitwise AND with shifting
+        res: list[bool] = [bool((byte_value >> i) & 1) for i in range(8)]
+
+        if res[6] != self.check.isChecked():
+            self.check.blockSignals(True)
+            self.check.setChecked(res[6])
+            self.check.blockSignals(False)
+
+    @QtCore.Slot(int)
+    def dial_changed(self, value: int):
+        self.spin.setValue(value / 100)
+        self.change_vset()
+
+    @QtCore.Slot()
+    def change_vset(self):
+        self.instrument.request_write(f"VSET1:{self.spin.value():.3f}")
+        self.trigger_update()
+
+    @QtCore.Slot()
+    def change_output(self):
+        if self.check.isChecked():
+            value = 1
+        else:
+            value = 0
+        self.instrument.request_write(f"OUT{value}")
+        self.trigger_update()
+
+    def trigger_update(self):
+        self.instrument.request_query("STATUS?", self.sigSTATUSRead)
+        self.instrument.request_query("VSET1?", self.sigVSETRead)
+        self.instrument.request_query("VOUT1?", self.sigVOUTRead)
+
+
 if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setStyle("Fusion")
 
-    import tomlkit
-    import erlab.io
+    # import tomlkit
+    # import erlab.io
 
-    with open(
-        "/Users/khan/Source/python/1KARPES_DAQ/src/tempcontroller/config.toml", "r"
-    ) as f:
-        config = tomlkit.load(f)
-    names = (
-        config["general"]["names_336"]
-        + config["general"]["names_218"]
-        + config["general"]["names_331"]
-    )
-    ds = erlab.io.load_hdf5("/Users/khan/test_log.h5")
-    x = ds["Time"].astype(int).values * 1e-9
-    yvals = [ds[n].values for n in names]
+    # with open(
+    #     "/Users/khan/Source/python/1KARPES_DAQ/src/tempcontroller/config.toml", "r"
+    # ) as f:
+    #     config = tomlkit.load(f)
+    # names = (
+    #     config["general"]["names_336"]
+    #     + config["general"]["names_218"]
+    #     + config["general"]["names_331"]
+    # )
+    # ds = erlab.io.load_hdf5("/Users/khan/test_log.h5")
+    # x = ds["Time"].astype(int).values * 1e-9
+    # yvals = [ds[n].values for n in names]
 
-    # win = HeaterWidget()
-    win = PlottingWidget(twinx_labels=["He pump", "1K Cold finger"])
-    win.plotItem.set_labels(names)
-    win.plotItem.set_datalist(x, yvals)
+    # # win = HeaterWidget()
+    # win = PlottingWidget(twinx_labels=["He pump", "1K Cold finger"])
+    # win.plotItem.set_labels(names)
+    # win.plotItem.set_datalist(x, yvals)
+    win = HeatSwitchWidget()
 
     # print(win.plotItem.plots[0].curve.parentItem().parentItem().parentItem())
 

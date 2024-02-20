@@ -6,18 +6,21 @@ import queue
 
 
 class RequestHandler:
-    def __init__(self, resource_name: str, baud_rate: int | None = None):
+    def __init__(self, resource_name: str, interval_ms: int = 50, **kwargs):
         self.resource_name = resource_name
-        self._baud_rate = baud_rate
+        self.interval_ms = interval_ms
+        self._resource_kwargs = kwargs
 
     def open(self):
-        self.inst = pyvisa.ResourceManager().open_resource(self.resource_name)
+        self.inst = pyvisa.ResourceManager().open_resource(
+            self.resource_name, **self._resource_kwargs
+        )
         if self._baud_rate is not None:
             self.inst.baud_rate = self._baud_rate
         self._last_update = time.perf_counter_ns()
 
     def wait_time(self):
-        while (time.perf_counter_ns() - self._last_update) < 50000:
+        while (time.perf_counter_ns() - self._last_update) < self.interval_ms * 1e3:
             time.sleep(1e-3)
 
     def write(self, *args, **kwargs):
@@ -42,7 +45,7 @@ class RequestHandler:
         self.inst.close()
 
 
-class LakeshoreThread(QtCore.QThread):
+class VISAThread(QtCore.QThread):
 
     sigWritten = QtCore.Signal()
     sigQueried = QtCore.Signal()

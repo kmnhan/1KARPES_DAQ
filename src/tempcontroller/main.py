@@ -16,8 +16,15 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from connection import LakeshoreThread
-from widgets import CommandWidget, HeaterWidget, QVLine, ReadingWidget, PlottingWidget
+from connection import VISAThread
+from widgets import (
+    CommandWidget,
+    HeaterWidget,
+    QVLine,
+    ReadingWidget,
+    PlottingWidget,
+    HeatSwitchWidget,
+)
 
 try:
     os.chdir(sys._MEIPASS)
@@ -163,12 +170,15 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.heater1 = HeaterWidget(output="1")
         self.heater2 = HeaterWidget(output="2")
         self.heater3 = HeaterWidget(output="", loop="1")
+        self.heatswitch = HeatSwitchWidget()
         d1 = Dock(f"336 Heater1 (D) Control", widget=self.heater1)
         d2 = Dock(f"336 Heater2 (C) Control", widget=self.heater2)
         d3 = Dock(f"331 Heater Control", widget=self.heater3)
+        d4 = Dock(f"Heat Switch", widget=self.heatswitch)
         area.addDock(d2, "left")
         area.addDock(d1, "right", d2)
         area.addDock(d3, "right", d1)
+        area.addDock(d4, "right", d3)
 
         self.commands = QtWidgets.QTabWidget()
         self.commands.setWindowTitle("Command")
@@ -231,9 +241,12 @@ class MainWindow(MainWindowGUI):
         super().__init__(*args, **kwargs)
 
         # Initialize temperature controller threads
-        self.lake218 = LakeshoreThread("GPIB0::12::INSTR", baud_rate=9600)
-        self.lake331 = LakeshoreThread("GPIB0::15::INSTR", baud_rate=9600)
-        self.lake336 = LakeshoreThread("GPIB0::18::INSTR", baud_rate=57600)
+        self.lake218 = VISAThread("GPIB0::12::INSTR", baud_rate=9600)
+        self.lake331 = VISAThread("GPIB0::15::INSTR", baud_rate=9600)
+        self.lake336 = VISAThread("GPIB0::18::INSTR", baud_rate=57600)
+
+        # Initialize power supply thread
+        self.mkpower = VISAThread("ASRL5::INSTR", baud_rate=9600, data_bits=8)
 
         # Link reading, command, and heater widgets to corresponding thread
         self.readings_331.instrument = self.lake331
@@ -253,6 +266,11 @@ class MainWindow(MainWindowGUI):
         self.heater2.curr_spin = self.readings_336.krdg_spins[2]
         self.heater3.curr_spin = self.readings_331.krdg_spins[0]
 
+        self.heatswitch.instrument = self.mkpower
+
+        # Connect regen signal
+        self.heatswitch.sigRegenerate.connect()
+
         # Connect update signal
         self.sigUpdate.connect(self.readings_331.trigger_update)
         self.sigUpdate.connect(self.readings_218_0.trigger_update)
@@ -261,6 +279,7 @@ class MainWindow(MainWindowGUI):
         self.sigUpdate.connect(self.heater1.trigger_update)
         self.sigUpdate.connect(self.heater2.trigger_update)
         self.sigUpdate.connect(self.heater3.trigger_update)
+        self.sigUpdate.connect(self.heatswitch.trigger_update)
 
         # Start threads
         self.start_threads()
@@ -316,12 +335,14 @@ class MainWindow(MainWindowGUI):
         self.lake218.start()
         self.lake331.start()
         self.lake336.start()
+        self.mkpower.start()
         # Wait until all threads are ready
         while not all(
             (
                 hasattr(self.lake218, "queue"),
                 hasattr(self.lake331, "queue"),
                 hasattr(self.lake336, "queue"),
+                hasattr(self.mkpower, "queue"),
             )
         ):
             time.sleep(1e-3)
@@ -330,9 +351,11 @@ class MainWindow(MainWindowGUI):
         self.lake218.stopped.set()
         self.lake331.stopped.set()
         self.lake336.stopped.set()
+        self.mkpower.stopped.set()
         self.lake218.wait()
         self.lake331.wait()
         self.lake336.wait()
+        self.mkpower.wait()
 
     def set_logging_interval(self, value: float, update_config: bool = True):
         self.log_timer.setInterval(round(value * 1000))
@@ -345,7 +368,31 @@ class MainWindow(MainWindowGUI):
         # Trigger updates
         self.sigUpdate.emit()
         self.plot_values[0].append(dt.timestamp())
+
+        # Wait 100 ms for data to update
+        QtCore.QTimer.singleShot(100, self.check_regen)
         QtCore.QTimer.singleShot(100, self.refresh_plot)
+
+    def check_regen(self):
+        if self.heatswitch.regen_check.isChecked():
+
+            tol = self.heatswitch.regen_spin.value()
+            val = self.kelvin_values[0]  # TA [K]
+
+            if val > tol:
+                self.heatswitch.regen_check.setChecked(False)
+                self.regenerate()
+
+    def regenerate(self):
+        self.mkpower.request_write("OUT0")
+        if 45 <= self.heater2.setpoint_spin.value() <= 55:
+            # Setpoint is already within He pump target range
+            self.lake336.request_write("RANGE 2,3")
+        else:
+            # Setpoint is outside He pump target range, set to 45 K
+            self.lake336.request_write("SETP 2,45; RANGE 2,3")
+        self.heatswitch.trigger_update()
+        self.heater2.trigger_update()
 
     def refresh_plot(self):
         for dq, val in zip(self.plot_values[1:], self.kelvin_values):
