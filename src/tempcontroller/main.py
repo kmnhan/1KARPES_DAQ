@@ -268,9 +268,6 @@ class MainWindow(MainWindowGUI):
 
         self.heatswitch.instrument = self.mkpower
 
-        # Connect regen signal
-        self.heatswitch.sigRegenerate.connect()
-
         # Connect update signal
         self.sigUpdate.connect(self.readings_331.trigger_update)
         self.sigUpdate.connect(self.readings_218_0.trigger_update)
