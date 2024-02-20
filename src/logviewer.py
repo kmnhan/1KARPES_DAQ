@@ -1,7 +1,6 @@
 import datetime
 import os
 import sys
-import time
 
 import numpy as np
 import pandas as pd
@@ -40,6 +39,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot0 = DynamicPlotItemTwiny(
             legendtableview=self.legendtable,
             plot_cls=XDateSnapCurvePlotDataItem,
+            pen_kw_twin=dict(width=2, style=QtCore.Qt.DashLine),
         )
         self.graphics_layout.addItem(self.plot0, 0, 0)
         self.plot0.setup_twiny()
@@ -79,6 +79,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.actionshowcursor.toggled.connect(self.plot1.toggle_cursor)
         self.actionsnap.toggled.connect(self.plot0.toggle_snap)
         self.actionsnap.toggled.connect(self.plot1.toggle_snap)
+        self.actionlog0.toggled.connect(lambda: self.plot0.toggle_logy(twin=False))
+        self.actionlog1.toggled.connect(lambda: self.plot0.toggle_logy(twin=True))
 
     def sync_cursors(self, line: pg.InfiniteLine):
         if line == self.plot0.vline:

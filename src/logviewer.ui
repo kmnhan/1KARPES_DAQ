@@ -120,7 +120,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Update Time</string>
+                <string>Refresh</string>
                </property>
               </widget>
              </item>
@@ -172,13 +172,16 @@
     <addaction name="actionsnap"/>
     <addaction name="separator"/>
     <addaction name="actiononlymain"/>
+    <addaction name="separator"/>
+    <addaction name="actionlog0"/>
+    <addaction name="actionlog1"/>
    </widget>
    <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actioncentercursor">
    <property name="text">
-    <string>Center cursor</string>
+    <string>Center Cursor</string>
    </property>
   </action>
   <action name="actionshowcursor">
@@ -208,7 +211,17 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Snap to points</string>
+    <string>Snap to Points</string>
+   </property>
+  </action>
+  <action name="actionlog0">
+   <property name="text">
+    <string>Toggle Temperature Log Scale</string>
+   </property>
+  </action>
+  <action name="actionlog1">
+   <property name="text">
+    <string>Toggle Shields Log Scale</string>
    </property>
   </action>
  </widget>
