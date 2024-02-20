@@ -144,7 +144,7 @@ class MainWindow(MainWindowGUI):
         )
         self.actiononlymain.toggled.connect(self.update_plot)
         try:
-            self.load_data(update=False)
+            self.load_data()
         except ValueError:
             pass
 
@@ -204,24 +204,6 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(bool)
     def toggle_temperature(self, value: bool):
         self.plot0.setVisible(value)
-
-    # @staticmethod
-    # def _temperature_label(x: int, y: float):
-    #     return (
-    #         datetime.datetime.fromtimestamp(max(x, 0)).strftime(
-    #             "%m/%d %H:%M:%S"
-    #         )
-    #         + f"\n{y:.3f}"
-    #     )
-
-    # @staticmethod
-    # def _pressure_label(x: int, y: float):
-    #     return (
-    #         datetime.datetime.fromtimestamp(max(x, 0)).strftime(
-    #             "%m/%d %H:%M:%S"
-    #         )
-    #         + f"\n{y:.3g}"
-    #     )
 
     @QtCore.Slot()
     def update_plot(self):
