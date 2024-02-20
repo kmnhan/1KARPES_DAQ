@@ -65,7 +65,6 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             pi.scene().sigMouseMoved.connect(self.mouse_moved)
             pi.setDefaultPadding(0)
             pi.showGrid(x=True, y=True, alpha=1.0)
-            pi.showAxes((True, False, False, True))
         self.plot1.setLogMode(False, True)
 
         self.startdateedit.dateTimeChanged.connect(self.enddateedit.setMinimumDateTime)
