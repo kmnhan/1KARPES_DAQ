@@ -700,6 +700,7 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
         for plot in self.plots:
             if plot.getViewBox() == self.vbs[index]:
                 plot.setLogMode(self.getAxis("bottom").logMode, value)
+        self.vbs[index].enableAutoRange(y=True)
 
     def set_twinx_labels(self, twinx_labels: list[str]):
         self.twinx_labels = twinx_labels
