@@ -486,9 +486,11 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
         self.vout_spin.setValue(float(value))
-        self.dial.blockSignals(True)
-        self.dial.setValue(round(float(value) * 100))
-        self.dial.blockSignals(False)
+
+        if not self.dial.isSliderDown():
+            self.dial.blockSignals(True)
+            self.dial.setValue(round(float(value) * 100))
+            self.dial.blockSignals(False)
 
     @QtCore.Slot(str)
     def update_vset(self, value: str | float):
