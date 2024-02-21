@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -213,7 +214,8 @@ class MainWindow(MainWindowGUI):
     def update_plot(self):
         if self.df is not None:
             self.plot0.set_datalist(
-                self.df.index.values.astype(np.float64) * 1e-9, self.df.values.T
+                self.df.index.values.astype(float) * 1e-9 + time.timezone,
+                self.df.values.T,
             )
         if self.pressure_check.isChecked():
             for i in range(1, 2):
@@ -222,7 +224,7 @@ class MainWindow(MainWindowGUI):
                 )
             if self.df_mg15 is not None:
                 self.plot1.set_datalist(
-                    self.df_mg15.index.values.astype(np.float64) * 1e-9,
+                    self.df_mg15.index.values.astype(float) * 1e-9 + time.timezone,
                     self.df_mg15.values.T,
                 )
 
