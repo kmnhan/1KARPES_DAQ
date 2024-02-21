@@ -386,7 +386,7 @@ class MainWindow(MainWindowGUI):
         if self.heatswitch.regen_check.isChecked():
 
             tol = self.heatswitch.regen_spin.value()
-            val = self.kelvin_values[0]  # TA [K]
+            val = float(self.kelvin_values[0])  # TA [K]
 
             if val > tol:
                 self.heatswitch.regen_check.setChecked(False)
