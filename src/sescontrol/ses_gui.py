@@ -230,7 +230,7 @@ class ScanWorker(QtCore.QRunnable):
 
         if self.has_da:
             # DA maps take time to save even after scan ends, let's try to wait
-            timeout_start = time.monotonic()
+            timeout_start = time.perf_counter()
             fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
             while True:
                 time.sleep(0.2)
@@ -247,7 +247,7 @@ class ScanWorker(QtCore.QRunnable):
                             os.listdir(os.path.join(SES_DIR, "work"))
                         ):
                             break
-                elif self._stop and time.monotonic() > timeout_start + 20:
+                elif self._stop and time.perf_counter() > timeout_start + 20:
                     # SES 상에서 stop after something 누른 다음 stop after point를 통해
                     # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 20초
                     # 기다려서 안 되면 그냥 안 되는갑다 하기
@@ -470,28 +470,10 @@ class ScanType(*uic.loadUiType("scantype.ui")):
         # apply motion limits
         self.update_motor_limits(index)
 
-        # # make two comboboxes mutually exclusive
-        # self.motors[1 - index].combo.blockSignals(True)
-        # self.motors[1 - index].combo.clear()
-        # if self.motors[index].isChecked():
-        #     self.motors[1 - index].combo.addItems(
-        #         [
-        #             ax
-        #             for ax in self.valid_axes
-        #             if ax != self.motors[index].combo.currentText()
-        #         ]
-        #     )
-        # else:
-        #     self.motors[1 - index].combo.addItems(self.valid_axes)
-        # self.motors[1 - index].combo.blockSignals(False)
-
-        # apply motion limits to other combobox (selection may have changed)
-        # self.update_motor_limits(1 - index)
-
     def update_motor_limits(self, index: int):
         """Get motor limits from corresponding plugin and update values."""
         try:
-            plugin = Motor.plugins[self.motors[index].name]
+            plugin: Motor = Motor.plugins[self.motors[index].name]
         except KeyError:
             return
         else:
@@ -752,6 +734,7 @@ class SESShortcuts(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     qapp = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)

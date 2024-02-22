@@ -123,6 +123,7 @@ class SESController(object):
 
     @property
     def alive(self) -> bool:
+        """Returns wheter SES is running."""
         try:
             proc = psutil.Process(self._pid)
         except psutil.NoSuchProcess:

@@ -198,8 +198,8 @@ class DataFetcher(QtCore.QRunnable):
             )
             if not os.path.isfile(filename):
                 filename = filename.replace(".pxt", ".zip")
-                timeout = time.monotonic() + 20
-                while time.monotonic() < timeout:
+                timeout = time.perf_counter() + 20
+                while time.perf_counter() < timeout:
                     if os.path.isfile(filename):
                         if os.stat(filename).st_size != 0:
                             try:
