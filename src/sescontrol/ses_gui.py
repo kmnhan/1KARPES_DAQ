@@ -5,6 +5,8 @@ import os
 import sys
 import time
 import zipfile
+import multiprocessing
+from multiprocessing import shared_memory
 from collections import deque
 from collections.abc import Iterable
 
@@ -192,6 +194,19 @@ class ScanWorker(QtCore.QRunnable):
         self._stop = True
         self._stopnow = True
 
+    def update_seq_start_time(self):
+        """Write current time to shared memory if exists.
+
+        The shared memory is accessed by the attribute server.
+        """
+        try:
+            shm = shared_memory.SharedMemory(name="seq_start")
+        except FileNotFoundError:
+            pass
+        else:
+            np.ndarray((1,), "f8", shm.buf)[0] = datetime.datetime.now().timestamp()
+            shm.close()
+
     def sequence_run_wait(self) -> int:
         """Run sequence and wait until it finishes."""
 
@@ -199,6 +214,8 @@ class ScanWorker(QtCore.QRunnable):
 
         # click run button
         self.click_sequence_button("Run")
+        self.update_seq_start_time()
+
         time.sleep(0.01)
 
         # keep checking for abort during scan
