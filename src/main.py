@@ -4,7 +4,7 @@ import sys
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from attributeserver.widgets import StatusWidget
-from sescontrol.widgets import ScanType, SESController
+from sescontrol.widgets import ScanType, SESShortcuts
 
 
 class MainWindowGUI(*uic.loadUiType("main.ui")):
@@ -14,15 +14,15 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.setupUi(self)
         self.setWindowTitle("1KARPES Data Acquisition")
 
-        self.ses_controls = SESController()
+        self.ses_shortcuts = SESShortcuts()
         self.status = StatusWidget()
         self.scantype = ScanType()
 
-        self.centralWidget().layout().addWidget(self.ses_controls)
+        self.centralWidget().layout().addWidget(self.ses_shortcuts)
         self.centralWidget().layout().addWidget(self.status)
         self.centralWidget().layout().addWidget(self.scantype)
 
-        self.ses_controls.sigAliveChanged.connect(self.scantype.setEnabled)
+        self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
 
 
 class MainWindow(MainWindowGUI):
