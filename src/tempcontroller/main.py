@@ -412,7 +412,9 @@ class MainWindow(MainWindowGUI):
     def refresh(self):
         # Create shareable list on first update
         if self.sl is None:
-            self.sl = shared_memory.ShareableList(self.kelvin_values, name="CurrTemp")
+            self.sl = shared_memory.ShareableList(
+                self.kelvin_values, name="Temperatures"
+            )
 
         for i, (dq, val) in enumerate(zip(self.plot_values[1:], self.kelvin_values)):
             # Update plot value
@@ -492,6 +494,7 @@ class MainWindow(MainWindowGUI):
         # Free shared memory
         self.sl.shm.close()
         self.sl.shm.unlink()
+        self.sl = None
 
         # Stop logging process
         self.log_writer.stop()
