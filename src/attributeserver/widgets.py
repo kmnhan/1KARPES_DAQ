@@ -108,6 +108,9 @@ class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
         self.attr_server.start()
 
         self.update_thread = StatusThread()
+
+        self.update_thread.sigTUpdate.connect(self.update_temperature)
+        self.update_thread.sigPUpdate.connect(self.update_pressure)
         self.update_thread.start()
 
     @QtCore.Slot(object)
@@ -116,7 +119,7 @@ class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
         self.line1.setText(temp[1])
         self.line2.setText(temp[2])
 
-    @QtCore.Slot()
+    @QtCore.Slot(object)
     def update_pressure(self, pressure: list[str]):
         self.line3.setText(pressure[0])
 
