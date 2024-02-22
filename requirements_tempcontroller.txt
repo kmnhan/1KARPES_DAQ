@@ -1,6 +1,6 @@
 pyqtgraph
 numpy
-pyqt6<=6.5.3
+pyqt6
 qtawesome
 qtpy
 pyvisa

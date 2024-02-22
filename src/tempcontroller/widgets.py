@@ -1,3 +1,4 @@
+import os
 import sys
 from collections.abc import Sequence
 
@@ -7,6 +8,11 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 from connection import VISAThread
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class QHLine(QtWidgets.QFrame):
