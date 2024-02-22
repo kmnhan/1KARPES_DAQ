@@ -212,7 +212,7 @@ class ReadingWidgetGUI(QtWidgets.QWidget):
         inputs: Sequence[str],
         names: Sequence[str] | None = None,
         hide_srdg: bool = True,
-        decimals: int = 2,
+        decimals: int = 3,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)

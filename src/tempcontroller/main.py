@@ -123,7 +123,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.readings_336 = ReadingWidget(
             inputs=("A", "B", "C", "D"),
             names=self.config["general"]["names_336"],
-            decimals=3,
+            decimals=4,
         )
         self.readings_218_0 = ReadingWidget(
             inputs=tuple(str(i) for i in range(1, 5)),
