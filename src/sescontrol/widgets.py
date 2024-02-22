@@ -5,15 +5,15 @@ import time
 import humanize
 import numpy as np
 import pyqtgraph as pg
-from liveviewer import LiveImageTool
-from plugins import Motor
 
 sys.coinit_flags = 2
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from sescontrol.ses_win import SESController, get_file_info, next_index
+from sescontrol.liveviewer import LiveImageTool
+from sescontrol.plugins import Motor
 from sescontrol.scan import MotorPosWriter, ScanWorker
+from sescontrol.ses_win import SESController, get_file_info, next_index
 
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553
