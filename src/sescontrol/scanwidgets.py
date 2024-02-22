@@ -84,12 +84,14 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             return None
 
     def set_limits(self, minimum: float | None, maximum: float | None):
-        if minimum is not None:
-            self.start.setMinimum(minimum)
-            self.end.setMinimum(minimum)
-        if maximum is not None:
-            self.start.setMaximum(maximum)
-            self.end.setMaximum(maximum)
+        if minimum is None:
+            minimum = -np.inf
+        if maximum is None:
+            maximum = np.inf
+        self.start.setMinimum(minimum)
+        self.end.setMinimum(minimum)
+        self.start.setMaximum(maximum)
+        self.end.setMaximum(maximum)
 
     def set_default_delta(self, value: float):
         """Set initial value for delta and whether to allow changes."""
@@ -148,6 +150,14 @@ if __name__ == "__main__":
             super().__init__()
             self.channel = SingleMotorSetup()
             self.layout = QtWidgets.QVBoxLayout(self)
+
+            self.channel.set_limits(-0.7, 2.3)
+            self.channel.start.setValue(0.1)
+            self.channel.end.setValue(1)
+            self.channel.delta.setValue(0.1)
+            self.channel.set_limits(None, None)
+            self.channel.set_default_delta(1.0)
+            self.channel.delta.setDisabled(True)
             self.layout.addWidget(self.channel)
 
     qapp = QtWidgets.QApplication.instance()
