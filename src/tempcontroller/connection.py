@@ -1,8 +1,9 @@
-import pyvisa
-from qtpy import QtCore, QtGui, QtWidgets, uic
-import time
-import threading
 import queue
+import threading
+import time
+
+import pyvisa
+from qtpy import QtCore
 
 
 class RequestHandler:

@@ -1,8 +1,6 @@
 import collections
-import configparser
 import csv
 import datetime
-import json
 import multiprocessing
 import os
 import sys
@@ -10,8 +8,6 @@ import time
 from multiprocessing import shared_memory
 
 import numpy as np
-import numpy.typing as npt
-import pyqtgraph as pg
 import pyvisa
 import tomlkit
 from pyqtgraph.dockarea.Dock import Dock

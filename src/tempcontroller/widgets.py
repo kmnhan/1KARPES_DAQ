@@ -1,17 +1,12 @@
 import sys
-from collections.abc import Iterable, Sequence, Callable
+from collections.abc import Sequence
 
-import datetime
-import numpy as np
 import pyqtgraph as pg
-import pyvisa
-from pyqtgraph.dockarea.Dock import Dock
-from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qt_extensions.legendtable import LegendTableView
-from qt_extensions.plotting import XDateSnapCurvePlotDataItem, DynamicPlotItemTwiny
 
 from connection import VISAThread
+from qt_extensions.legendtable import LegendTableView
+from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 
 
 class QHLine(QtWidgets.QFrame):
