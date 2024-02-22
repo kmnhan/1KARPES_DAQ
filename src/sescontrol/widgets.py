@@ -464,17 +464,20 @@ class SESShortcuts(QtWidgets.QWidget):
 
         self.ses: SESController = SESController()
 
-        self.reconnect_timer = QtCore.QTimer(self)
-        self.reconnect_timer.setInterval(500)
-        self.reconnect_timer.timeout.connect(self.check_alive)
+        self.alive_check_timer = QtCore.QTimer(self)
+        self.alive_check_timer.setInterval(500)
+        self.alive_check_timer.timeout.connect(self.check_alive)
         self.check_alive()
-        self.reconnect_timer.start()
+        self.alive_check_timer.start()
 
     @QtCore.Slot()
     def check_alive(self):
         alive = self.ses.alive
         if self.buttons[0].isEnabled() != alive:
             self.sigAliveChanged.emit(alive)
+
+    @QtCore.Slot()
+    def reconnect(self):
         if not self.ses.alive:
             self.ses.try_connect()
 

@@ -23,6 +23,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.centralWidget().layout().addWidget(self.scantype)
 
         self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
+        self.actionreconnect.triggered.connect(self.ses_shortcuts.reconnect)
 
 
 class MainWindow(MainWindowGUI):
