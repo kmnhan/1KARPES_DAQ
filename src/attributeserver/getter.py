@@ -53,7 +53,7 @@ def get_pressure_dict() -> dict[str, str]:
 
 
 def get_temperature_list() -> list[str]:
-    return get_shared_list("Temperatures")
+    return [str(v) for v in get_shared_list("Temperatures")]
 
 
 def get_temperature_dict() -> dict[str, str]:
