@@ -88,7 +88,7 @@
   <customwidget>
    <class>SingleMotorSetup</class>
    <extends>QGroupBox</extends>
-   <header>scanwidgets</header>
+   <header>sescontrol.widgets</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
