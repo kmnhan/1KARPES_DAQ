@@ -98,10 +98,16 @@ def next_index(base_dir: str, base_file: str, valid_ext: Iterable[str]) -> int:
         return int(os.path.splitext(files[-1])[0][len(base_file) :][:4]) + 1
 
 
-class SESController(object):
+class SESController:
     def __init__(self):
-        super().__init__()
-        self._pid, self._hwnd = get_ses_properties()
+        self._pid: int | None = None
+        self.try_connect()
+
+    def try_connect(self):
+        try:
+            self._pid, self._hwnd = get_ses_properties()
+        except RuntimeError:
+            return
         self._ses_app = pywinauto.Application(backend="win32").connect(
             process=self._pid
         )
@@ -124,6 +130,8 @@ class SESController(object):
     @property
     def alive(self) -> bool:
         """Returns wheter SES is running."""
+        if self._pid is None:
+            return False
         try:
             proc = psutil.Process(self._pid)
         except psutil.NoSuchProcess:

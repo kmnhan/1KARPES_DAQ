@@ -31,7 +31,7 @@ import pywinauto.win32functions
 import win32.lib.pywintypes
 from liveviewer import LiveImageTool
 from plugins import Motor
-from scanwidgets import SingleMotorSetup
+from sescontrol.scanwidget import SingleMotorSetup
 from ses_win import SESController, get_file_info, get_ses_properties, next_index
 
 SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
@@ -677,45 +677,36 @@ class SESShortcuts(QtWidgets.QWidget):
         "Sequence Setup": ("Sequence", "Setup..."),
         "Control Theta": ("DA30", "Control Theta..."),
         "Center Deflection": ("DA30", "Center Deflection"),
-        "Run Sequence": ("Sequence", "Run"),
     }
 
     def __init__(self):
         super().__init__()
         self.setMinimumWidth(250)
         self.setWindowTitle("SES Shortcuts")
-        self.setLayout(QtWidgets.QVBoxLayout(self))
-        self.connect()
+        self.setLayout(QtWidgets.QHBoxLayout(self))
         self.create_buttons()
 
-        self.scantype = ScanType()
-        self.scantype.show()
-        self.scantype.activateWindow()
-
-    @property
-    def ses(self) -> SESController:
-        return self._ses
-
-    @ses.setter
-    def ses(self, value: SESController):
-        self._ses = value
+        self.ses: SESController = SESController()
+        self.reconnect_timer = QtCore.QTimer(self)
+        self.reconnect_timer.setInterval(500)
+        self.reconnect_timer.timeout.connect(self.check_alive)
+        self.check_alive()
+        self.reconnect_timer.start()
 
     @QtCore.Slot()
-    def connect(self):
-        while True:
-            try:
-                self.ses = SESController()
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    str(e),
-                    f"Make sure SES.exe is running and the main window is visible.",
-                )
-            else:
-                break
+    def check_alive(self):
+        self.set_buttons_enabled(self.ses.alive)
+        if not self.ses.alive:
+            self.ses.try_connect()
 
     @QtCore.Slot(object)
     def try_click(self, menu_path: tuple[str, str]):
+        if menu_path == self.SES_ACTIONS["Calibrate Voltages"]:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Reminder for MCP protection",
+                "Check the slit number and photon flux!",
+            )
         try:
             self.ses.click_menu(menu_path)
         except Exception as e:
@@ -724,13 +715,19 @@ class SESShortcuts(QtWidgets.QWidget):
                 str(e),
                 f"SES control failed",
             )
-            self.connect()
+            self.check_alive()
+
+    def set_buttons_enabled(self, value: bool):
+        for btn in self.buttons:
+            btn.setEnabled(value)
 
     def create_buttons(self):
+        self.buttons: list[QtWidgets.QPushButton] = []
         for label, path in self.SES_ACTIONS.items():
             btn = QtWidgets.QPushButton(label, self)
             btn.clicked.connect(lambda *, path=path: self.try_click(path))
             self.layout().addWidget(btn)
+            self.buttons.append(btn)
 
 
 if __name__ == "__main__":
