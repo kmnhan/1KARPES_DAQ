@@ -12,9 +12,10 @@ import numpy as np
 import pywinauto
 import pywinauto.win32functions
 import win32.lib.pywintypes
-from plugins import Motor
 from qtpy import QtCore
-from ses_win import get_ses_properties
+
+from sescontrol.plugins import Motor
+from sescontrol.ses_win import get_ses_properties
 
 SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
 
