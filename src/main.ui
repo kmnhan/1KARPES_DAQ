@@ -25,8 +25,20 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionreconnect"/>
+   </widget>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionreconnect">
+   <property name="text">
+    <string>Reconnect to SES</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
