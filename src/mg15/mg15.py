@@ -144,24 +144,6 @@ class MG15(QtCore.QObject):
         self.sigUpdated.emit()
 
     @property
-    def pressures(self) -> list[float]:
-        return [self.get_pressure(ch) for ch in range(1, 7 + 1)]
-
-    pressures_mbar = pressures
-
-    @property
-    def pressures_torr(self) -> list[float]:
-        return [self.get_pressure_torr(ch) for ch in range(1, 7 + 1)]
-
-    @property
-    def pressures_pa(self) -> list[float]:
-        return [self.get_pressure_pa(ch) for ch in range(1, 7 + 1)]
-
-    @property
-    def pressures_psia(self) -> list[float]:
-        return [self.get_pressure_psia(ch) for ch in range(1, 7 + 1)]
-
-    @property
     def states(self) -> list[str]:
         return [self.get_state(ch) for ch in range(1, 7 + 1)]
 
@@ -177,20 +159,24 @@ class MG15(QtCore.QObject):
     def setpoints_source(self) -> list[str]:
         return [self.get_setpoint_source(num) for num in range(1, 10 + 1)]
 
-    def get_pressure(self, channel: int) -> float:
+    def pressures(self, unit: str) -> list[float]:
+        return [self.get_pressure(ch, unit) for ch in range(1, 7 + 1)]
+
+    def get_pressure(self, channel: int, unit: str) -> float:
+        return getattr(self, f"get_pressure_{unit}")(channel)
+
+    def get_pressure_mbar(self, channel: int) -> float:
         idx = channel - 1
         return uint8_to_ieee754(self.registers[3 * idx : 3 * idx + 2])
 
-    get_pressure_mbar = get_pressure
-
     def get_pressure_torr(self, channel: int) -> float:
-        return self.get_pressure(channel) * MBAR_TO_TORR
+        return self.get_pressure_mbar(channel) * MBAR_TO_TORR
 
     def get_pressure_pa(self, channel: int) -> float:
-        return self.get_pressure(channel) * MBAR_TO_PA
+        return self.get_pressure_mbar(channel) * MBAR_TO_PA
 
     def get_pressure_psia(self, channel: int) -> float:
-        return self.get_pressure(channel) * MBAR_TO_PSIA
+        return self.get_pressure_mbar(channel) * MBAR_TO_PSIA
 
     def get_state(self, channel: int) -> str:
         idx = channel - 1

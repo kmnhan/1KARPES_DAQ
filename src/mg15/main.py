@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import sys
 import time
+from multiprocessing import shared_memory
 
 import numpy as np
 import pymodbus
@@ -185,12 +186,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.plotting.plotItem.getAxis("left").setLabel(f"Pressure ({self.log_units})")
         self.plotting.plotItem.getAxis("left").enableAutoSIPrefix(False)
-
         d2.addWidget(self.plotting)
 
         # Setup data array
         self.time_list: list[datetime.datetime] = []
         self.pressure_list: list[list[float]] = []
+
+        # Shared memory for access by other processes
+        # Will be created on initial data update
+        self.sl: shared_memory.ShareableList | None = None
 
         # Connect to MG15
         self.mg15 = mg15.MG15(address)
@@ -217,7 +221,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def write_log(self):
         updated: datetime.datetime = self.mg15.updated
-        pressures: list[float] = getattr(self.mg15, f"pressures_{self.log_units}")
+        pressures: list[float] = self.mg15.pressures(self.log_units)
         self.log_writer.append(updated, pressures)
 
         # Setup plotting
@@ -244,12 +248,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def update_values(self):
-        pressure_func = getattr(self.mg15, f"get_pressure_{self.disp_units}")
+        if self.sl is None:
+            # Create shareable list on first update
+            self.sl = shared_memory.ShareableList(
+                [self.mg15.get_pressure(ch, self.log_units) for ch in self.main_gauges],
+                name="Pressures",
+            )
+
         for i, ch in enumerate(self.main_gauges):
+            # Format & display pressure
             status: str = self.mg15.get_state(ch)
             if status == mg15.GAUGE_STATE[0]:
                 value = (
-                    np.format_float_scientific(pressure_func(ch), 3)
+                    np.format_float_scientific(
+                        self.mg15.get_pressure(ch, self.disp_units), 3
+                    )
                     .replace("e", "E")
                     .replace("-", "−")
                 )
@@ -257,9 +270,21 @@ class MainWindow(QtWidgets.QMainWindow):
                 value = status
             self.pressure_widget.set_value(i, value)
 
+            # Update shareable list
+            self.sl[i] = self.mg15.get_pressure(ch, self.log_units)
+
     def closeEvent(self, *args, **kwargs):
-        self.log_writer.stop()
+        # Halt data acquisition
         self.mg15.disconnect()
+
+        # Free shared memory
+        self.sl.shm.close()
+        self.sl.shm.unlink()
+        self.sl = None
+
+        # Stop logging process
+        self.log_writer.stop()
+
         return super().closeEvent(*args, **kwargs)
 
 
