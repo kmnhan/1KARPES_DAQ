@@ -246,7 +246,7 @@ class MainWindow(MainWindowGUI):
 
         # Shared memory for access by other processes
         # Will be created on initial data update
-        self.sl: shared_memory.ShareableList | None = None
+        self.shm: shared_memory.SharedMemory | None = None
 
         # Initialize temperature controller threads
         self.lake218 = VISAThread("GPIB0::12::INSTR")
@@ -411,16 +411,21 @@ class MainWindow(MainWindowGUI):
 
     def refresh(self):
         # Create shareable list on first update
-        if self.sl is None:
-            self.sl = shared_memory.ShareableList(
-                self.kelvin_values, name="Temperatures"
+
+        klist = self.kelvin_values
+        if self.shm is None:
+            self.shm = shared_memory.SharedMemory(
+                name="Temperatures", create=True, size=8 * len(klist)
             )
 
-        for i, (dq, val) in enumerate(zip(self.plot_values[1:], self.kelvin_values)):
+        arr = np.ndarray((len(klist),), dtype="f8", buffer=self.shm.buf)
+
+        for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], klist)):
             # Update plot value
-            dq.append(float(val))
-            # Update shareable list
-            self.sl[i] = val
+            kval = float(kstr)
+            dq.append(kval)
+            # Update shared memory
+            arr[i] = kval
         self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
 
     @QtCore.Slot(int, object)
@@ -492,9 +497,8 @@ class MainWindow(MainWindowGUI):
         pyvisa.ResourceManager().close()
 
         # Free shared memory
-        self.sl.shm.close()
-        self.sl.shm.unlink()
-        self.sl = None
+        self.shm.close()
+        self.shm.unlink()
 
         # Stop logging process
         self.log_writer.stop()
