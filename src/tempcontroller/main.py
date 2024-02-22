@@ -7,8 +7,10 @@ import multiprocessing
 import os
 import sys
 import time
+from multiprocessing import shared_memory
 
 import numpy as np
+import numpy.typing as npt
 import pyqtgraph as pg
 import pyvisa
 import tomlkit
@@ -242,6 +244,10 @@ class MainWindow(MainWindowGUI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Shared memory for access by other processes
+        # Will be created on initial data update
+        self.sl: shared_memory.ShareableList | None = None
+
         # Initialize temperature controller threads
         self.lake218 = VISAThread("GPIB0::12::INSTR")
         self.lake331 = VISAThread("GPIB0::15::INSTR")
@@ -380,7 +386,7 @@ class MainWindow(MainWindowGUI):
 
         # Wait 100 ms for data to update
         QtCore.QTimer.singleShot(100, self.check_regen)
-        QtCore.QTimer.singleShot(100, self.refresh_plot)
+        QtCore.QTimer.singleShot(100, self.refresh)
 
     def check_regen(self):
         if self.heatswitch.regen_check.isChecked():
@@ -403,9 +409,16 @@ class MainWindow(MainWindowGUI):
         self.heatswitch.trigger_update()
         self.heater2.trigger_update()
 
-    def refresh_plot(self):
-        for dq, val in zip(self.plot_values[1:], self.kelvin_values):
+    def refresh(self):
+        # Create shareable list on first update
+        if self.sl is None:
+            self.sl = shared_memory.ShareableList(self.kelvin_values, name="CurrTemp")
+
+        for i, (dq, val) in enumerate(zip(self.plot_values[1:], self.kelvin_values)):
+            # Update plot value
             dq.append(float(val))
+            # Update shareable list
+            self.sl[i] = val
         self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
 
     @QtCore.Slot(int, object)
@@ -472,9 +485,17 @@ class MainWindow(MainWindowGUI):
         self.log_writer.append(dt, [v.lstrip("+") for v in self.values])
 
     def closeEvent(self, *args, **kwargs):
+        # Halt data acquisition
         self.stop_threads()
         pyvisa.ResourceManager().close()
+
+        # Free shared memory
+        self.sl.shm.close()
+        self.sl.shm.unlink()
+
+        # Stop logging process
         self.log_writer.stop()
+
         super().closeEvent(*args, **kwargs)
 
 
