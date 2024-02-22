@@ -1,8 +1,10 @@
+import threading
+import time
 from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from attributeserver.getter import SLIT_TABLE, get_temperature_list, get_pressure_list
+from attributeserver.getter import SLIT_TABLE, get_pressure_list, get_temperature_list
 from attributeserver.server import AttributeServer
 
 
@@ -69,6 +71,32 @@ class SlitWidget(QtWidgets.QComboBox):
             shm.close()
 
 
+class StatusThread(QtCore.QThread):
+
+    sigTUpdate = QtCore.Signal(object)
+    sigPUpdate = QtCore.Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self.stopped = threading.Event()
+
+    def run(self):
+        self.stopped.clear()
+
+        while not self.stopped.is_set():
+            try:
+                temp = [str(float(v)) for v in get_temperature_list()]
+            except FileNotFoundError:
+                temp = [""] * 3
+            self.sigTUpdate.emit(temp)
+            try:
+                pressure: list[str] = get_pressure_list()
+            except FileNotFoundError:
+                pressure: list[str] = [""]
+            self.sigPUpdate.emit(pressure)
+            time.sleep(0.1)
+
+
 class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
 
     def __init__(self):
@@ -79,34 +107,24 @@ class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
         self.attr_server = AttributeServer()
         self.attr_server.start()
 
-        self.update_timer = QtCore.QTimer(self)
-        self.update_timer.setInterval(100)
-        self.update_timer.timeout.connect(self.update_temperature)
-        self.update_timer.timeout.connect(self.update_pressure)
-        self.update()
-        self.update_timer.start()
+        self.update_thread = StatusThread()
+        self.update_thread.start()
 
-    @QtCore.Slot()
-    def update_temperature(self):
-        try:
-            temp: list[str] = get_temperature_list()
-        except FileNotFoundError:
-            temp: list[str] = [""] * 3
-
+    @QtCore.Slot(object)
+    def update_temperature(self, temp: list[str]):
         self.line0.setText(temp[0])
         self.line1.setText(temp[1])
         self.line2.setText(temp[2])
 
     @QtCore.Slot()
-    def update_pressure(self):
-        try:
-            pressure: list[str] = get_pressure_list()
-        except FileNotFoundError:
-            pressure: list[str] = [""]
-
+    def update_pressure(self, pressure: list[str]):
         self.line3.setText(pressure[0])
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        # Stop update thread
+        self.update_thread.stopped.set()
+        self.update_thread.wait()
+
         # Stop attribute server
         self.attr_server.stopped.set()
         self.attr_server.wait()
