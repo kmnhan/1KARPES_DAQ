@@ -251,8 +251,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.sl is None:
             # Create shareable list on first update
             self.sl = shared_memory.ShareableList(
-                [self.mg15.get_pressure(ch, self.log_units) for ch in self.main_gauges],
-                name="Pressures",
+                [float(0.0)] * len(self.main_gauges), name="Pressures"
             )
 
         for i, ch in enumerate(self.main_gauges):
@@ -266,12 +265,11 @@ class MainWindow(QtWidgets.QMainWindow):
                     .replace("e", "E")
                     .replace("-", "−")
                 )
+                self.sl[i] = float(self.mg15.get_pressure(ch, self.log_units))
             else:
+                self.sl[i] = float(np.nan)
                 value = status
             self.pressure_widget.set_value(i, value)
-
-            # Update shareable list
-            self.sl[i] = self.mg15.get_pressure(ch, self.log_units)
 
     def closeEvent(self, *args, **kwargs):
         # Halt data acquisition
