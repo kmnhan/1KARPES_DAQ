@@ -324,8 +324,8 @@ class MMThread(QtCore.QThread):
 
             delta_list: list[int] = [self._target - self.get_position(self._channel)]
 
-            time_start = time.time()
-            time_list: list[float] = [time.time() - time_start]
+            time_start = time.perf_counter()
+            time_list: list[float] = [time.perf_counter() - time_start]
 
             pulse_reduced = 0
 
@@ -405,7 +405,7 @@ class MMThread(QtCore.QThread):
                 else:
                     pos = self.get_position(self._channel)
                 delta_list.append(self._target - pos)
-                time_list.append(time.time() - time_start)
+                time_list.append(time.perf_counter() - time_start)
 
                 if self.stopped:
                     break

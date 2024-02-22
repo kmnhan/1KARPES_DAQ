@@ -37,22 +37,22 @@ class CameraHandler(QtCore.QThread):
         cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
         frame_rate = 30
-        time_prev = time.time()
+        time_prev = time.perf_counter()
         while self.live:
             cap.set(cv2.CAP_PROP_FOCUS, int(self.focus * 5))
-            dt = time.time() - time_prev
-            ret, image = cap.read()
-            if ret and dt > 1.0 / frame_rate:
-                self.sigGrabbed.emit(image)
-                time_prev = time.time()
-                if self.save_requested:
-                    filename = os.path.join(
-                        SAVE_DIR,
-                        f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S',time.localtime())}.jpg",
-                    )
-                    cv2.imwrite(filename, image)
-                    self.save_requested = False
-            time.sleep(0.005)
+            if time.perf_counter() - time_prev > 1.0 / frame_rate:
+                ret, image = cap.read()
+                if ret:
+                    self.sigGrabbed.emit(image)
+                    time_prev = time.perf_counter()
+                    if self.save_requested:
+                        filename = os.path.join(
+                            SAVE_DIR,
+                            f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S',time.localtime())}.jpg",
+                        )
+                        cv2.imwrite(filename, image)
+                        self.save_requested = False
+            time.sleep(0.001)
         cap.release()
 
     @QtCore.Slot(int)
