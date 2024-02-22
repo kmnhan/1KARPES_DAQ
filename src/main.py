@@ -1,13 +1,10 @@
 import multiprocessing
 import sys
-from multiprocessing import shared_memory
 
-import numpy as np
-import zmq
-from qtpy import QtCore, QtWidgets, uic
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from attributeserver.widgets import SlitWidget
-from attributeserver.server import AttributeServer
+from attributeserver.widgets import StatusWidget
+from sescontrol.widgets import ScanType, SESController
 
 
 class MainWindowGUI(*uic.loadUiType("main.ui")):
@@ -17,20 +14,26 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.setupUi(self)
         self.setWindowTitle("1KARPES Data Acquisition")
 
+        self.ses_controls = SESController()
+        self.status = StatusWidget()
+        self.scantype = ScanType()
+
+        self.centralWidget().layout().addWidget(self.ses_controls)
+        self.centralWidget().layout().addWidget(self.status)
+        self.centralWidget().layout().addWidget(self.scantype)
+
+        self.ses_controls.sigAliveChanged.connect(self.scantype.setEnabled)
+
 
 class MainWindow(MainWindowGUI):
     def __init__(self):
         super().__init__()
-        # Initialize shared memory
-        self.shm_slit = shared_memory.SharedMemory(name="slit_idx", create=True, size=1)
-        self.shm_seq = shared_memory.SharedMemory(name="seq_start", create=True, size=8)
 
-    def closeEvent(self, *args, **kwargs):
-        self.shm_slit.close()
-        self.shm_slit.unlink()
-        self.shm_seq.close()
-        self.shm_seq.unlink()
-        super().closeEvent(*args, **kwargs)
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.scantype.closeEvent(event)
+        if event.isAccepted():
+            self.status.closeEvent(event)
+            super().closeEvent(event)
 
 
 if __name__ == "__main__":
