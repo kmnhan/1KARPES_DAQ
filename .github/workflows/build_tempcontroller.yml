@@ -1,0 +1,38 @@
+name: Build Temperature Controller
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build Temperature Controller
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    # - name: Install UPX
+    #   uses: crazy-max/ghaction-upx@v2
+    #   with:
+    #     install-only: true
+
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Resolving dependencies...
+      run: pip install -r requirements_tempcontroller.txt pyinstaller
+
+    - name: Building...
+      run: pyinstaller tempcontroller.spec
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: Camera Monitor
+        path: dist/tempcontrol/

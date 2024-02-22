@@ -1,0 +1,7 @@
+pyqtgraph
+numpy
+pyqt6<=6.5.3
+qtawesome
+qtpy
+pyvisa
+tomlkit
