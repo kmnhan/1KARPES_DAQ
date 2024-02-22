@@ -8,8 +8,9 @@ import numpy as np
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
 from erlab.interactive.imagetool.controls import ItoolControlsBase
-from plugins import Motor
 from qtpy import QtCore, QtWidgets
+
+from sescontrol.plugins import Motor
 
 
 class MotorThread(threading.Thread):
