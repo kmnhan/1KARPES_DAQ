@@ -6,11 +6,7 @@ import multiprocessing
 import os
 import sys
 import time
-
-try:
-    os.chdir(sys._MEIPASS)
-except:
-    pass
+from multiprocessing import shared_memory
 
 import numpy as np
 from maniserver import ManiServer
@@ -19,7 +15,11 @@ from motionwidgets import DeltaWidget, SingleChannelWidget, SingleControllerWidg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 LOG_DIR = "D:/MotionController/logs"
-# LOG_DIR = os.path.expanduser("~/MotionController/logs")
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class LoggingProc(multiprocessing.Process):
@@ -101,6 +101,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.setupUi(self)
         self.setWindowTitle("Motion Control")
 
+        # Register
+        # self.sl = shared_memory.ShareableList
+
         self.stop_btn.setDefaultAction(self.actionstop)
         self.stopcurrent_btn.setDefaultAction(self.actionstopcurrent)
         self.readpos_btn.setDefaultAction(self.actionreadpos)
@@ -155,13 +158,18 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         # Connect to controllers
         self.connect()
 
+    def register(self):
+        pass
+        # enabled for each channel: 6
+        # tolerance for each channel: 6
+        # lb, ub for each channel: 12
+
     @QtCore.Slot(object)
     def parse_request(self, request: list[str]):
         if len(request) == 0:
             # `?`
-            self.sigReply.emit(
-                self.get_current_positions(0) + self.get_current_positions(1)
-            )
+            self.refresh_positions()
+            self.sigReply.emit(self.current_positions)
         elif request[0] == "STATUS":
             # `? STATUS`
             self.sigReply.emit(self.status)
@@ -283,16 +291,17 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         chx.move()
         chy.move()
 
-    def get_current_positions(self, con_idx: int) -> list[float]:
-        con = self.controllers[con_idx]
-        if con.status != MMStatus.Moving:
-            con.refresh_positions(navg=10)
-        return [ch.current_pos for ch in con.channels]
+    def refresh_positions(self, navg: int = 10):
+        for con in self.controllers:
+            con.refresh_positions(navg=navg)
+
+    @property
+    def current_positions(self) -> tuple[float, float, float, float, float, float]:
+        return sum((con.current_positions for con in self.controllers), tuple())
 
     def get_current_position(self, con_idx: int, channel: int) -> float:
         con = self.controllers[con_idx]
-        if con.status != MMStatus.Moving:
-            con.refresh_position(channel, navg=10)
+        con.refresh_position(channel, navg=10)
         return con.get_channel(channel).current_pos
 
     def connect(self):
@@ -351,7 +360,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
             return
 
-        valid_channels: tuple[list[int]] = tuple(
+        valid_channels: tuple[tuple[int, ...], tuple[int, ...]] = tuple(
             con.valid_channel_numbers for con in self.controllers
         )
 

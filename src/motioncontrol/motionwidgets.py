@@ -392,8 +392,12 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return tuple(ch for ch in self.channels if ch.enabled)
 
     @property
-    def valid_channel_numbers(self) -> list[int]:
-        return [i for i in range(1, 3 + 1) if self.is_channel_enabled(i)]
+    def valid_channel_numbers(self) -> tuple[int,...]:
+        return tuple(i for i in range(1, 3 + 1) if self.is_channel_enabled(i))
+
+    @property
+    def current_positions(self) -> tuple[float, float, float]:
+        return tuple(ch.current_pos for ch in self.channels)
 
     def get_channel(self, channel) -> SingleChannelWidget:
         return self.channels[channel - 1]
@@ -434,8 +438,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(int, int)
     def refresh_position(self, channel: int, navg: int = 1):
         if self.is_channel_enabled(channel):
-            self.mmthread.reset(channel)
-            self.mmthread.get_refreshed_position(channel, navg)
+            if self.status != MMStatus.Moving:
+                self.mmthread.reset(channel)
+                self.mmthread.get_refreshed_position(channel, navg)
 
     @QtCore.Slot()
     def target_current_all(self):
