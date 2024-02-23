@@ -2,6 +2,8 @@ import csv
 import datetime
 import glob
 import os
+import shutil
+import tempfile
 import time
 import zipfile
 from collections import deque
@@ -219,17 +221,22 @@ class ScanWorker(QtCore.QRunnable):
                 time.sleep(0.2)
                 if os.path.isfile(fname) and os.stat(fname).st_size != 0:
                     try:
-                        with zipfile.ZipFile(fname, "r") as _:
-                            # do nothing, just trying to open the file
-                            pass
+                        # Copy the zipfile and try opening
+                        with tempfile.TemporaryDirectory() as tmpdirname:
+                            tmp = shutil.copy(fname, tmpdirname)
+                            with zipfile.ZipFile(tmp, "r") as _:
+                                # Do nothing, just trying to open the file
+                                pass
                     except zipfile.BadZipFile:
                         continue
                     else:
                         # zipfile is intact, check work folder to confirm
-                        if len(workfiles) == len(
-                            os.listdir(os.path.join(SES_DIR, "work"))
-                        ):
-                            break
+                        # <- workfile checking is not reliable, turn off for now
+
+                        # if len(workfiles) == len(
+                        #     os.listdir(os.path.join(SES_DIR, "work"))
+                        # ):
+                        break
                 elif self._stop and time.perf_counter() > timeout_start + 20:
                     # SES 상에서 stop after something 누른 다음 stop after point를 통해
                     # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 20초

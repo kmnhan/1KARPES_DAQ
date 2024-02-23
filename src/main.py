@@ -1,10 +1,17 @@
 import multiprocessing
-import sys
+import sys, os
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from attributeserver.widgets import StatusWidget
 from sescontrol.widgets import ScanType, SESShortcuts
+
+os.environ["QT_API"] = "pyqt6"
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class QHLine(QtWidgets.QFrame):
