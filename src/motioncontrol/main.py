@@ -397,9 +397,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.server.stopped.set()
         self.server.wait(2000)
 
-        # close plots
+        # Handle controller close events
         for con in self.controllers:
-            con.plot.close()
+            con.close()
         super().closeEvent(*args, **kwargs)
 
 

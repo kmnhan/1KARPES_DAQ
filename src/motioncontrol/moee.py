@@ -4,7 +4,9 @@ import enum
 import logging
 import socket
 import sys
+import threading
 import time
+from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -191,22 +193,17 @@ class MMThread(QtCore.QThread):
             if self.mmrecv() == 0:
                 break
 
-    def get_refreshed_position(
-        self,
-        channel: int,
-        navg: int = 1,
-    ) -> int:
-        # Just reading the position will not return the correct values... probably
-        # controller error? So actuate with 0V first
+    def _set_reading_params(self, channel: int) -> None:
+        # Set controller parameters for position reading: 0 volts and max frequency.
         self.set_pulse_train(channel, 1)
         self.set_amplitude(channel, 0)
         self.set_frequency(channel, 500)
         self.set_direction(channel, 1)
 
+    def _read_averaged_position(self, channel: int, navg: int):
         vals: list[int] = []
         for _ in range(navg):
-            self.mmsend(MMCommand.SENDSIGONCE, channel)
-            self.mmrecv()
+            self._send_signal_once(channel)
             vals.append(self.get_position(channel, emit=False))
         avg = sum(vals) / len(vals)
         if navg == 1:
@@ -217,6 +214,20 @@ class MMThread(QtCore.QThread):
         avg = round(avg)
         self.sigPosRead.emit(channel, avg)
         return avg
+
+    def _send_signal_once(self, channel: int) -> None:
+        self.mmsend(MMCommand.SENDSIGONCE, int(channel))
+        self.mmrecv()
+
+    def get_refreshed_position(
+        self,
+        channel: int,
+        navg: int = 1,
+    ) -> int:
+        # Just reading the position will not return the correct values... probably
+        # controller error? So actuate with 0V first
+        self._set_reading_params(channel)
+        return self._read_averaged_position(channel, navg)
 
     def get_refreshed_position_live(
         self, channel: int, navg: int, pulse_train: int, direction: int
@@ -292,13 +303,13 @@ class MMThread(QtCore.QThread):
         log.info(
             f"Initializing parameters {channel} {target} {frequency} {amplitude} {threshold}"
         )
-        self._channel = int(channel)
-        self._target = int(target)
-        self._sigtime = frequency
-        self._amplitudes = amplitude
-        self._threshold = int(abs(threshold))
-        self._high_precision = high_precision
-        self.initialized = True
+        self._channel: int = int(channel)
+        self._target: int = int(target)
+        self._sigtime: int = frequency
+        self._amplitudes: tuple[int, int] = amplitude
+        self._threshold: int = int(abs(threshold))
+        self._high_precision: bool = high_precision
+        self.initialized: bool = True
 
     def run(self):
         if not self.initialized:
@@ -394,10 +405,11 @@ class MMThread(QtCore.QThread):
                         # set amplitude if not set
                         self.set_amplitude(self._channel, self._amplitudes[direction])
 
-                # send signal & read position
+                # send signal
                 self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
                 self.mmrecv()
 
+                # read position
                 if self._high_precision and pulse_reduced == 3:
                     pos = self.get_refreshed_position_live(
                         self._channel, navg=20, pulse_train=1, direction=direction
@@ -414,6 +426,48 @@ class MMThread(QtCore.QThread):
             log.exception("Exception while moving!")
         self.initialized = False
         self.sigMoveFinished.emit(self._channel)
+
+
+class EncoderThread(QtCore.QThread):
+
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget | None = None,
+        *,
+        mmthread: MMThread,
+        slname: str,
+    ):
+        super().__init__(parent=parent)
+        self.mmthread: MMThread = mmthread
+        self.stopped: threading.Event = threading.Event()
+        # self.mutex: QtCore.QMutex | None = None
+        self.slname: str = slname
+
+    def run(self):
+        # self.mutex = QtCore.QMutex()
+        if self.mmthread.initialized or self.mmthread.isRunning:
+            log.warning("EncoderThread started while mmthread is active.")
+            return
+
+        sl = shared_memory.ShareableList(name=self.slname)
+
+        for ch in range(1, 4):
+            self.mmthread._set_reading_params(ch)
+
+        self.stopped.clear()
+        while not self.stopped.is_set():
+            for i, ch in enumerate(range(1, 4)):
+                if sl[i]:
+                    if self.mmthread.initialized:
+                        # Motion is about to start
+                        log.warning("MMThread init detected. This should not happen")
+                        self.stopped.set()
+                        break
+                    self.mmthread._send_signal_once(ch)
+                    self.mmthread.get_position(ch, emit=True)
+
+        sl.shm.close()
+        del sl
 
 
 if __name__ == "__main__":

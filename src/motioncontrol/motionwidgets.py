@@ -4,11 +4,12 @@ import threading
 import time
 import tomllib
 from collections.abc import Sequence
+from multiprocessing import shared_memory
 
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from moee import MMCommand, MMStatus, MMThread
+from moee import MMCommand, MMStatus, MMThread, EncoderThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 CONFIG_FILE = "D:/MotionController/piezomotors.toml"
@@ -78,7 +79,9 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.checkbox.toggled.connect(self.refresh_enabled)
+
+        self.sigEnabledChanged = self.checkbox.toggled
+        self.sigEnabledChanged.connect(self.refresh_enabled)
         self.checkbox.setChecked(True)
         self.status = MotorStatus(self)
         self.layout().addWidget(self.status)
@@ -353,6 +356,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         for i, ch in enumerate(self.channels):
             self.layout().addWidget(ch)
             ch.checkbox.setText(f"Ch{i+1}")
+            ch.sigEnabledChanged.connect(lambda *, idx=i: self.refresh_shm(idx))
         self.ch1.sigMoveRequested.connect(self.move_ch1)
         self.ch2.sigMoveRequested.connect(self.move_ch2)
         self.ch3.sigMoveRequested.connect(self.move_ch3)
@@ -371,6 +375,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.plot = MotionPlot()
         self.plot.setLabel("bottom", text="Time", units="s")
         self.plot.setLabel("left", text="Remaining", units="m")
+
+        # Setup shared memory of enabled channels
+        self.sl = shared_memory.ShareableList([ch.enabled for ch in self.channels])
+
+        # Initialize position encoding thread.
+        # This thread will read position when MMThread is not active.
+        self.encoder = EncoderThread(mmthread=self.mmthread, slname=self.sl.shm.name)
 
     @property
     def status(self) -> MMStatus:
@@ -392,14 +403,14 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return tuple(ch for ch in self.channels if ch.enabled)
 
     @property
-    def valid_channel_numbers(self) -> tuple[int,...]:
+    def valid_channel_numbers(self) -> tuple[int, ...]:
         return tuple(i for i in range(1, 3 + 1) if self.is_channel_enabled(i))
 
     @property
     def current_positions(self) -> tuple[float, float, float]:
         return tuple(ch.current_pos for ch in self.channels)
 
-    def get_channel(self, channel) -> SingleChannelWidget:
+    def get_channel(self, channel: int) -> SingleChannelWidget:
         return self.channels[channel - 1]
 
     def is_channel_enabled(self, channel: int) -> bool:
@@ -412,6 +423,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     def write_log(self, entry: str | list[str]):
         self.writeLog.emit(entry)
+
+    def refresh_shm(self, idx: int) -> None:
+        self.sl[idx] = self.channels[idx].enabled
 
     @QtCore.Slot(object)
     def get_capacitance(self) -> list[str]:
@@ -456,6 +470,19 @@ class SingleControllerWidget(QtWidgets.QWidget):
         delta_abs = -self.get_channel(channel).cal_A * np.asarray(delta)
         self.plot.curve.setData(x=dt, y=delta_abs * 1e-3)
 
+    @QtCore.Slot()
+    def start_encoding(self):
+        # Start encoder thread.
+        if not self.encoder.isRunning():
+            self.encoder.start()
+
+    @QtCore.Slot()
+    def stop_encoding(self):
+        # Start encoder thread.
+        if self.encoder.isRunning():
+            self.encoder.stopped.set()
+            self.encoder.wait()
+
     @QtCore.Slot(int)
     def move_started(self, channel: int):
         # Disable input on channels
@@ -479,9 +506,12 @@ class SingleControllerWidget(QtWidgets.QWidget):
             ch.set_motion_busy(False)
         self.get_channel(channel).status.setState(False)
 
-        # If queue has remaining items, move
+        # If queue has remaining items, move.
+        # Otherwise, start position encoding thread.
         if not self.queue.empty():
             self._move()
+        else:
+            self.start_encoding()
 
     @QtCore.Slot()
     def refresh_plot_visibility(self):
@@ -542,6 +572,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
             self.queue.task_done()
             return
 
+        # Stop encoder before motion start
+        self.stop_encoding()
+
         # Set motion parameters
         kwargs["threshold"] = ch.tolerance
         if ch.abs_tolerance < 1e-3:
@@ -558,7 +591,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         """Connect to motor controller. Displays a message box on failure."""
         while True:
             try:
-                self.mmthread.connect(self.address)
+                self.connect_raise()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(
                     self,
@@ -567,7 +600,6 @@ class SingleControllerWidget(QtWidgets.QWidget):
                     "on and connected. If the problem persists, try restarting the "
                     "server process on the controller.",
                 )
-                self.mmthread.sock.close()
             else:
                 break
 
@@ -581,7 +613,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 self.mmthread.sock.close()
                 raise e
             else:
-                break
+                self.start_encoding()
 
     @QtCore.Slot()
     def empty_queue(self):
@@ -609,6 +641,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def disconnect(self):
         self.stop()
+        # Encoding must be stopped after mmthread is stopped
+        self.stop_encoding()
         self.mmthread.disconnect()
 
     @QtCore.Slot()
@@ -624,6 +658,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
             )
         else:
             self.connect()
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.stop_encoding()
+        self.plot.close()
+        self.sl.shm.close()
+        self.sl.shm.unlink()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":
