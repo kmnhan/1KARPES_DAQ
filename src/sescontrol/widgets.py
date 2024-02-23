@@ -289,9 +289,13 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         base_dir, base_file, valid_ext, _, sequences = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
 
-        has_da = any(seq["run mode"] == "ARPES Mapping" for seq in sequences)
+        seq_is_da: list[bool] = [
+            seq["run mode"] == "ARPES Mapping" for seq in sequences
+        ]
+        has_da = any(seq_is_da)
+        only_da = all(seq_is_da)
 
-        if has_da:
+        if only_da:
             self.itool = None
         else:
             self.itool = LiveImageTool(threadpool=self.threadpool)
@@ -380,7 +384,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         for m in self.motors:
             m.setDisabled(True)
         self.start_btn.setDisabled(True)
-        self.damap_check.setDisabled(True)
         self.stop_btn.setDisabled(False)
         self.stop_point_btn.setDisabled(False)
         if self.itool is not None:
@@ -399,7 +402,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         for m in self.motors:
             m.setDisabled(False)
         self.start_btn.setDisabled(False)
-        self.damap_check.setDisabled(False)
         self.stop_btn.setDisabled(True)
         self.stop_point_btn.setText("Stop After Point")
         self.stop_point_btn.setDisabled(True)
