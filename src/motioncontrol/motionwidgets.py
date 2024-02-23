@@ -640,24 +640,26 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def disconnect(self):
-        self.stop()
-        # Encoding must be stopped after mmthread is stopped
-        self.stop_encoding()
-        self.mmthread.disconnect()
+        if self.isEnabled():
+            self.stop()
+            # Encoding must be stopped after mmthread is stopped
+            self.stop_encoding()
+            self.mmthread.disconnect()
 
     @QtCore.Slot()
     def reconnect(self):
-        try:
-            self.disconnect()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(
-                self,
-                str(e),
-                f"Disconnecting {self.address} failed. If the problem persists, try "
-                "restarting the server process on the controller.",
-            )
-        else:
-            self.connect()
+        if self.isEnabled():
+            try:
+                self.disconnect()
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    str(e),
+                    f"Disconnecting {self.address} failed. If the problem persists, try "
+                    "restarting the server process on the controller.",
+                )
+            else:
+                self.connect()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         self.stop_encoding()
