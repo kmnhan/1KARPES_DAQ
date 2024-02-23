@@ -313,7 +313,7 @@ class MMThread(QtCore.QThread):
 
     def run(self):
         if not self.initialized:
-            log.warning("MMSocket was not initialized prior to execution.")
+            log.warning("MMThread was not initialized prior to execution.")
             return
 
         self.sigMoveStarted.emit(self._channel)
@@ -445,7 +445,7 @@ class EncoderThread(QtCore.QThread):
 
     def run(self):
         # self.mutex = QtCore.QMutex()
-        if self.mmthread.initialized or self.mmthread.isRunning:
+        if self.mmthread.initialized or self.mmthread.isRunning():
             log.warning("EncoderThread started while mmthread is active.")
             return
 

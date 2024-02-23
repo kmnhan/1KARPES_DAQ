@@ -309,7 +309,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             try:
                 con.connect_raise()
             except Exception as e:
-                con.disable()
+                con.disable()    
+            con.start_encoding()
 
     def disconnect(self):
         for con in self.controllers:

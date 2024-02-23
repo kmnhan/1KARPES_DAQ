@@ -473,13 +473,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def start_encoding(self):
         # Start encoder thread.
-        if not self.encoder.isRunning():
+        if self.isEnabled() and not self.encoder.isRunning():
             self.encoder.start()
 
     @QtCore.Slot()
     def stop_encoding(self):
-        # Start encoder thread.
-        if self.encoder.isRunning():
+        # Stop encoder thread.
+        if self.isEnabled() and self.encoder.isRunning():
             self.encoder.stopped.set()
             self.encoder.wait()
 
@@ -613,7 +613,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 self.mmthread.sock.close()
                 raise e
             else:
-                self.start_encoding()
+                break
 
     @QtCore.Slot()
     def empty_queue(self):
