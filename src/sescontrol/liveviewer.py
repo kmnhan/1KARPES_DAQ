@@ -457,7 +457,27 @@ class WorkFileImageTool(BaseImageTool):
             )
         else:
             arr = xr.DataArray(arr)
-        self.slicer_area.set_data(arr)
+
+        if self.array_slicer._obj.shape == arr.shape:
+            self.array_slicer._obj[:] = arr.values
+            for prop in (
+                "nanmax",
+                "nanmin",
+                "absnanmax",
+                "absnanmin",
+                # "coords",
+                # "coords_uniform",
+                # "incs",
+                # "incs_uniform",
+                # "lims",
+                # "lims_uniform",
+                "data_vals_T",
+            ):
+                self.array_slicer.reset_property_cache(prop)
+            self.slicer_area.refresh_all()
+        else:
+            self.slicer_area.set_data(arr)
+
         self.setWindowTitle(f"work: {region}")
 
 
