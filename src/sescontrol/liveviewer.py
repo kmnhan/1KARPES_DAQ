@@ -387,6 +387,10 @@ class WorkFileImageTool(BaseImageTool):
         widget.setLayout(QtWidgets.QVBoxLayout())
         widget.layout().setContentsMargins(0, 0, 0, 0)
 
+        lowerwidget = QtWidgets.QWidget()
+        lowerwidget.setLayout(QtWidgets.QHBoxLayout())
+        lowerwidget.layout().setContentsMargins(0, 0, 0, 0)
+
         self.region_combo = QtWidgets.QComboBox()
         self.region_combo.currentTextChanged.connect(self.reload)
 
@@ -396,9 +400,10 @@ class WorkFileImageTool(BaseImageTool):
         self.reload_btn = QtWidgets.QPushButton("Load")
         self.reload_btn.clicked.connect(self.reload)
 
+        lowerwidget.layout().addWidget(self.norm_check)
+        lowerwidget.layout().addWidget(self.reload_btn)
         widget.layout().addWidget(self.region_combo)
-        widget.layout().addWidget(self.norm_check)
-        widget.layout().addWidget(self.reload_btn)
+        widget.layout().addWidget(lowerwidget)
 
         load_dock = QtWidgets.QDockWidget("Work file", self)
         load_dock.setFeatures(
