@@ -452,8 +452,8 @@ class SESShortcuts(QtWidgets.QWidget):
 
     SES_ACTIONS: dict[str, tuple[str, str]] = {
         "Calibrate Voltages": ("Calibration", "Voltages..."),
-        "File Options": ("Setup", "File Options..."),
-        "Sequence Setup": ("Sequence", "Setup..."),
+        "File Opts.": ("Setup", "File Options..."),
+        "Sequences": ("Sequence", "Setup..."),
         "Control Theta": ("DA30", "Control Theta..."),
         "Center Deflection": ("DA30", "Center Deflection"),
     }
@@ -463,6 +463,7 @@ class SESShortcuts(QtWidgets.QWidget):
         self.setMinimumWidth(250)
         self.setWindowTitle("SES Shortcuts")
         self.setLayout(QtWidgets.QHBoxLayout(self))
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.create_buttons()
 
@@ -513,7 +514,8 @@ class SESShortcuts(QtWidgets.QWidget):
     def create_buttons(self):
         self.buttons: list[QtWidgets.QPushButton] = []
         for label, path in self.SES_ACTIONS.items():
-            btn = QtWidgets.QPushButton(label, self)
+            btn = QtWidgets.QPushButton(label)
             btn.clicked.connect(lambda *, path=path: self.try_click(path))
             self.layout().addWidget(btn)
+            btn.setMinimumWidth(btn.fontMetrics().boundingRect(btn.text()).width() + 14)
             self.buttons.append(btn)

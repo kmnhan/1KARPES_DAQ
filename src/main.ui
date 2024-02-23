@@ -6,9 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>295</width>
-    <height>238</height>
+    <width>494</width>
+    <height>239</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Arial</family>
+   </font>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -21,8 +26,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>295</width>
-     <height>21</height>
+     <width>494</width>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">

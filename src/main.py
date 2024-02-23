@@ -7,6 +7,13 @@ from attributeserver.widgets import StatusWidget
 from sescontrol.widgets import ScanType, SESShortcuts
 
 
+class QHLine(QtWidgets.QFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+        self.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+
+
 class MainWindowGUI(*uic.loadUiType("main.ui")):
 
     def __init__(self):
@@ -20,6 +27,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.centralWidget().layout().addWidget(self.ses_shortcuts)
         self.centralWidget().layout().addWidget(self.status)
+        self.centralWidget().layout().addWidget(QHLine())
         self.centralWidget().layout().addWidget(self.scantype)
 
         self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
@@ -39,9 +47,7 @@ class MainWindow(MainWindowGUI):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
-    if not qapp:
-        qapp = QtWidgets.QApplication(sys.argv)
+    qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
     win = MainWindow()
     win.show()
