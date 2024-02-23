@@ -52,7 +52,7 @@ def get_ses_properties() -> tuple[int, int]:
     return proc.pid, get_ses_window(proc)
 
 
-def get_file_info() -> tuple[str, str, set[str], int]:
+def get_file_info() -> tuple[str, str, set[str], int, list[dict[str, str]]]:
     """
     Reads the `factory.seq` file in the SES folder to determine where the current data
     is being saved.
@@ -79,7 +79,12 @@ def get_file_info() -> tuple[str, str, set[str], int]:
         spec.get("spectrum file extension", ".pxt").split(",")
     )
 
-    return base_dir, base_file, valid_ext, spec.get("saveafter")
+    seq_enabled: list[dict[str, str]] = []
+    for v in config.values():
+        if int(v.get("Enabled", 0)):
+            seq_enabled.append(dict(v))
+
+    return base_dir, base_file, valid_ext, spec.get("saveafter"), seq_enabled
 
 
 def next_index(base_dir: str, base_file: str, valid_ext: Iterable[str]) -> int:

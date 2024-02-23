@@ -286,10 +286,12 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 return
 
         # get file information
-        base_dir, base_file, valid_ext, _ = get_file_info()
+        base_dir, base_file, valid_ext, _, sequences = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
 
-        if self.damap_check.isChecked():
+        has_da = any(seq["run mode"] == "ARPES Mapping" for seq in sequences)
+
+        if has_da:
             self.itool = None
         else:
             self.itool = LiveImageTool(threadpool=self.threadpool)
@@ -306,12 +308,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 motor_args=motor_args,
             )
         scan_worker = ScanWorker(
-            motor_args,
-            base_dir,
-            base_file,
-            data_idx,
-            valid_ext,
-            self.damap_check.isChecked(),
+            motor_args, base_dir, base_file, data_idx, valid_ext, has_da
         )
         scan_worker.signals.sigStepFinished.connect(self.step_finished)
         scan_worker.signals.sigStepFinished.connect(self.update_live)
