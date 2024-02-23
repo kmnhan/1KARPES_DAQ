@@ -385,17 +385,22 @@ class WorkFileImageTool(BaseImageTool):
 
         widget = QtWidgets.QWidget()
         widget.setLayout(QtWidgets.QVBoxLayout())
+        widget.layout().setContentsMargins(0, 0, 0, 0)
+
         self.region_combo = QtWidgets.QComboBox()
         self.region_combo.currentTextChanged.connect(self.reload)
-        self.norm_check = QtWidgets.QCheckBox()
+
+        self.norm_check = QtWidgets.QCheckBox("Norm")
         self.norm_check.toggled.connect(self.reload)
+
         self.reload_btn = QtWidgets.QPushButton("Load")
         self.reload_btn.clicked.connect(self.reload)
+
         widget.layout().addWidget(self.region_combo)
         widget.layout().addWidget(self.norm_check)
         widget.layout().addWidget(self.reload_btn)
 
-        load_dock = QtWidgets.QDockWidget("Motors", self)
+        load_dock = QtWidgets.QDockWidget("Work file", self)
         load_dock.setFeatures(
             QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
         )
