@@ -11,7 +11,7 @@ sys.coinit_flags = 2
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from sescontrol.liveviewer import LiveImageTool
+from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
 from sescontrol.scan import MotorPosWriter, ScanWorker
 from sescontrol.ses_win import SESController, get_file_info, next_index
@@ -187,6 +187,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.current_file: str | None = None
         self.start_time: float | None = None
         self.step_times: list[float] = []
+        
+        self.workfileitool = WorkFileImageTool()
 
         self._itools: list[LiveImageTool | None] = []
 

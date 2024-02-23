@@ -1,3 +1,4 @@
+import configparser
 import os
 import threading
 import time
@@ -11,6 +12,7 @@ from erlab.interactive.imagetool.controls import ItoolControlsBase
 from qtpy import QtCore, QtWidgets
 
 from sescontrol.plugins import Motor
+from sescontrol.ses_win import SES_DIR
 
 
 class MotorThread(threading.Thread):
@@ -370,3 +372,103 @@ class LiveImageTool(BaseImageTool):
             ):
                 self.array_slicer.reset_property_cache(prop)
             self.slicer_area.refresh_all()
+
+
+class WorkFileImageTool(BaseImageTool):
+    def __init__(self, parent=None):
+        super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
+
+        self.workdir = os.path.join(SES_DIR, "work")
+
+        for d in self.docks:
+            d.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+
+        widget = QtWidgets.QWidget()
+        widget.setLayout(QtWidgets.QVBoxLayout())
+        self.region_combo = QtWidgets.QComboBox()
+        self.region_combo.currentTextChanged.connect(self.reload)
+        self.norm_check = QtWidgets.QCheckBox()
+        self.norm_check.toggled.connect(self.reload)
+        self.reload_btn = QtWidgets.QPushButton("Load")
+        self.reload_btn.clicked.connect(self.reload)
+        widget.layout().addWidget(self.region_combo)
+        widget.layout().addWidget(self.norm_check)
+        widget.layout().addWidget(self.reload_btn)
+
+        load_dock = QtWidgets.QDockWidget("Motors", self)
+        load_dock.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+        )
+        load_dock.setWidget(self.widget_box(widget))
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, load_dock)
+
+        self.regions: list[str] = []
+        self.regionscan_timer = QtCore.QTimer(self)
+        self.regionscan_timer.setInterval(500)
+        self.regionscan_timer.timeout.connect(self.update_regions)
+        self.regionscan_timer.start()
+
+        self.mnb = ItoolMenuBar(self.slicer_area, self)
+
+    def update_regions(self):
+        """Scan for regions in work directory."""
+        regions: list[str] = []
+        for f in os.listdir(self.workdir):
+            if f.startswith("Spectrum_") and f.endswith("_Norm.bin"):
+                regions.append(f[9:-9])
+        if set(regions) == set(self.regions):
+            return
+        else:
+            self.regions = regions
+            self.region_combo.clear()
+            self.region_combo.addItems(self.regions)
+
+    def reload(self):
+        region: str = self.region_combo.currentText()
+
+        if self.norm_check.isChecked():
+            binfile: str = f"Spectrum_{region}_Norm.bin"
+        else:
+            binfile: str = f"Spectrum_{region}.bin"
+
+        if not os.path.isfile(binfile):
+            print("File not found, abort")
+            return
+
+        arr = np.fromfile(os.path.join(self.workdir, binfile), dtype=np.float32)
+
+        ini_file = os.path.join(self.workdir, f"Spectrum_{region}.ini")
+        if os.path.isfile(ini_file):
+            region_info = parse_ini(ini_file)["spectrum"]
+            shape, coords = get_shape_and_coords(region_info)
+            arr = xr.DataArray(
+                arr.reshape(shape), coords=coords, name=region_info["name"]
+            )
+        else:
+            arr = xr.DataArray(arr)
+        self.slicer_area.set_data(arr)
+        self.setWindowTitle(f"work: {region}")
+
+
+def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
+    shape: list[int] = []
+    coords = dict()
+    for d in ("depth", "height", "width"):
+        n = int(region_info[d])
+        offset = float(region_info[f"{d}offset"])
+        delta = float(region_info[f"{d}delta"])
+        shape.append(n)
+        coords[region_info[f"{d}label"]] = np.linspace(
+            offset, offset + (n - 1) * delta, n
+        )
+    return tuple(shape), coords
+
+
+def parse_ini(filename):
+    parser = configparser.ConfigParser(strict=False)
+    out = dict()
+    with open(filename, "r") as f:
+        parser.read_file(f)
+        for section in parser.sections():
+            out[section] = dict(parser.items(section))
+    return out

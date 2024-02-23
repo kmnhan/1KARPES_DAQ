@@ -27,7 +27,7 @@
      <x>0</x>
      <y>0</y>
      <width>494</width>
-     <height>23</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -36,12 +36,24 @@
     </property>
     <addaction name="actionreconnect"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionworkfile"/>
+   </widget>
    <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionreconnect">
    <property name="text">
     <string>Reconnect to SES</string>
+   </property>
+  </action>
+  <action name="actionworkfile">
+   <property name="text">
+    <string>Show Workfile Viewer</string>
    </property>
   </action>
  </widget>

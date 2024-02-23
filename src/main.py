@@ -39,6 +39,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
         self.actionreconnect.triggered.connect(self.ses_shortcuts.reconnect)
+        self.actionworkfile.triggered.connect(self.scantype.workfileitool.show)
 
 
 class MainWindow(MainWindowGUI):
