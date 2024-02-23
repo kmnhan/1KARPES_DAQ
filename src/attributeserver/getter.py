@@ -100,12 +100,12 @@ def get_seqstart_dict() -> dict[str, str]:
 
 
 def get_attribute_dict() -> dict[str, str]:
-    attrs = {}
+    attrs = {"attrs_time": datetime.datetime.now().isoformat()}
     for fn in (
+        get_seqstart_dict,
         get_temperature_dict,
         get_pressure_dict,
         get_slit_dict,
-        get_seqstart_dict,
     ):
         try:
             d = fn()

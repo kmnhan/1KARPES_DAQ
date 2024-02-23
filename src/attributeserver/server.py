@@ -9,7 +9,7 @@ from attributeserver.getter import get_header
 
 
 class AttributeServer(QtCore.QThread):
-    PORT = 5558
+    PORT = 5556
     sigSocketBound = QtCore.Signal()
     sigSocketClosed = QtCore.Signal()
 
