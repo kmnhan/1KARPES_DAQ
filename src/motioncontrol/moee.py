@@ -8,7 +8,7 @@ import threading
 import time
 from multiprocessing import shared_memory
 
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtGui, QtWidgets
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -59,7 +59,9 @@ class MMThread(QtCore.QThread):
 
     sigCapRead(channel, value)
 
-    sigPosRead(channel, value)s
+    sigPosRead(channel, value)
+
+    sigAvgPosRead(channel, value)
 
     """
 
@@ -67,6 +69,7 @@ class MMThread(QtCore.QThread):
     sigMoveFinished = QtCore.Signal(int)
     sigCapRead = QtCore.Signal(int, float)
     sigPosRead = QtCore.Signal(int, int)
+    sigAvgPosRead = QtCore.Signal(int, float)
     sigDeltaChanged = QtCore.Signal(int, object, object)
 
     def __init__(self, parent=None):
@@ -200,20 +203,19 @@ class MMThread(QtCore.QThread):
         self.set_frequency(channel, 500)
         self.set_direction(channel, 1)
 
-    def _read_averaged_position(self, channel: int, navg: int):
+    def _read_averaged_position(
+        self, channel: int, navg: int
+    ) -> tuple[int | float, float]:
         vals: list[int] = []
         for _ in range(navg):
             self._send_signal_once(channel)
             vals.append(self.get_position(channel, emit=False))
-        avg = sum(vals) / len(vals)
+
         if navg == 1:
-            log.info(f"Read pos {avg:.2f}")
+            return vals[0], 0.0
         else:
-            std = (sum([abs(v - avg) ** 2 for v in vals]) / len(vals)) ** (1 / 2)
-            log.info(f"Read pos {avg:.2f} ± {std:.2f}")
-        avg = round(avg)
-        self.sigPosRead.emit(channel, avg)
-        return avg
+            avg = float(sum(vals) / len(vals))
+            return avg, (sum([abs(v - avg) ** 2 for v in vals]) / len(vals)) ** (1 / 2)
 
     def _send_signal_once(self, channel: int) -> None:
         self.mmsend(MMCommand.SENDSIGONCE, int(channel))
@@ -223,11 +225,21 @@ class MMThread(QtCore.QThread):
         self,
         channel: int,
         navg: int = 1,
-    ) -> int:
+    ) -> int | float:
         # Just reading the position will not return the correct values... probably
         # controller error? So actuate with 0V first
         self._set_reading_params(channel)
-        return self._read_averaged_position(channel, navg)
+
+        avg, std = self._read_averaged_position(channel, navg)
+
+        if navg == 1:
+            log.info(f"Read pos {avg}")
+            self.sigPosRead.emit(channel, avg)
+        else:
+            log.info(f"Read pos {avg:.2f} ± {std:.2f}")
+            self.sigAvgPosRead.emit(channel, avg)
+
+        return avg
 
     def get_refreshed_position_live(
         self, channel: int, navg: int, pulse_train: int, direction: int
@@ -333,7 +345,9 @@ class MMThread(QtCore.QThread):
             # set frequency
             self.set_frequency(self._channel, self._sigtime)
 
-            delta_list: list[int] = [self._target - self.get_position(self._channel)]
+            delta_list: list[int | float] = [
+                self._target - self.get_position(self._channel)
+            ]
 
             time_start = time.perf_counter()
             time_list: list[float] = [time.perf_counter() - time_start]
@@ -435,26 +449,27 @@ class EncoderThread(QtCore.QThread):
         parent: QtWidgets.QWidget | None = None,
         *,
         mmthread: MMThread,
-        slname: str,
+        sharedmem: str,
     ):
         super().__init__(parent=parent)
         self.mmthread: MMThread = mmthread
         self.stopped: threading.Event = threading.Event()
-        # self.mutex: QtCore.QMutex | None = None
-        self.slname: str = slname
+        self.sharedmem: str = sharedmem
 
     def run(self):
-        # self.mutex = QtCore.QMutex()
         if self.mmthread.initialized or self.mmthread.isRunning():
             log.warning("EncoderThread started while mmthread is active.")
             return
 
-        sl = shared_memory.ShareableList(name=self.slname)
+        sl = shared_memory.ShareableList(name=self.sharedmem)
 
         for ch in range(1, 4):
             self.mmthread._set_reading_params(ch)
 
         self.stopped.clear()
+
+        navg: int = 20
+        vals: list[list[float]] = [[], [], []]
         while not self.stopped.is_set():
             for i, ch in enumerate(range(1, 4)):
                 if sl[i]:
@@ -464,7 +479,10 @@ class EncoderThread(QtCore.QThread):
                         self.stopped.set()
                         break
                     self.mmthread._send_signal_once(ch)
-                    self.mmthread.get_position(ch, emit=True)
+                    vals[i].append(self.mmthread.get_position(ch, emit=False))
+                    if len(vals[i]) == navg:
+                        self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
+                        vals[i] = []
 
         sl.shm.close()
         del sl

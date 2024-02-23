@@ -95,7 +95,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.move_btn.clicked.connect(self.move)
 
         # internal variable to store raw position
-        self.raw_position: int | None = None
+        self.raw_position: int | float | None = None
 
         # read configuration & populate combobox
         with open(CONFIG_FILE, "rb") as f:
@@ -208,7 +208,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         if self.raw_position is not None:
             self.set_current_pos(self.raw_position)
 
-    def convert_pos(self, pos: int) -> float:
+    def convert_pos(self, pos: int | float) -> float:
         """Convert raw position integer to calibrated position."""
         return self.cal_A * pos + self.cal_B
 
@@ -216,8 +216,9 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         """Convert position value into nearest raw position integer."""
         return round((value - self.cal_B) / self.cal_A)
 
+    @QtCore.Slot(float)
     @QtCore.Slot(int)
-    def set_current_pos(self, pos: int):
+    def set_current_pos(self, pos: int | float):
         self.raw_position = pos
         self.pos_lineedit.setText(f"{self.convert_pos(self.raw_position):.4f}")
 
@@ -366,6 +367,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
+        self.mmthread.sigAvgPosRead.connect(self.set_position)
         self.mmthread.sigDeltaChanged.connect(self.update_plot)
 
         # Initialize motion queue
@@ -381,7 +383,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
         # Initialize position encoding thread.
         # This thread will read position when MMThread is not active.
-        self.encoder = EncoderThread(mmthread=self.mmthread, slname=self.sl.shm.name)
+        self.encoder = EncoderThread(mmthread=self.mmthread, sharedmem=self.sl.shm.name)
 
     @property
     def status(self) -> MMStatus:
@@ -461,8 +463,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
         for ch in self.valid_channels:
             ch.target_current_pos()
 
+    @QtCore.Slot(int, float)
     @QtCore.Slot(int, int)
-    def set_position(self, channel: int, pos: int):
+    def set_position(self, channel: int, pos: int | float):
         self.get_channel(channel).set_current_pos(pos)
 
     @QtCore.Slot(int, object, object)
