@@ -344,8 +344,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     writeLog = QtCore.Signal(object)
 
-    def __init__(self, parent=None, *, address: str):
+    def __init__(self, parent=None, *, address: str, index: int):
         self.address = address
+        self.index = index
 
         super().__init__(parent)
         self.setLayout(QtWidgets.QVBoxLayout(self))
@@ -501,8 +502,15 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.queue.task_done()
 
         # Write log
-        ch = self.get_channel(channel)
-        self.write_log(["Moved", ch.name, f"{ch.current_pos:.5f}"])
+        ch: SingleChannelWidget = self.get_channel(channel)
+        self.write_log(
+            [
+                "End Move",
+                str(int(channel + 3 * self.index)),
+                ch.name,
+                f"{ch.current_pos:.5f}",
+            ]
+        )
 
         # Return channels to normal state
         for ch in self.channels:
@@ -557,14 +565,12 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def _move(self):
         # Get motion parameters from first item in queue
-        kwargs = self.queue.get()
-        ch = self.get_channel(kwargs["channel"])
-
-        # Write motion start log
-        self.write_log(["Start", ch.name, f"{ch.convert_pos(kwargs['target']):.5f}"])
+        kwargs: dict = self.queue.get()
+        ch_num: int = kwargs["channel"]
+        ch: SingleChannelWidget = self.get_channel(ch_num)
 
         # Various sanity checks
-        if not self.is_channel_enabled(kwargs["channel"]):
+        if not self.is_channel_enabled(ch_num):
             # This may happen when the channel is disabled after the motion was queued.
             print("Move called on a disabled channel ignored.")
             self.queue.task_done()
@@ -574,6 +580,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
             print("Motion already in progress.")
             self.queue.task_done()
             return
+
+        # Write motion start log
+        self.write_log(
+            [
+                "Start Move",
+                str(int(ch_num + 3 * self.index)),
+                ch.name,
+                f"{ch.convert_pos(kwargs['target']):.5f}",
+            ]
+        )
 
         # Stop encoder before motion start
         self.stop_encoding()

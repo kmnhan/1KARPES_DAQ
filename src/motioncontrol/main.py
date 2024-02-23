@@ -114,8 +114,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # initialize controllers
         self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = (
-            SingleControllerWidget(self, address="192.168.0.210"),
-            SingleControllerWidget(self, address="192.168.0.211"),
+            SingleControllerWidget(self, address="192.168.0.210", index=0),
+            SingleControllerWidget(self, address="192.168.0.211", index=1),
         )
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
@@ -309,7 +309,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             try:
                 con.connect_raise()
             except Exception as e:
-                con.disable()    
+                con.disable()
             con.start_encoding()
 
     def disconnect(self):
