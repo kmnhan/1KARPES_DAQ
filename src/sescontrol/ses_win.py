@@ -34,9 +34,9 @@ def get_ses_window(process: psutil.Process) -> int:
     for thread in process.threads():
 
         def enum_windows_callback(hwnd, lParam):
-            if win32gui.IsWindowVisible(hwnd):
-                if win32gui.GetWindowText(hwnd) == "SES":
-                    windows.append(hwnd)
+            # if win32gui.IsWindowVisible(hwnd):
+            if win32gui.GetWindowText(hwnd) == "SES":
+                windows.append(hwnd)
             return True
 
         thread_id = thread.id
