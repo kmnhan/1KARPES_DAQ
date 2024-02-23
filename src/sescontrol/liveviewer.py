@@ -456,7 +456,11 @@ class WorkFileImageTool(BaseImageTool):
                 arr.reshape(shape), coords=coords, name=region_info["name"]
             )
         else:
-            arr = xr.DataArray(arr)
+            ses_config = configparser.ConfigParser(strict=False)
+            with open(os.path.join(SES_DIR, "ini\Ses.ini"), "r") as f:
+                ses_config.read_file(f)
+            nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+            arr = xr.DataArray(arr.reshape((int(len(arr) / nslices), nslices)))
 
         if self.array_slicer._obj.shape == arr.shape:
             self.array_slicer._obj[:] = arr.values
@@ -465,19 +469,18 @@ class WorkFileImageTool(BaseImageTool):
                 "nanmin",
                 "absnanmax",
                 "absnanmin",
-                # "coords",
-                # "coords_uniform",
-                # "incs",
-                # "incs_uniform",
-                # "lims",
-                # "lims_uniform",
+                "coords",
+                "coords_uniform",
+                "incs",
+                "incs_uniform",
+                "lims",
+                "lims_uniform",
                 "data_vals_T",
             ):
                 self.array_slicer.reset_property_cache(prop)
             self.slicer_area.refresh_all()
         else:
             self.slicer_area.set_data(arr)
-
         self.setWindowTitle(f"work: {region}")
 
 

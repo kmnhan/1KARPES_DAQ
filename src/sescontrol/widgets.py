@@ -187,8 +187,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.current_file: str | None = None
         self.start_time: float | None = None
         self.step_times: list[float] = []
-        
-        self.workfileitool = WorkFileImageTool()
+
+        self.workfileitool: WorkFileImageTool = WorkFileImageTool()
 
         self._itools: list[LiveImageTool | None] = []
 
@@ -439,9 +439,9 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             if not ret == QtWidgets.QMessageBox.Yes:
                 event.ignore()
                 return
-        for win in self._itools:
-            if win:
-                win.close()
+        # for win in self._itools:
+        #     if win:
+        #         win.close()
         self.pos_logger.stop()
         self.threadpool.waitForDone()
         super().closeEvent(event)
