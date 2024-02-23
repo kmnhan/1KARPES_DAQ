@@ -430,12 +430,13 @@ class WorkFileImageTool(BaseImageTool):
             binfile: str = f"Spectrum_{region}_Norm.bin"
         else:
             binfile: str = f"Spectrum_{region}.bin"
+        binfile = os.path.join(self.workdir, binfile)
 
         if not os.path.isfile(binfile):
             print("File not found, abort")
             return
 
-        arr = np.fromfile(os.path.join(self.workdir, binfile), dtype=np.float32)
+        arr = np.fromfile(binfile, dtype=np.float32)
 
         ini_file = os.path.join(self.workdir, f"Spectrum_{region}.ini")
         if os.path.isfile(ini_file):
