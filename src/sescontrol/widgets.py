@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 import time
 
@@ -17,6 +18,11 @@ from sescontrol.ses_win import SESController, get_file_info, next_index
 
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class SingleMotorSetup(QtWidgets.QGroupBox):
