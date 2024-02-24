@@ -83,7 +83,7 @@ class StatusThread(QtCore.QThread):
     sigTUpdate = QtCore.Signal(object)
     sigPUpdate = QtCore.Signal(object)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.stopped = threading.Event()
 
@@ -94,12 +94,21 @@ class StatusThread(QtCore.QThread):
             try:
                 temp = [str(float(v)) for v in get_temperature_list()]
             except FileNotFoundError:
+                # Shared memory not present, temperature controller may be off
                 temp = [""] * 3
+            except ValueError as e:
+                # Something went wrong while reading shared memory, try again
+                print(f"Error while reading shared temperature: {e}")
+                continue
             self.sigTUpdate.emit(temp)
+
             try:
                 pressure: list[str] = get_pressure_list()
             except FileNotFoundError:
                 pressure: list[str] = [""]
+            except ValueError as e:
+                print(f"Error while reading shared pressure: {e}")
+                continue
             self.sigPUpdate.emit(pressure)
             time.sleep(0.1)
 
