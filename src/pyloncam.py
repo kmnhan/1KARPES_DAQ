@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import platform
@@ -86,6 +87,39 @@ class RowOrderingWidget(QtWidgets.QWidget):
                 self._table_widget.cellWidget(r1, i).row_index = r1
 
 
+class ConfigDialog(*uic.loadUiType("cameramonitor_config.ui")):
+    def __init__(
+        self, parent: QtWidgets.QWidget | None = None, *, settings: QtCore.QSettings
+    ):
+        super().__init__(parent=parent)
+        self.setupUi(self)
+        self.setWindowTitle("Camera Monitor Settings")
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.settings: QtCore.QSettings = settings
+        self.populate()
+
+    def show(self):
+        self.populate()
+        super().show()
+
+    def populate(self):
+        self.horiz_spin.setValue(self.settings.value("calibration/h", 0.011))
+        self.vert_spin.setValue(self.settings.value("calibration/v", 0.011))
+        self.hoff_spin.setValue(self.settings.value("calibration/hoff", 0.0))
+        self.voff_spin.setValue(self.settings.value("calibration/voff", 0.0))
+        self.autosave_spin.setValue(self.settings.value("autosave_interval", 300))
+
+    def accept(self):
+        self.settings.setValue("calibration/h", self.horiz_spin.value())
+        self.settings.setValue("calibration/v", self.vert_spin.value())
+        self.settings.setValue("calibration/hoff", self.hoff_spin.value())
+        self.settings.setValue("calibration/voff", self.voff_spin.value())
+        self.settings.setValue("autosave_interval", self.autosave_spin.value())
+        super().accept()
+
+
 uiclass, baseclass = uic.loadUiType("framegrab.ui")
 
 
@@ -107,16 +141,16 @@ class MainWindowGUI(uiclass, baseclass):
 
         # target & circle roi
         self.target = pg.TargetItem(pen="r")
-        self.circle = pg.CircleROI(self.target.pos(), radius=1138, movable=False)
+        self.circle = pg.CircleROI(self.target.pos(), size=(1138, 1138), movable=False)
         self.target.sigPositionChanged.connect(self.target_moved)
         self.target_check.stateChanged.connect(
             lambda: self.target.setVisible(self.target_check.isChecked())
         )
         self.target_check.setChecked(True)
-        self.circle_check.stateChanged.connect(
-            lambda: self.circle.setVisible(self.circle_check.isChecked())
+        self.actioncircle.toggled.connect(
+            lambda: self.circle.setVisible(self.actioncircle.isChecked())
         )
-        self.circle_check.setChecked(False)
+        self.actioncircle.setChecked(False)
 
         self.plot_item.addItem(self.target)
         self.plot_item.addItem(self.circle)
@@ -134,9 +168,9 @@ class MainWindowGUI(uiclass, baseclass):
             self.plot_item.addItem(ln, ignoreBounds=True)
             ln.setVisible(False)
         self.plot_item.scene().sigMouseMoved.connect(self.mouse_moved)
-        self.crosshair_check.stateChanged.connect(
+        self.actioncrosshair.toggled.connect(
             lambda: [
-                ln.setVisible(self.crosshair_check.isChecked()) for ln in self.lines
+                ln.setVisible(self.actioncrosshair.isChecked()) for ln in self.lines
             ]
         )
 
@@ -144,7 +178,7 @@ class MainWindowGUI(uiclass, baseclass):
         self.cmap_combo.setDefaultCmap("gray")
         self.cmap_combo.textActivated.connect(self.update_cmap)
         self.gamma_widget.valueChanged.connect(self.update_cmap)
-        self.invert_check.stateChanged.connect(self.update_cmap)
+        self.actioninvert.toggled.connect(self.update_cmap)
         self.contrast_check.stateChanged.connect(self.update_cmap)
         self.update_cmap()
 
@@ -158,7 +192,7 @@ class MainWindowGUI(uiclass, baseclass):
 
         # get settings
         self.settings = QtCore.QSettings("erlab", "Frame Grabber")
-        self.load_from_settings()
+        self.load_pos_from_settings()
 
         # save & load position
         self.load_btn.clicked.connect(self.load_position)
@@ -172,13 +206,35 @@ class MainWindowGUI(uiclass, baseclass):
                     len(self.pos_table.selectedRanges()) == 0
                 )
             )
-        self.pos_table.cellChanged.connect(self.write_to_settings)
+        self.pos_table.cellChanged.connect(self.write_pos_to_settings)
         for i in (0, 3):
             self.pos_table.horizontalHeader().setSectionResizeMode(
                 i, QtWidgets.QHeaderView.ResizeToContents
             )
         self.pos_table.selectRow(0)
         self.load_btn.click()
+
+        # Setup autosave timer
+        self.autosave_timer = QtCore.QTimer(self)
+
+        # Initialize calibration factors
+        self._cal_h: float = 0.011
+        self._cal_v: float = 0.011
+        self._off_h: float = 0.0
+        self._off_v: float = 0.0
+
+        # Config dialog
+        self.config_dialog = ConfigDialog(self, settings=self.settings)
+        self.config_dialog.accepted.connect(self.refresh_settings)
+        # self.refresh_settings()
+        self.actionsettings.triggered.connect(lambda: self.config_dialog.show())
+
+    @QtCore.Slot(bool)
+    def toggle_autosave(self, value: bool):
+        if value:
+            self.autosave_timer.start()
+        else:
+            self.autosave_timer.stop()
 
     @QtCore.Slot()
     def target_moved(self):
@@ -216,7 +272,25 @@ class MainWindowGUI(uiclass, baseclass):
 
         self.pos_table.setCellWidget(row_idx, 3, RowOrderingWidget(row_idx, 3))
 
-    def load_from_settings(self):
+    def update_rect(self):
+        raise NotImplementedError
+
+    @property
+    def rect(self) -> QtCore.QRect:
+        raise NotImplementedError
+
+    def refresh_settings(self):
+        self._cal_h = self.settings.value("calibration/h", 0.011)
+        self._cal_v = self.settings.value("calibration/v", 0.011)
+        self._off_h = self.settings.value("calibration/hoff", 0.0)
+        self._off_v = self.settings.value("calibration/voff", 0.0)
+        self.circle.setSize((1138 * self._cal_h, 1138 * self._cal_v))
+        self.update_rect()
+        self.autosave_timer.setInterval(
+            int(self.settings.value("autosave_interval") * 1e3)
+        )
+
+    def load_pos_from_settings(self):
         self.settings.beginGroup("savedPositions")
         for i, pos in enumerate(self.settings.childGroups()):
             name_item, x_item, y_item = (
@@ -235,7 +309,7 @@ class MainWindowGUI(uiclass, baseclass):
 
         self.settings.endGroup()
 
-    def write_to_settings(self):
+    def write_pos_to_settings(self):
         self.settings.remove("savedPositions")
         for i in range(self.pos_table.rowCount()):
             try:
@@ -274,7 +348,7 @@ class MainWindowGUI(uiclass, baseclass):
         self.image_item.set_colormap(
             self._cmap_name,
             self._cmap_gamma,
-            reverse=self.invert_check.isChecked(),
+            reverse=self.actioninvert.isChecked(),
             highContrast=self.contrast_check.isChecked(),
             update=True,
         )
@@ -287,7 +361,7 @@ class MainWindowGUI(uiclass, baseclass):
 
         point = self.plot_item.vb.mapSceneToView(pos)
         self.statusBar().showMessage(f"X = {point.x():.6g}, Z = {point.y():.6g}")
-        if self.crosshair_check.isChecked():
+        if self.actioncrosshair.isChecked():
             self.lines[0].setPos(point.x())
             self.lines[1].setPos(point.y())
 
@@ -339,7 +413,7 @@ class FrameGrabber(QtCore.QThread):
         self._camera = None
         self.save_requested: bool = False
         self.mutex: QtCore.QMutex | None = None
-        self.set_srgb(True)
+        self.set_srgb(False)
 
     @property
     def camera(self) -> pylon.InstantCamera:
@@ -354,6 +428,14 @@ class FrameGrabber(QtCore.QThread):
         if self.mutex is not None:
             self.mutex.lock()
         self._live = value
+        if self.mutex is not None:
+            self.mutex.unlock()
+
+    @QtCore.Slot()
+    def request_save(self):
+        if self.mutex is not None:
+            self.mutex.lock()
+        self.save_requested: bool = True
         if self.mutex is not None:
             self.mutex.unlock()
 
@@ -404,22 +486,22 @@ class FrameGrabber(QtCore.QThread):
 
         while self.camera.IsGrabbing():
             # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-            grabResult = self.camera.RetrieveResult(
+            grab_time = datetime.datetime.now()
+            grab_result = self.camera.RetrieveResult(
                 5000, pylon.TimeoutHandling_ThrowException
             )
 
             # Image grabbed successfully?
-            if grabResult.GrabSucceeded():
+            if grab_result.GrabSucceeded():
                 try:
-                    self.sigGrabbed.emit(grabResult.GetArray(raw=False))
+                    self.sigGrabbed.emit(grab_result.GetArray(raw=False))
                 except ValueError:
                     logging.exception("Exception while getting array from grabResult!")
                 else:
                     if self.save_requested:
-                        img.AttachGrabResultBuffer(grabResult)
+                        img.AttachGrabResultBuffer(grab_result)
                         filename = os.path.join(
-                            SAVE_DIR,
-                            f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S',time.localtime())}",
+                            SAVE_DIR, f"Image_{grab_time.isoformat()}"
                         )
                         if platform.system() == "Windows":
                             ipo = pylon.ImagePersistenceOptions()
@@ -433,12 +515,12 @@ class FrameGrabber(QtCore.QThread):
                 try:
                     pass
                     # print(
-                    #     f"Error {grabResult.ErrorCode}: ", grabResult.ErrorDescription
+                    #     f"Error {grab_result.ErrorCode}: ", grabResult.ErrorDescription
                     # )
                 except UnicodeDecodeError:
-                    print(f"Error {grabResult.ErrorCode}")
+                    print(f"Error {grab_result.ErrorCode}")
 
-            grabResult.Release()
+            grab_result.Release()
             if genicam.IsWritable(self.camera.ExposureTimeRaw):
                 if self.camera.ExposureTimeRaw.Value != self.exposure:
                     print(self.exposure)
@@ -481,19 +563,10 @@ class MainWindow(MainWindowGUI):
 
         # save image
         self.save_img_btn.clicked.connect(self.save_image)
-        self.save_profile_btn.setDisabled(True)  # not implemented
+        self.save_h5_btn.setDisabled(True)  # not implemented
 
-        self.autosave_timer = QtCore.QTimer(self)
-        self.autosave_timer.setInterval(300000)
         self.autosave_timer.timeout.connect(self.save_image)
         self.autosave_check.toggled.connect(self.toggle_autosave)
-
-    @QtCore.Slot(bool)
-    def toggle_autosave(self, value: bool):
-        if value:
-            self.autosave_timer.start()
-        else:
-            self.autosave_timer.stop()
 
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
@@ -545,8 +618,26 @@ class MainWindow(MainWindowGUI):
         #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
         # )
 
+    @property
+    def rect(self) -> QtCore.QRect:
+        shape = self.image_item.image.shape
+        x = -(shape[1] - 1) / 2
+        y = -(shape[0] - 1) / 2
+        w = -2 * x * self.cal_h
+        h = -2 * y * self.cal_v
+        x += self._off_h
+        y += self._off_v
+        return QtCore.QRect(x, y, w, h)
+
+    def update_rect(self):
+        try:
+            self.image_item.setRect(self.rect)
+        except AttributeError:
+            pass
+
     @QtCore.Slot(object)
     def set_image(self, image):
+        # I don't remember why this method exists...
         if image.ndim == 3:
             self.image_item.setImage(np.flip(image, -1), useRGBA=True)
         else:
@@ -558,7 +649,7 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def save_image(self):
-        self.frame_grabber.save_requested = True
+        self.frame_grabber.request_save()
 
     @QtCore.Slot()
     def toggle_grabbing(self):
@@ -576,10 +667,7 @@ class MainWindow(MainWindowGUI):
 
 
 if __name__ == "__main__":
-    qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
-    if not qapp:
-        qapp = QtWidgets.QApplication(sys.argv)
-
+    qapp = QtWidgets.QApplication(sys.argv)
     qapp.setWindowIcon(QtGui.QIcon("./images/pyloncam.ico"))
 
     win = MainWindow()
