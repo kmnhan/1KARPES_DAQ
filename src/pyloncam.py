@@ -9,6 +9,7 @@ import time
 
 # import cv2
 import numpy as np
+import numpy.typing as npt
 import pyqtgraph as pg
 import xarray as xr
 from pypylon import genicam, pylon
@@ -30,8 +31,51 @@ DEVICE_ALIASES: dict[str, str] = {
 SAVE_DIR: str = os.path.join(
     os.path.expanduser("~"), "Pictures", "Sample Camera"
 )  #: Directory to save the image to.
+PIXEL_BITS: int = 10  #: Pixel format bits, 8 or 10 for our sample camera.
+
 tlf: pylon.TlFactory = pylon.TlFactory.GetInstance()  #: The transport layer factory.
 img: pylon.PylonImage = pylon.PylonImage()  #: Handles image saving.
+pylon.PylonImage
+
+
+def format_datetime(dt: datetime.datetime) -> str:
+    return dt.isoformat(sep="_", timespec="milliseconds").replace(":", "-")
+
+
+class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
+    def OnOpened(self, camera):
+        try:
+            # # Maximize the Image AOI.
+            # if genicam.IsWritable(camera.OffsetX):
+            #     camera.OffsetX.Value = camera.OffsetX.Min
+            # if genicam.IsWritable(camera.OffsetY):
+            #     camera.OffsetY.Value = camera.OffsetY.Min
+            # camera.Width.Value = camera.Width.Max
+            # camera.Height.Value = camera.Height.Max
+
+            # Flip image.
+            if genicam.IsWritable(camera.ReverseX):
+                camera.ReverseX.Value = True
+            if genicam.IsWritable(camera.ReverseY):
+                camera.ReverseY.Value = False
+
+            if genicam.IsWritable(camera.GainAuto):
+                camera.GainAuto.Value = "Off"
+
+            if genicam.IsWritable(camera.GammaSelector):
+                camera.GammaSelector.Value = "sRGB"
+
+            if genicam.IsWritable(camera.ExposureAuto):
+                camera.ExposureAuto.Value = "Off"
+
+            # Set the pixel data format.
+            camera.PixelFormat.Value = f"Mono{PIXEL_BITS}"
+        except genicam.GenericException as e:
+            raise genicam.RuntimeException(
+                "Could not apply configuration. GenICam::GenericException \
+                                            caught in OnOpened method msg=%s"
+                % e.what()
+            )
 
 
 class RowOrderingWidget(QtWidgets.QWidget):
@@ -136,7 +180,7 @@ class MainWindowGUI(uiclass, baseclass):
         # add plot and image
         self.plot_item = self.graphics_layout.addPlot()
         self.plot_item.setDefaultPadding(0)
-        self.plot_item.vb.invertY(True)
+        # self.plot_item.vb.invertY(False)
 
         self.plot_item.vb.setCursor(QtGui.QCursor(QtCore.Qt.CrossCursor))
         self.image_item = BetterImageItem(axisOrder="row-major")
@@ -180,13 +224,14 @@ class MainWindowGUI(uiclass, baseclass):
         # color related widgets
         self.cmap_combo.setDefaultCmap("gray")
         self.cmap_combo.textActivated.connect(self.update_cmap)
+        self.gamma_widget.setValue(0.5)
         self.gamma_widget.valueChanged.connect(self.update_cmap)
         self.actioninvert.toggled.connect(self.update_cmap)
         self.contrast_check.stateChanged.connect(self.update_cmap)
         self.update_cmap()
 
         # add colorbar
-        self.cbar = BetterColorBarItem(limits=(0, 255))
+        self.cbar = BetterColorBarItem(limits=(0, 2**PIXEL_BITS - 1))
         self.cbar.setImageItem(image=self.image_item, insert_in=self.plot_item)
         self.cbar.set_width(20)
         self.auto_clim_check.stateChanged.connect(
@@ -229,7 +274,7 @@ class MainWindowGUI(uiclass, baseclass):
         # Config dialog
         self.config_dialog = ConfigDialog(self, settings=self.settings)
         self.config_dialog.accepted.connect(self.refresh_settings)
-        # self.refresh_settings()
+        self.refresh_settings()
         self.actionsettings.triggered.connect(lambda: self.config_dialog.show())
 
     @QtCore.Slot(bool)
@@ -287,7 +332,8 @@ class MainWindowGUI(uiclass, baseclass):
         self._cal_v = float(self.settings.value("calibration/v", 0.011))
         self._off_h = float(self.settings.value("calibration/hoff", 0.0))
         self._off_v = float(self.settings.value("calibration/voff", 0.0))
-        self.circle.setSize((1138 * self._cal_h, 1138 * self._cal_v))
+        self.circle.setSize((2276 * self._cal_h, 2276 * self._cal_h))
+        self.target_moved()
         self.update_rect()
         self.autosave_timer.setInterval(
             int(float(self.settings.value("autosave_interval")) * 1e3)
@@ -366,42 +412,6 @@ class MainWindowGUI(uiclass, baseclass):
         if self.actioncrosshair.isChecked():
             self.lines[0].setPos(point.x())
             self.lines[1].setPos(point.y())
-
-
-class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
-    def OnOpened(self, camera):
-        try:
-            # Maximize the Image AOI.
-            if genicam.IsWritable(camera.OffsetX):
-                camera.OffsetX.Value = camera.OffsetX.Min
-            if genicam.IsWritable(camera.OffsetY):
-                camera.OffsetY.Value = camera.OffsetY.Min
-            camera.Width.Value = camera.Width.Max
-            camera.Height.Value = camera.Height.Max
-
-            # Flip image.
-            if genicam.IsWritable(camera.ReverseX):
-                camera.ReverseX.Value = True
-            if genicam.IsWritable(camera.ReverseY):
-                camera.ReverseY.Value = False
-
-            if genicam.IsWritable(camera.GainAuto):
-                camera.GainAuto.Value = "Off"
-
-            if genicam.IsWritable(camera.GammaSelector):
-                camera.GammaSelector.Value = "sRGB"
-
-            if genicam.IsWritable(camera.ExposureAuto):
-                camera.ExposureAuto.Value = "Off"
-
-            # Set the pixel data format.
-            camera.PixelFormat.Value = "Mono8"
-        except genicam.GenericException as e:
-            raise genicam.RuntimeException(
-                "Could not apply configuration. GenICam::GenericException \
-                                            caught in OnOpened method msg=%s"
-                % e.what()
-            )
 
 
 class FrameGrabber(QtCore.QThread):
@@ -503,7 +513,7 @@ class FrameGrabber(QtCore.QThread):
                     if self.save_requested:
                         img.AttachGrabResultBuffer(grab_result)
                         filename = os.path.join(
-                            SAVE_DIR, f"Image_{grab_time.isoformat()}"
+                            SAVE_DIR, f"Image_{format_datetime(grab_time)}"
                         )
                         if platform.system() == "Windows":
                             ipo = pylon.ImagePersistenceOptions()
@@ -536,28 +546,6 @@ class FrameGrabber(QtCore.QThread):
                 self.camera.StopGrabbing()
         self.camera.Close()
         self.mutex = None
-
-
-def save_as_hdf5(
-    data: xr.DataArray | xr.Dataset,
-    filename: str | os.PathLike,
-):
-    scaling = [[1, 0]]
-    for i in range(data.ndim):
-        coord = data[data.dims[i]].values
-        delta = coord[1] - coord[0]
-        scaling.append([delta, coord[0]])
-    if data.ndim == 4:
-        scaling[0] = scaling.pop(-1)
-    data.attrs["IGORWaveScaling"] = scaling
-    data.to_netcdf(
-        filename,
-        encoding={
-            var: dict(compression="gzip", compression_opts=9) for var in data.coords
-        },
-        engine="h5netcdf",
-        invalid_netcdf=True,
-    )
 
 
 class MainWindow(MainWindowGUI):
@@ -643,13 +631,13 @@ class MainWindow(MainWindowGUI):
     def image_array(self) -> xr.DataArray:
         image = self.image_item.image
         shape = image.shape
-        xlim, zlim = (shape[1] - 1) / 2, (shape[0] - 1) / 2
+        xlim, zlim = self._cal_h * (shape[1] - 1) / 2, self._cal_v * (shape[0] - 1) / 2
         return xr.DataArray(
             image,
-            dims=("x", "z"),
+            dims=("z", "x"),
             coords=dict(
-                x=np.linspace(-xlim, xlim, shape[1]) + self._off_h,
                 z=np.linspace(-zlim, zlim, shape[0]) + self._off_v,
+                x=np.linspace(-xlim, xlim, shape[1]) + self._off_h,
             ),
         )
 
@@ -660,21 +648,29 @@ class MainWindow(MainWindowGUI):
         w, h = -2 * x, -2 * y
         x += self._off_h
         y += self._off_v
-        print(x, y, w, h)
         return QtCore.QRectF(x, y, w, h)
 
     @QtCore.Slot(object, object)
-    def grabbed(self, grabtime: datetime.datetime, image):
+    def grabbed(self, grabtime: datetime.datetime, image: npt.NDArray):
+        image = np.flip(image, axis=0)
         self.grab_time: datetime.datetime = grabtime
-        self.image_item.setImage(image, autoLevels=False)
-        self.update_rect()
-
-        if np.amax(image) == 255:
-            self.statusBar().showMessage(
-                "Saturation detected! Consider lowering exposure."
-            )
+        if self.image_item.image is None:
+            self.image_item.setImage(image, autoLevels=False, axisOrder="row-major")
+            self.update_rect()
         else:
-            self.statusBar().showMessage(self.grab_time.isoformat())
+            self.image_item.setImage(
+                image, autoLevels=False, axisOrder="row-major", rect=self.rect
+            )
+
+        msg = "Last Update "
+        msg += self.grab_time.isoformat(sep=" ", timespec="milliseconds")
+
+        max_val = 2**PIXEL_BITS - 1
+        if np.amax(image) == max_val and sum(image.flatten() == max_val) > 1:
+            msg += " | "
+            msg += "Saturation detected! Consider lowering exposure."
+
+        self.statusBar().showMessage(msg)
         # self.statusBar().showMessage(
         #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
         # )
@@ -684,7 +680,6 @@ class MainWindow(MainWindowGUI):
         try:
             self.image_item.setRect(self.rect)
         except AttributeError as e:
-            print(e)
             pass
 
     # @QtCore.Slot(object)
@@ -705,10 +700,28 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def save_hdf5(self):
-        dt = self.grab_time
-        arr = self.image_array
-        filename = os.path.join(SAVE_DIR, f"Image_{dt.isoformat()}.h5")
-        save_as_hdf5(arr, filename)
+        dt, data = self.grab_time, self.image_array
+
+        filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
+
+        # Compatibility with Igor HDF5 loader
+        scaling = [[1, 0]]
+        for i in range(data.ndim):
+            coord = data[data.dims[i]].values
+            delta = coord[1] - coord[0]
+            scaling.append([delta, coord[0]])
+        if data.ndim == 4:
+            scaling[0] = scaling.pop(-1)
+        data.attrs["IGORWaveScaling"] = scaling
+
+        data.to_netcdf(
+            filename,
+            encoding={
+                var: dict(compression="gzip", compression_opts=9) for var in data.coords
+            },
+            engine="h5netcdf",
+            invalid_netcdf=True,
+        )
 
     @QtCore.Slot()
     def toggle_grabbing(self):
