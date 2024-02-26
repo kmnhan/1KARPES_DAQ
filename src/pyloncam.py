@@ -123,7 +123,7 @@ class ConfigDialog(*uic.loadUiType("cameramonitor_config.ui")):
         super().accept()
 
 
-uiclass, baseclass = uic.loadUiType("framegrab.ui")
+uiclass, baseclass = uic.loadUiType("pyloncam.ui")
 
 
 class MainWindowGUI(uiclass, baseclass):
@@ -279,7 +279,7 @@ class MainWindowGUI(uiclass, baseclass):
         raise NotImplementedError
 
     @property
-    def rect(self) -> QtCore.QRect:
+    def rect(self) -> QtCore.QRectF:
         raise NotImplementedError
 
     def refresh_settings(self):
@@ -654,13 +654,14 @@ class MainWindow(MainWindowGUI):
         )
 
     @property
-    def rect(self) -> QtCore.QRect:
+    def rect(self) -> QtCore.QRectF:
         shape = self.image_item.image.shape
-        x, y = -(shape[1] - 1) / 2, -(shape[0] - 1) / 2
-        w, h = -2 * x * self.cal_h, -2 * y * self.cal_v
+        x, y = -self._cal_h * (shape[1] - 1) / 2, -self._cal_v * (shape[0] - 1) / 2
+        w, h = -2 * x, -2 * y
         x += self._off_h
         y += self._off_v
-        return QtCore.QRect(x, y, w, h)
+        print(x, y, w, h)
+        return QtCore.QRectF(x, y, w, h)
 
     @QtCore.Slot(object, object)
     def grabbed(self, grabtime: datetime.datetime, image):
@@ -682,7 +683,8 @@ class MainWindow(MainWindowGUI):
     def update_rect(self):
         try:
             self.image_item.setRect(self.rect)
-        except AttributeError:
+        except AttributeError as e:
+            print(e)
             pass
 
     # @QtCore.Slot(object)
