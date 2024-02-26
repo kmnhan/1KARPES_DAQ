@@ -639,28 +639,6 @@ class MainWindow(MainWindowGUI):
         # self.exposure_spin.blockSignals(False)
         # self.exposure_slider.blockSignals(False)
 
-    @QtCore.Slot(object, object)
-    def grabbed(self, grabtime: datetime.datetime, image):
-        self.grab_time: datetime.datetime = grabtime
-        self.image_item.setImage(image, autoLevels=False, rect=self.rect)
-
-        if np.amax(image) == 255:
-            self.statusBar().showMessage(
-                "Saturation detected! Consider lowering exposure."
-            )
-        else:
-            self.statusBar().showMessage(self.grab_time.isoformat())
-        # self.statusBar().showMessage(
-        #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
-        # )
-
-    @QtCore.Slot()
-    def save_hdf5(self):
-        dt = self.grab_time
-        arr = self.image_array
-        filename = os.path.join(SAVE_DIR, f"Image_{dt.isoformat()}.h5")
-        save_as_hdf5(arr, filename)
-
     @property
     def image_array(self) -> xr.DataArray:
         image = self.image_item.image
@@ -684,6 +662,22 @@ class MainWindow(MainWindowGUI):
         y += self._off_v
         return QtCore.QRect(x, y, w, h)
 
+    @QtCore.Slot(object, object)
+    def grabbed(self, grabtime: datetime.datetime, image):
+        self.grab_time: datetime.datetime = grabtime
+        self.image_item.setImage(image, autoLevels=False)
+        self.update_rect()
+
+        if np.amax(image) == 255:
+            self.statusBar().showMessage(
+                "Saturation detected! Consider lowering exposure."
+            )
+        else:
+            self.statusBar().showMessage(self.grab_time.isoformat())
+        # self.statusBar().showMessage(
+        #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
+        # )
+
     @QtCore.Slot()
     def update_rect(self):
         try:
@@ -706,6 +700,13 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def save_image(self):
         self.frame_grabber.request_save()
+
+    @QtCore.Slot()
+    def save_hdf5(self):
+        dt = self.grab_time
+        arr = self.image_array
+        filename = os.path.join(SAVE_DIR, f"Image_{dt.isoformat()}.h5")
+        save_as_hdf5(arr, filename)
 
     @QtCore.Slot()
     def toggle_grabbing(self):
