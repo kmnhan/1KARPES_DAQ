@@ -3,3 +3,6 @@ matplotlib
 pypylon
 pyqt6
 qtpy
+numpy
+xarray
+h5netcdf

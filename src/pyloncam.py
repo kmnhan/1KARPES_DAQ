@@ -10,6 +10,7 @@ import time
 # import cv2
 import numpy as np
 import pyqtgraph as pg
+import xarray as xr
 from pypylon import genicam, pylon
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -356,11 +357,10 @@ class MainWindowGUI(uiclass, baseclass):
     def mouse_moved(self, pos):
         # if not self.plot_item.vb.itemBoundingRect(self.image_item).contains(pos):
         if not self.plot_item.sceneBoundingRect().contains(pos):
-            self.statusBar().clearMessage()
+            # self.statusBar().clearMessage()
             return
-
         point = self.plot_item.vb.mapSceneToView(pos)
-        self.statusBar().showMessage(f"X = {point.x():.6g}, Z = {point.y():.6g}")
+        # self.statusBar().showMessage(f"X = {point.x():.6g}, Z = {point.y():.6g}")
         if self.actioncrosshair.isChecked():
             self.lines[0].setPos(point.x())
             self.lines[1].setPos(point.y())
@@ -403,7 +403,7 @@ class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
 
 
 class FrameGrabber(QtCore.QThread):
-    sigGrabbed = QtCore.Signal(object)
+    sigGrabbed = QtCore.Signal(object, object)
     sigExposureRead = QtCore.Signal(int, int, int)
     # sigFailed = QtCore.Signal()
 
@@ -494,7 +494,7 @@ class FrameGrabber(QtCore.QThread):
             # Image grabbed successfully?
             if grab_result.GrabSucceeded():
                 try:
-                    self.sigGrabbed.emit(grab_result.GetArray(raw=False))
+                    self.sigGrabbed.emit(grab_time, grab_result.GetArray(raw=False))
                 except ValueError:
                     logging.exception("Exception while getting array from grabResult!")
                 else:
@@ -536,12 +536,37 @@ class FrameGrabber(QtCore.QThread):
         self.mutex = None
 
 
+def save_as_hdf5(
+    data: xr.DataArray | xr.Dataset,
+    filename: str | os.PathLike,
+):
+    scaling = [[1, 0]]
+    for i in range(data.ndim):
+        coord = data[data.dims[i]].values
+        delta = coord[1] - coord[0]
+        scaling.append([delta, coord[0]])
+    if data.ndim == 4:
+        scaling[0] = scaling.pop(-1)
+    data.attrs["IGORWaveScaling"] = scaling
+    data.to_netcdf(
+        filename,
+        encoding={
+            var: dict(compression="gzip", compression_opts=9) for var in data.coords
+        },
+        engine="h5netcdf",
+        invalid_netcdf=True,
+    )
+
+
 class MainWindow(MainWindowGUI):
     sigExposureChanged = QtCore.Signal(int)
     sigGammaToggled = QtCore.Signal(bool)
 
     def __init__(self):
         super().__init__()
+
+        # Store grabbed time here
+        self.grab_time: datetime.datetime | None = None
 
         # handle image grabbing
         self.frame_grabber = FrameGrabber()
@@ -563,7 +588,8 @@ class MainWindow(MainWindowGUI):
 
         # save image
         self.save_img_btn.clicked.connect(self.save_image)
-        self.save_h5_btn.setDisabled(True)  # not implemented
+        self.save_h5_btn.clicked.connect(self.save_hdf5)
+        # self.save_h5_btn.setDisabled(True)  # not implemented
 
         self.autosave_timer.timeout.connect(self.save_image)
         self.autosave_check.toggled.connect(self.toggle_autosave)
@@ -611,24 +637,52 @@ class MainWindow(MainWindowGUI):
         # self.exposure_spin.blockSignals(False)
         # self.exposure_slider.blockSignals(False)
 
-    @QtCore.Slot(object)
-    def grabbed(self, image):
+    @QtCore.Slot(object, object)
+    def grabbed(self, grabtime: datetime.datetime, image):
+        self.grab_time: datetime.datetime = grabtime
         self.image_item.setImage(image, autoLevels=False)
+
+        if np.amax(image) == 255:
+            self.statusBar().showMessage(
+                "Saturation detected! Consider lowering exposure."
+            )
+        else:
+            self.statusBar().showMessage(self.grab_time.isoformat())
         # self.statusBar().showMessage(
         #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
         # )
 
+    @QtCore.Slot()
+    def save_hdf5(self):
+        dt = self.grab_time
+        arr = self.image_array
+        filename = os.path.join(SAVE_DIR, f"Image_{dt.isoformat()}.h5")
+        save_as_hdf5(arr, filename)
+
+    @property
+    def image_array(self) -> xr.DataArray:
+        image = self.image_item.image
+        shape = image.shape
+        xlim, zlim = (shape[1] - 1) / 2, (shape[0] - 1) / 2
+        return xr.DataArray(
+            image,
+            dims=("x", "z"),
+            coords=dict(
+                x=np.linspace(-xlim, xlim, shape[1]) + self._off_h,
+                z=np.linspace(-zlim, zlim, shape[0]) + self._off_v,
+            ),
+        )
+
     @property
     def rect(self) -> QtCore.QRect:
         shape = self.image_item.image.shape
-        x = -(shape[1] - 1) / 2
-        y = -(shape[0] - 1) / 2
-        w = -2 * x * self.cal_h
-        h = -2 * y * self.cal_v
+        x, y = -(shape[1] - 1) / 2, -(shape[0] - 1) / 2
+        w, h = -2 * x * self.cal_h, -2 * y * self.cal_v
         x += self._off_h
         y += self._off_v
         return QtCore.QRect(x, y, w, h)
 
+    @QtCore.Slot()
     def update_rect(self):
         try:
             self.image_item.setRect(self.rect)
