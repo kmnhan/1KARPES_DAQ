@@ -642,7 +642,7 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(object, object)
     def grabbed(self, grabtime: datetime.datetime, image):
         self.grab_time: datetime.datetime = grabtime
-        self.image_item.setImage(image, autoLevels=False)
+        self.image_item.setImage(image, autoLevels=False, rect=self.rect)
 
         if np.amax(image) == 255:
             self.statusBar().showMessage(
@@ -691,13 +691,13 @@ class MainWindow(MainWindowGUI):
         except AttributeError:
             pass
 
-    @QtCore.Slot(object)
-    def set_image(self, image):
-        # I don't remember why this method exists...
-        if image.ndim == 3:
-            self.image_item.setImage(np.flip(image, -1), useRGBA=True)
-        else:
-            self.image_item.setImage(image)
+    # @QtCore.Slot(object)
+    # def set_image(self, image):
+    #     # I don't remember why this method exists...
+    #     if image.ndim == 3:
+    #         self.image_item.setImage(np.flip(image, -1), useRGBA=True)
+    #     else:
+    #         self.image_item.setImage(image)
 
     @QtCore.Slot(int)
     def set_exposure(self, value: int):
