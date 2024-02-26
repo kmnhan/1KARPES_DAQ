@@ -106,11 +106,13 @@ class ConfigDialog(*uic.loadUiType("cameramonitor_config.ui")):
         super().show()
 
     def populate(self):
-        self.horiz_spin.setValue(self.settings.value("calibration/h", 0.011))
-        self.vert_spin.setValue(self.settings.value("calibration/v", 0.011))
-        self.hoff_spin.setValue(self.settings.value("calibration/hoff", 0.0))
-        self.voff_spin.setValue(self.settings.value("calibration/voff", 0.0))
-        self.autosave_spin.setValue(self.settings.value("autosave_interval", 300))
+        self.horiz_spin.setValue(float(self.settings.value("calibration/h", 0.011)))
+        self.vert_spin.setValue(float(self.settings.value("calibration/v", 0.011)))
+        self.hoff_spin.setValue(float(self.settings.value("calibration/hoff", 0.0)))
+        self.voff_spin.setValue(float(self.settings.value("calibration/voff", 0.0)))
+        self.autosave_spin.setValue(
+            float(self.settings.value("autosave_interval", 300))
+        )
 
     def accept(self):
         self.settings.setValue("calibration/h", self.horiz_spin.value())
@@ -281,14 +283,14 @@ class MainWindowGUI(uiclass, baseclass):
         raise NotImplementedError
 
     def refresh_settings(self):
-        self._cal_h = self.settings.value("calibration/h", 0.011)
-        self._cal_v = self.settings.value("calibration/v", 0.011)
-        self._off_h = self.settings.value("calibration/hoff", 0.0)
-        self._off_v = self.settings.value("calibration/voff", 0.0)
+        self._cal_h = float(self.settings.value("calibration/h", 0.011))
+        self._cal_v = float(self.settings.value("calibration/v", 0.011))
+        self._off_h = float(self.settings.value("calibration/hoff", 0.0))
+        self._off_v = float(self.settings.value("calibration/voff", 0.0))
         self.circle.setSize((1138 * self._cal_h, 1138 * self._cal_v))
         self.update_rect()
         self.autosave_timer.setInterval(
-            int(self.settings.value("autosave_interval") * 1e3)
+            int(float(self.settings.value("autosave_interval")) * 1e3)
         )
 
     def load_pos_from_settings(self):
