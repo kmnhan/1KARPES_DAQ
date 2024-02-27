@@ -267,6 +267,8 @@ class DataFetcher(QtCore.QRunnable):
 
 
 class LiveImageTool(BaseImageTool):
+    sigClosed = QtCore.Signal(object)
+
     def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
 
@@ -372,6 +374,11 @@ class LiveImageTool(BaseImageTool):
             ):
                 self.array_slicer.reset_property_cache(prop)
             self.slicer_area.refresh_all()
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.slicer_area.set_data(np.ones((2, 2), dtype=np.float32))
+        self.sigClosed.emit(self)
+        super().closeEvent(event)
 
 
 class WorkFileImageTool(BaseImageTool):

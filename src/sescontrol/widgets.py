@@ -1,4 +1,5 @@
 import datetime
+import gc
 import os
 import sys
 import time
@@ -199,6 +200,12 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @itool.setter
     def itool(self, imagetool: LiveImageTool):
         self._itools.append(imagetool)
+        imagetool.sigClosed.connect(self.itool_closed)
+
+    @QtCore.Slot(object)
+    def itool_closed(self, imagetool: LiveImageTool):
+        self._itools.remove(imagetool)
+        gc.collect(generation=2)
 
     @property
     def valid_axes(self) -> list[str]:
