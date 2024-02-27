@@ -6,12 +6,14 @@ pypylon_dir = pathlib.Path(pypylon.__file__).parent
 pylon_binaries = [(str(f), './pypylon') for f in pypylon_dir.glob('*.dll')]
 pylon_binaries += [(str(f), './pypylon') for f in pypylon_dir.glob('*.pyd')]
 
+datas = [('src/pyloncam.ui', '.'), ('src/cameramonitor_config.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/images/pyloncam_white.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')]
+datas += copy_metadata('numpy')
 
 a = Analysis(
     ['src\\pyloncam.py'],
     pathex=[],
     binaries=pylon_binaries,
-    datas=[('src/pyloncam.ui', '.'), ('src/cameramonitor_config.ui', '.'), ('src/images/pyloncam.ico', './images'), ('src/images/pyloncam_white.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
+    datas=datas,
     hiddenimports=['PyQt6', 'h5netcdf', 'xarray', 'numpy', 'matplotlib', 'matplotlib.colors'],
     hookspath=[],
     hooksconfig={},
