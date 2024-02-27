@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
 from erlab.interactive.imagetool.controls import ItoolControlsBase
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets, QtGui
 
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import SES_DIR
@@ -246,20 +246,20 @@ class DataFetcher(QtCore.QRunnable):
             {k: v for k, v in self.COORDS_MAPPING.items() if k in wave.dims}
         )
 
-        # binning
-        if len(self._motor_args) != 0:
+        # Bin 2D scan to save memory
+        if len(self._motor_args) > 1:
             wave = wave.coarsen(
                 {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
             ).mean()
 
         if self._niter == 1:
-            # reserve space for future scans
+            # Reserve space for future scans
             wave = wave.expand_dims(
                 {name: coord for name, coord in self._motor_args},
                 axis=[wave.ndim + i for i in range(len(self._motor_args))],
             ).copy()
 
-            # fill reserved space with nan
+            # Fill reserved space with nan
             for name, coord in self._motor_args:
                 wave.loc[{name: wave.coords[name] != coord[0]}] = np.nan
 
