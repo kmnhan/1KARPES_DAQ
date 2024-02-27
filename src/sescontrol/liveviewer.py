@@ -467,7 +467,7 @@ class WorkFileImageTool(BaseImageTool):
             with open(os.path.join(SES_DIR, "ini\Ses.ini"), "r") as f:
                 ses_config.read_file(f)
             nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
-            arr = xr.DataArray(arr.reshape((int(len(arr) / nslices), nslices)))
+            arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
 
         if self.array_slicer._obj.shape == arr.shape:
             self.array_slicer._obj[:] = arr.values
