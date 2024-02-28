@@ -7,7 +7,7 @@ jobs:
 
   build:
     name: Build Log Viewer
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       fail-fast: false
 
@@ -30,4 +30,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Log Viewer
-        path: dist/logviewer/
+        path: dist/LogViewer.app
