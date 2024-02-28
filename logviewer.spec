@@ -1,5 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+import sys
+if sys.platform == "darwin":
+    arch = "universal2"
+else:
+    arch = None
 
 a = Analysis(
     ["src\\logviewer.py"],
@@ -35,7 +39,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,
+    target_arch=arch,
     codesign_identity=None,
     entitlements_file=None,
     icon=["src\\images\\logviewer.ico"],
@@ -49,3 +53,11 @@ coll = COLLECT(
     upx_exclude=[],
     name="logviewer",
 )
+if arch is not None:
+    app = BUNDLE(
+        coll,
+        name='Logviewer.app',
+        icon='src/images/logviewer.ico',
+        bundle_identifier=None,
+    )
+

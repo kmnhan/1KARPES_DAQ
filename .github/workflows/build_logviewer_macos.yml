@@ -1,0 +1,33 @@
+name: Build Log Viewer (MacOS)
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build Log Viewer
+    runs-on: macos-latest-xlarge
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Resolving dependencies...
+      run: pip install -r requirements_logviewer.txt pyinstaller
+
+    - name: Building...
+      run: pyinstaller logviewer.spec
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: Log Viewer
+        path: dist/logviewer/
