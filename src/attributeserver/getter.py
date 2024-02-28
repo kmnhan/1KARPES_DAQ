@@ -52,9 +52,9 @@ def get_shared_int(name: str) -> int:
     return out
 
 
-def get_shared_floats(name: str, size: int) -> list[float]:
+def get_shared_array(name: str, num: int, dtype: str) -> list:
     shm = shared_memory.SharedMemory(name=name)
-    out = list(np.ndarray((size,), dtype="f8", buffer=shm.buf))
+    out = list(np.ndarray((num,), dtype=dtype, buffer=shm.buf))
     shm.close()
     return out
 
@@ -67,7 +67,9 @@ def get_shared_float(name: str) -> float:
 
 
 def get_pressure_list() -> list[str]:
-    return [np.format_float_scientific(v, 3) for v in get_shared_list("Pressures")]
+    return [
+        np.format_float_scientific(v, 3) for v in get_shared_array("Pressures", 3, "f4")
+    ]
 
 
 def get_pressure_dict() -> dict[str, str]:
@@ -75,7 +77,7 @@ def get_pressure_dict() -> dict[str, str]:
 
 
 def get_temperature_list() -> list[str]:
-    return [str(v) for v in get_shared_floats("Temperatures", len(SLIT_TABLE))]
+    return [str(v) for v in get_shared_array("Temperatures", len(SLIT_TABLE), "f8")]
 
 
 def get_temperature_dict() -> dict[str, str]:

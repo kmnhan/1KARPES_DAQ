@@ -194,7 +194,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Shared memory for access by other processes
         # Will be created on initial data update
-        self.sl: shared_memory.ShareableList | None = None
+        self.shm: shared_memory.SharedMemory | None = None
 
         # Connect to MG15
         self.mg15 = mg15.MG15(address)
@@ -248,11 +248,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def update_values(self):
-        if self.sl is None:
-            # Create shareable list on first update
-            self.sl = shared_memory.ShareableList(
-                [float(0.0)] * len(self.main_gauges), name="Pressures"
+        if self.shm is None:
+            # Create shared memory on first update
+            self.shm = shared_memory.SharedMemory(
+                name="Pressures", create=True, size=4 * len(self.main_gauges)
             )
+
+        arr = np.ndarray((len(self.main_gauges),), dtype="f4", buffer=self.shm.buf)
 
         for i, ch in enumerate(self.main_gauges):
             # Format & display pressure
@@ -265,9 +267,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     .replace("e", "E")
                     .replace("-", "−")
                 )
-                self.sl[i] = float(self.mg15.get_pressure(ch, self.log_units))
+                arr[i] = np.float32(self.mg15.get_pressure(ch, self.log_units))
             else:
-                self.sl[i] = float(np.nan)
+                arr[i] = np.float32(np.nan)
                 value = status
             self.pressure_widget.set_value(i, value)
 
@@ -276,9 +278,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mg15.disconnect()
 
         # Free shared memory
-        self.sl.shm.close()
-        self.sl.shm.unlink()
-        self.sl = None
+        self.shm.close()
+        self.shm.unlink()
 
         # Stop logging process
         self.log_writer.stop()
