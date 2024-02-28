@@ -226,8 +226,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.time_list.append(updated)
         main_gauge_pressures = []
         for ch in self.main_gauges:
-            state = self.mg15.get_state(ch)
-            if state == mg15.GAUGE_STATE[0]:
+            if self.mg15.get_state(ch) == mg15.GAUGE_STATE[0]:
                 main_gauge_pressures.append(pressures[ch - 1])
             else:
                 main_gauge_pressures.append(np.nan)

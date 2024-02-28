@@ -75,12 +75,12 @@ MBAR_TO_PA: float = 100.0
 MBAR_TO_PSIA: float = MBAR_TO_PA * (0.0254**2) / (0.45359237 * 9.80665)
 
 
-def uint16_to_boolean_array(uint16_value):
+def uint16_to_boolean_array(uint16_value) -> list[bool]:
     # Convert uint16 to binary, remove the '0b' prefix, and pad with zeros
     return [bit == "1" for bit in bin(uint16_value)[2:].zfill(16)]
 
 
-def uint8_to_ieee754(array):
+def uint8_to_ieee754(array) -> float:
     # Convert two uint16 into single uint32, then unpack to float (IEEE-754)
     return struct.unpack(">f", struct.pack(">I", (array[0] << 16) | array[1]))[0]
 
@@ -100,12 +100,6 @@ class MG15Connection(QtCore.QThread):
         self.address = address
         if self.isRunning():
             self.mutex.unlock()
-
-    # @QtCore.Slot(object)
-    # def set_value(self, value):
-    #     self.mutex.lock()
-    #     self._ret_val = value
-    #     self.mutex.unlock()
 
     def run(self):
         self.mutex = QtCore.QMutex()
@@ -166,8 +160,11 @@ class MG15(QtCore.QObject):
         return getattr(self, f"get_pressure_{unit}")(channel)
 
     def get_pressure_mbar(self, channel: int) -> float:
-        idx = channel - 1
-        return uint8_to_ieee754(self.registers[3 * idx : 3 * idx + 2])
+        if self.get_state(channel) == GAUGE_STATE[0]:
+            idx = channel - 1
+            return uint8_to_ieee754(self.registers[3 * idx : 3 * idx + 2])
+        else:
+            return float("nan")
 
     def get_pressure_torr(self, channel: int) -> float:
         return self.get_pressure_mbar(channel) * MBAR_TO_TORR
