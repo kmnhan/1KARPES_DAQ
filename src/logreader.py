@@ -7,8 +7,8 @@ import pandas as pd
 
 if sys.platform == "darwin":
     # debug on macOS
-    CRYO_DIR = os.path.expanduser("~/sample_logs/Cryocooler_Log")
-    MG15_DIR = os.path.expanduser("~/sample_logs/MG15_Log")
+    CRYO_DIR = "/Volumes/143.248.11.28/Logs/Cryocooler"
+    MG15_DIR = "/Volumes/143.248.11.28/Logs/Pressure"
 else:
     CRYO_DIR = "D:/Logs/Cryocooler"
     MG15_DIR = "D:/Logs/Pressure"
