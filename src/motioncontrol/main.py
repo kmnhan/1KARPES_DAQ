@@ -14,7 +14,7 @@ from moee import MMStatus
 from motionwidgets import DeltaWidget, SingleChannelWidget, SingleControllerWidget
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-LOG_DIR = "D:/MotionController/logs"
+LOG_DIR = "D:/Logs/Motion"
 
 try:
     os.chdir(sys._MEIPASS)

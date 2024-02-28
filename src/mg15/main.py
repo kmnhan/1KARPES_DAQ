@@ -160,9 +160,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log_units: str = (
             self.config.get("Python", "Logging Units", fallback="torr").strip().lower()
         )
-        log_dir: str = self.config.get(
-            "Python", "Logging Directory", fallback="D:\\MG15_Log"
-        )
+        log_dir: str = self.config.get("Python", "Logging Directory")
         log_interval: float = self.config.getfloat(
             "Python", "Logging Interval (s)", fallback=10.0
         )

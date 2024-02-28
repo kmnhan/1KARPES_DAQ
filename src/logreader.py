@@ -10,8 +10,8 @@ if sys.platform == "darwin":
     CRYO_DIR = os.path.expanduser("~/sample_logs/Cryocooler_Log")
     MG15_DIR = os.path.expanduser("~/sample_logs/MG15_Log")
 else:
-    CRYO_DIR = "D:/Cryocooler_Log"
-    MG15_DIR = "D:/MG15_Log"
+    CRYO_DIR = "D:/Logs/Cryocooler"
+    MG15_DIR = "D:/Logs/Pressure"
 
 
 def parse_mg15_time(s: str) -> datetime.datetime:
