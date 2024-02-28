@@ -6,7 +6,7 @@ else:
     arch = None
 
 a = Analysis(
-    ["src\\logviewer.py"],
+    ["src/logviewer.py"],
     pathex=[],
     binaries=[],
     datas=[
@@ -42,7 +42,7 @@ exe = EXE(
     target_arch=arch,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["src\\images\\logviewer.ico"],
+    icon=["src/images/logviewer.ico"],
 )
 coll = COLLECT(
     exe,
@@ -56,8 +56,8 @@ coll = COLLECT(
 if arch is not None:
     app = BUNDLE(
         coll,
-        name='Logviewer.app',
-        icon='src/images/logviewer.ico',
+        name="LogViewer.app",
+        icon="src/images/logviewer.ico",
         bundle_identifier=None,
     )
 
