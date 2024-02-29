@@ -132,6 +132,10 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
         for plot, yval in zip(self.plots, ylist):
             plot.setData(xval, yval)
 
+    def clear(self):
+        for plot in self.plots:
+            plot.setData()
+
     @property
     def plotItem(self) -> pg.PlotItem:
         return self.plotwidget.plotItem
@@ -184,6 +188,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.plotting.plotItem.getAxis("left").setLabel(f"Pressure ({self.log_units})")
         self.plotting.plotItem.getAxis("left").enableAutoSIPrefix(False)
+        self.plotting.clear_btn.clicked.connect(self.clear_plot)
         d2.addWidget(self.plotting)
 
         # Setup data array
@@ -215,6 +220,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.log_timer.start()
         else:
             self.log_timer.stop()
+
+    @QtCore.Slot()
+    def clear_plot(self):
+        self.time_list: list[datetime.datetime] = []
+        self.pressure_list: list[list[float]] = []
+        self.plotting.clear()
 
     @QtCore.Slot()
     def write_log(self):
