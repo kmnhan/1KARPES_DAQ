@@ -7,6 +7,7 @@ import time
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+import qtawesome as qta
 import tomlkit
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -31,12 +32,37 @@ class PressureSnapCurvePlotDataItem(XDateSnapCurvePlotDataItem):
         return f"{y:.3g}"
 
 
+class BetterCalendarWidget(QtWidgets.QCalendarWidget):
+    """A custom calendar widget with improved styling and navigation buttons."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setStyleSheet(
+            "QCalendarWidget QWidget#qt_calendar_navigationbar"
+            " { background-color: #e0e0e0; }"
+        )
+        self.setGridVisible(True)
+
+        prev = self.findChild(QtWidgets.QToolButton, "qt_calendar_prevmonth")
+        if prev:
+            prev.setIcon(qta.icon("mdi6.arrow-left"))
+
+        next = self.findChild(QtWidgets.QToolButton, "qt_calendar_nextmonth")
+        if next:
+            next.setIcon(qta.icon("mdi6.arrow-right"))
+
+
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     def __init__(self):
+
         super().__init__()
         self.setupUi(self)
 
         self.setWindowTitle("1KARPES Log Viewer")
+
+        self.startdateedit.setCalendarWidget(BetterCalendarWidget())
+        self.enddateedit.setCalendarWidget(BetterCalendarWidget())
 
         self.plot0 = DynamicPlotItemTwiny(
             legendtableview=self.legendtable,
@@ -264,7 +290,10 @@ if __name__ == "__main__":
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
-    qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.ico"))
+    if sys.platform == "darwin":
+        qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.icns"))
+    else:
+        qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.ico"))
     win = MainWindow()
     win.show()
     win.activateWindow()

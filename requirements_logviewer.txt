@@ -4,3 +4,4 @@ tomlkit
 pyqt6<=6.5.3
 qtpy
 pyqtgraph
+qtawesome
