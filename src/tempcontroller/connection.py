@@ -22,29 +22,30 @@ class RequestHandler:
         self._last_update = time.perf_counter_ns()
 
     def wait_time(self):
-        while (time.perf_counter_ns() - self._last_update) < self.interval_ms * 1e3:
-            time.sleep(1e-3)
+        while (time.perf_counter_ns() - self._last_update) <= self.interval_ms * 1e3:
+            time.sleep(5e-4)
 
-    def write(self, *args, **kwargs):
+    def write(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
         res = self.inst.write(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.debug(f"{self.resource_name}  <--  {args[0]}")
+        log.log(loglevel, f"{self.resource_name}  <--  {args[0]}")
         return res
 
-    def query(self, *args, **kwargs):
+    def query(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.debug(f"{self.resource_name}  <--  {args[0]}")
-        log.debug(f"{self.resource_name}  -->  {res}")
+        log.log(loglevel, f"{self.resource_name}  <--  {args[0]}")
+        log.log(loglevel, f"{self.resource_name}  -->  {res}")
         return res
 
-    def read(self, *args, **kwargs):
+    def read(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.debug(f"{self.resource_name}  -->  {res}")
+        log.log(loglevel, f"{self.resource_name}  -->  {res}")
+        log.log()
         return res
 
     def close(self):
@@ -72,14 +73,20 @@ class VISAThread(QtCore.QThread):
         if self.mutex is not None:
             self.mutex.unlock()
 
-    def request_query(self, message: str, signal: QtCore.SignalInstance):
+    def request_query(
+        self,
+        message: str,
+        signal: QtCore.SignalInstance,
+        *,
+        loglevel: int = logging.DEBUG,
+    ):
         self.lock_mutex()
-        self.queue.put((message, signal))
+        self.queue.put((message, signal, loglevel))
         self.unlock_mutex()
 
-    def request_write(self, message: str):
+    def request_write(self, message: str, *, loglevel: int = logging.DEBUG):
         self.lock_mutex()
-        self.queue.put((message, None))
+        self.queue.put((message, None, loglevel))
         self.unlock_mutex()
 
     def run(self):
@@ -91,17 +98,17 @@ class VISAThread(QtCore.QThread):
 
         while not self.stopped.is_set():
             if not self.queue.empty():
-                message, reply_signal = self.queue.get()
+                message, reply_signal, loglevel = self.queue.get()
                 if reply_signal is None:  # Write only
                     try:
-                        self.controller.write(message)
+                        self.controller.write(message, loglevel=loglevel)
                     except pyvisa.VisaIOError:
                         self.sigVisaIOError.emit()
                     else:
                         self.sigWritten.emit()
                 else:  # Query
                     try:
-                        rep = self.controller.query(message)
+                        rep = self.controller.query(message, loglevel=loglevel)
                     except pyvisa.VisaIOError:
                         self.sigVisaIOError.emit()
                     else:
