@@ -120,6 +120,7 @@ class DynamicPlotItem(pg.PlotItem):
         legendtableview: LegendTableView,
         ncurves: int | None = None,
         plot_cls: type[pg.PlotDataItem] = pg.PlotDataItem,
+        plot_kw: dict | None = None,
         pen_kw: dict | None = None,
         xformat: Callable[[float], str] | None = None,
         yformat: Callable[[float], str] | None = None,
@@ -128,6 +129,9 @@ class DynamicPlotItem(pg.PlotItem):
         super().__init__(*args, **kwargs)
         self.legendtable: LegendTableView = legendtableview
         self.plot_cls: type[pg.PlotDataItem] = plot_cls
+        if plot_kw is None:
+            plot_kw = dict()
+        self.plot_kw: dict = plot_kw
         self.plots: list[pg.PlotDataItem] = []
         if ncurves is not None:
             self.set_ncurves(ncurves)
@@ -209,7 +213,7 @@ class DynamicPlotItem(pg.PlotItem):
             return
         elif diff > 0:
             for _ in range(diff):
-                self.plots.append(self.plot_cls())
+                self.plots.append(self.plot_cls(**self.plot_kw))
                 self.addItem(self.plots[-1])
         else:
             for _ in range(abs(diff)):
@@ -318,7 +322,7 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
         diff = ncurves - len(self.plots)
         if diff > 0:
             for _ in range(diff):
-                self.plots.append(self.plot_cls())
+                self.plots.append(self.plot_cls(**self.plot_kw))
         elif diff < 0:
             for _ in range(abs(diff)):
                 p = self.plots.pop(-1)
