@@ -492,7 +492,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     def instrument(self) -> VISAThread | None:
         return self._instrument
 
-    @property.setter
+    @instrument.setter
     def instrument(self, instrument: VISAThread | None):
         if self._instrument is not None:
             self._instrument.sigVisaIOError.disconnect(self.connection_problem)
