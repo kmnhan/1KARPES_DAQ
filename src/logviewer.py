@@ -1,4 +1,5 @@
 import datetime
+import gc
 import os
 import sys
 import time
@@ -9,7 +10,7 @@ import pyqtgraph as pg
 import tomlkit
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from logreader import get_cryocooler_log, get_pressure_log
+from logreader import CRYO_DIR, get_cryocooler_log, get_pressure_log
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import (
     DynamicPlotItem,
@@ -40,6 +41,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot0 = DynamicPlotItemTwiny(
             legendtableview=self.legendtable,
             plot_cls=XDateSnapCurvePlotDataItem,
+            plot_kw=dict(autoDownsample=True, clipToView=True),
             pen_kw_twin=dict(width=2, style=QtCore.Qt.DashLine),
         )
         self.graphics_layout.addItem(self.plot0, 0, 0)
@@ -51,6 +53,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot1 = DynamicPlotItem(
             legendtableview=LegendTableView(),
             plot_cls=PressureSnapCurvePlotDataItem,
+            plot_kw=dict(autoDownsample=True, clipToView=True),
         )
         self.graphics_layout.addItem(self.plot1, 1, 0)
         self.plot1.setAxisItems({"bottom": pg.DateAxisItem()})
@@ -163,6 +166,7 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(bool)
     def toggle_updates(self, value: bool):
         if value:
+            self.update_time()
             self.update_timer.start()
         else:
             self.update_timer.stop()
@@ -171,12 +175,19 @@ class MainWindow(MainWindowGUI):
     def update_time(self):
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.load_data()
+        gc.collect(generation=2)
 
     @QtCore.Slot()
     def load_data(self, *, update: bool = True):
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
         if self.df is not None:
             self.plot0.set_labels(self.df.columns)
+
+            config_file: str | None = QtCore.QSettings("erlab", "tempcontroller").value(
+                "config_file", None
+            )
+            if config_file is None:
+                config_file = os.path.join(CRYO_DIR, "config.toml")
 
             with open(
                 QtCore.QSettings("erlab", "tempcontroller").value("config_file"), "r"
