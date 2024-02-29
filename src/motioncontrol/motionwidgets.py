@@ -1,3 +1,4 @@
+import os
 import queue
 import sys
 import threading
@@ -9,10 +10,16 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from moee import MMCommand, MMStatus, MMThread, EncoderThread
+from moee import EncoderThread, MMCommand, MMStatus, MMThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 CONFIG_FILE = "D:/MotionController/piezomotors.toml"
+
+
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
 
 
 class StautsIconWidget(qta.IconWidget):
