@@ -348,15 +348,15 @@ class MainWindow(MainWindowGUI):
         self.lake336.start()
         self.mkpower.start()
         # Wait until all threads are ready
-        while not all(
+        while any(
             (
-                hasattr(self.lake218, "queue"),
-                hasattr(self.lake331, "queue"),
-                hasattr(self.lake336, "queue"),
-                hasattr(self.mkpower, "queue"),
+                self.lake218.stopped.is_set(),
+                self.lake331.stopped.is_set(),
+                self.lake336.stopped.is_set(),
+                self.mkpower.stopped.is_set(),
             )
         ):
-            time.sleep(1e-3)
+            time.sleep(1e-4)
 
     def stop_threads(self):
         self.lake218.stopped.set()

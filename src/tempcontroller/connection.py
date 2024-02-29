@@ -48,11 +48,13 @@ class VISAThread(QtCore.QThread):
 
     sigWritten = QtCore.Signal()
     sigQueried = QtCore.Signal()
+    sigVisaIOError = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.controller = RequestHandler(*args, **kwargs)
         self.stopped = threading.Event()
+        self.stopped.set()
         self.mutex: QtCore.QMutex | None = None
 
     def lock_mutex(self):
@@ -76,7 +78,6 @@ class VISAThread(QtCore.QThread):
     def run(self):
         self.mutex = QtCore.QMutex()
         self.queue = queue.Queue()
-
         self.stopped.clear()
 
         self.controller.open()
@@ -85,13 +86,38 @@ class VISAThread(QtCore.QThread):
             if not self.queue.empty():
                 message, reply_signal = self.queue.get()
                 if reply_signal is None:  # Write only
-                    self.controller.write(message)
-                    self.sigWritten.emit()
+                    try:
+                        self.controller.write(message)
+                    except pyvisa.VisaIOError:
+                        self.sigVisaIOError.emit()
+                    else:
+                        self.sigWritten.emit()
                 else:  # Query
-                    rep = self.controller.query(message)
-                    reply_signal.emit(rep)
-                    self.sigQueried.emit()
+                    try:
+                        rep = self.controller.query(message)
+                    except pyvisa.VisaIOError:
+                        self.sigVisaIOError.emit()
+                    else:
+                        reply_signal.emit(rep)
+                        self.sigQueried.emit()
                 self.queue.task_done()
             time.sleep(1e-3)
 
         self.controller.close()
+
+
+def start_visathread(thread: VISAThread):
+    thread.start()
+    while thread.stopped.is_set():
+        time.sleep(1e-4)
+        
+
+
+def stop_visathread(thread: VISAThread):
+    thread.stopped.set()
+    thread.wait()
+
+
+def restart_visathread(thread: VISAThread, msec: int = 0):
+    stop_visathread(thread)
+    QtCore.QTimer.singleShot(int(msec), lambda: start_visathread(thread))

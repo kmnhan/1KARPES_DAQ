@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from connection import VISAThread
+from connection import VISAThread, restart_visathread
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 
@@ -92,8 +92,9 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
     @QtCore.Slot(str)
     def update_range(self, value: str | int):
+        self.rng_raw = str(value).strip()
         self.combo.blockSignals(True)
-        self.combo.setCurrentIndex(int(value))
+        self.combo.setCurrentIndex(int(self.rng_raw))
         self.combo.blockSignals(False)
 
     @QtCore.Slot(str)
@@ -471,6 +472,9 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     def __init__(self, instrument: VISAThread | None = None, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self._instrument: VISAThread | None = None
+        self._vout_raw: str = "nan"
+
         self.instrument = instrument
 
         self.check.toggled.connect(self.change_output)
@@ -484,9 +488,39 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
         self.dial.setEnabled(self.check.isChecked())
 
+    @property
+    def instrument(self) -> VISAThread | None:
+        return self._instrument
+
+    @property.setter
+    def instrument(self, instrument: VISAThread | None):
+        if self._instrument is not None:
+            self._instrument.sigVisaIOError.disconnect(self.connection_problem)
+        self._instrument: VISAThread | None = instrument
+        if self._instrument is not None:
+            self._instrument.sigVisaIOError.connect(self.connection_problem)
+
+    @property
+    def vout_raw(self) -> str:
+        if self.isEnabled():
+            return self._vout_raw
+        else:
+            return "nan"
+
+    @QtCore.Slot()
+    def connection_problem(self):
+        """Disable widget and try to reconnect."""
+        self.setDisabled(True)
+        
+        QtCore.QTimer.singleShot(100, self.check_regen)
+        restart_visathread(self.instrument)
+        
+
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
-        self.vout_spin.setValue(float(value))
+        self.setDisabled(False)
+        self._vout_raw: str = str(value).strip()
+        self.vout_spin.setValue(float(self._vout_raw))
 
         if not self.dial.isSliderDown():
             self.dial.blockSignals(True)
@@ -495,6 +529,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
     @QtCore.Slot(str)
     def update_vset(self, value: str | float):
+        self.setDisabled(False)
         self.vset_spin.setValue(float(value))
 
     @QtCore.Slot(str)
@@ -510,6 +545,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         # Bitwise AND with shifting
         res: list[bool] = [bool((byte_value >> i) & 1) for i in range(8)]
 
+        self.setDisabled(False)
         if res[6] != self.check.isChecked():
             self.dial.setEnabled(res[6])
             self.check.blockSignals(True)
