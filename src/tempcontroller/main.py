@@ -375,10 +375,9 @@ class MainWindow(MainWindowGUI):
             self.overwrite_config()
 
     def update(self):
-        dt = datetime.datetime.now()
         # Trigger updates
         self.sigUpdate.emit()
-        self.plot_values[0].append(dt.timestamp())
+        self._lastupdate: datetime.datetime = datetime.datetime.now()
 
         # Wait 100 ms for data to update
         QtCore.QTimer.singleShot(100, self.check_regen)
@@ -416,6 +415,7 @@ class MainWindow(MainWindowGUI):
 
         arr = np.ndarray((len(klist),), dtype="f8", buffer=self.shm.buf)
 
+        self.plot_values[0].append(self._lastupdate.timestamp())
         for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], klist)):
             # Update plot value
             kval = float(kstr)
