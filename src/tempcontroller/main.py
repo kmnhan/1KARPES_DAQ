@@ -30,6 +30,9 @@ try:
 except:
     pass
 
+logging.addLevelName(5, "TRACE")
+logging.TRACE = 5
+
 log = logging.getLogger("tempctrl")
 log.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)

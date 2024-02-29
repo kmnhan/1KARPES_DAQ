@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from collections.abc import Sequence
@@ -13,6 +14,8 @@ try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+log = logging.getLogger("tempctrl")
 
 
 class QHLine(QtWidgets.QFrame):
@@ -201,10 +204,18 @@ class HeaterWidget(HeaterWidgetGUI):
             self.set_target(self.curr_spin.value())
 
     def trigger_update(self):
-        self.instrument.request_query(f"SETP? {self.loop}".strip(), self.sigSETP)
-        self.instrument.request_query(f"RAMP? {self.loop}".strip(), self.sigRAMP)
-        self.instrument.request_query(f"HTR? {self.output}".strip(), self.sigHTR)
-        self.instrument.request_query(f"RANGE? {self.output}".strip(), self.sigRANGE)
+        self.instrument.request_query(
+            f"SETP? {self.loop}".strip(), self.sigSETP, loglevel=5
+        )
+        self.instrument.request_query(
+            f"RAMP? {self.loop}".strip(), self.sigRAMP, loglevel=5
+        )
+        self.instrument.request_query(
+            f"HTR? {self.output}".strip(), self.sigHTR, loglevel=5
+        )
+        self.instrument.request_query(
+            f"RANGE? {self.output}".strip(), self.sigRANGE, loglevel=5
+        )
 
 
 class ReadingWidgetGUI(QtWidgets.QWidget):
@@ -375,8 +386,8 @@ class ReadingWidget(ReadingWidgetGUI):
         self.sigSRDG.connect(self.update_srdg)
 
     def trigger_update(self):
-        self.instrument.request_query(self.krdg_command, self.sigKRDG)
-        self.instrument.request_query(self.srdg_command, self.sigSRDG)
+        self.instrument.request_query(self.krdg_command, self.sigKRDG, loglevel=5)
+        self.instrument.request_query(self.srdg_command, self.sigSRDG, loglevel=5)
 
     @QtCore.Slot(str)
     def update_krdg(self, message):
@@ -511,7 +522,8 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     def connection_problem(self):
         """Disable widget and try to reconnect."""
         self.setDisabled(True)
-        restart_visathread(self.instrument, 500)
+        restart_visathread(self.instrument, 3000)
+        log.error("Connection problem with heat switch. Trying to reconnect.")
 
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
@@ -570,9 +582,9 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         self.trigger_update()
 
     def trigger_update(self):
-        self.instrument.request_query("STATUS?", self.sigSTATUSRead)
-        self.instrument.request_query("VSET1?", self.sigVSETRead)
-        self.instrument.request_query("VOUT1?", self.sigVOUTRead)
+        self.instrument.request_query("STATUS?", self.sigSTATUSRead, loglevel=5)
+        self.instrument.request_query("VSET1?", self.sigVSETRead, loglevel=5)
+        self.instrument.request_query("VOUT1?", self.sigVOUTRead, loglevel=5)
 
 
 if __name__ == "__main__":
