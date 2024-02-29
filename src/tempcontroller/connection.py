@@ -1,9 +1,12 @@
+import logging
 import queue
 import threading
 import time
 
 import pyvisa
 from qtpy import QtCore
+
+log = logging.getLogger("tempctrl")
 
 
 class RequestHandler:
@@ -26,18 +29,22 @@ class RequestHandler:
         self.wait_time()
         res = self.inst.write(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
+        log.debug(f"{self.resource_name}  <--  {args[0]}")
         return res
 
     def query(self, *args, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
+        log.debug(f"{self.resource_name}  <--  {args[0]}")
+        log.debug(f"{self.resource_name}  -->  {res}")
         return res
 
     def read(self, *args, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
+        log.debug(f"{self.resource_name}  -->  {res}")
         return res
 
     def close(self):
@@ -110,7 +117,6 @@ def start_visathread(thread: VISAThread):
     thread.start()
     while thread.stopped.is_set():
         time.sleep(1e-4)
-        
 
 
 def stop_visathread(thread: VISAThread):

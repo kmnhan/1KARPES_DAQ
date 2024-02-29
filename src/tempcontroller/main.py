@@ -1,6 +1,7 @@
 import collections
 import csv
 import datetime
+import logging
 import multiprocessing
 import os
 import sys
@@ -29,6 +30,14 @@ try:
 except:
     pass
 
+log = logging.getLogger("tempctrl")
+log.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+)
+log.addHandler(handler)
+
 
 def header_changed(filename, header: list[str]) -> bool:
     """Check log file and determine whether new header needs to be appended."""
@@ -49,6 +58,31 @@ def header_changed(filename, header: list[str]) -> bool:
 
 
 class LoggingProc(multiprocessing.Process):
+    """A process for logging data to CSV files.
+
+    Queues log entries and writes them to CSV files in the background. When the file is
+    unaccessible, the process will wait until the file is unlocked and then write the
+    log entry. If the process is stopped before all entries are written to the file, any
+    remaining log entries will be printed to stdout.
+
+    Parameters
+    ----------
+    log_dir
+        The directory where the log files will be stored.
+    header
+        The header of the CSV file.
+
+    Attributes
+    ----------
+    log_dir : str or os.PathLike
+        The directory where the log files will be stored.
+    header : list[str]
+        The header of the CSV file.
+    queue : multiprocessing.Queue
+        A queue to store the log messages.
+
+    """
+
     def __init__(self, log_dir: str | os.PathLike, header: list[str]):
         super().__init__()
         self.log_dir = log_dir
@@ -57,6 +91,7 @@ class LoggingProc(multiprocessing.Process):
         self.queue = multiprocessing.Manager().Queue()
 
     def run(self):
+        """The main method of the process that runs the logging loop."""
         self._stopped.clear()
 
         while not self._stopped.is_set():
@@ -65,7 +100,7 @@ class LoggingProc(multiprocessing.Process):
             if self.queue.empty():
                 continue
 
-            # retrieve message from queue
+            # Retrieve message from queue
             dt, msg = self.queue.get()
             filename = os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv")
             try:
@@ -77,7 +112,7 @@ class LoggingProc(multiprocessing.Process):
                         writer.writerow(self.header)
                     writer.writerow([dt.isoformat()] + msg)
             except PermissionError:
-                # put back the retrieved message in the queue
+                # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, msg))
                 for _ in range(n_left):
@@ -85,6 +120,7 @@ class LoggingProc(multiprocessing.Process):
                 continue
 
     def stop(self):
+        """Stops the logging process and prints any remaining log entries."""
         n_left = int(self.queue.qsize())
         if n_left != 0:
             print(
@@ -98,6 +134,7 @@ class LoggingProc(multiprocessing.Process):
         self.join()
 
     def append(self, timestamp: datetime.datetime, content: str | list[str]):
+        """Appends a log entry to the queue."""
         if isinstance(content, str):
             content = [content]
         self.queue.put((timestamp, content))
@@ -295,6 +332,7 @@ class MainWindow(MainWindowGUI):
 
         # Set heater options
         # Max current 0.1 A for pump is hardcoded to protect the GL4.
+        log.info("Setting heater protection")
         self.lake336.request_write("HTRSET 1,1,2,0,2")
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
 
@@ -337,10 +375,12 @@ class MainWindow(MainWindowGUI):
         self.log_timer = QtCore.QTimer(self)
         self.set_logging_interval(log_interval, update_config=False)
         self.log_timer.timeout.connect(self.write_log)
+        log.info(f"Logging to {log_dir} every {log_interval} seconds")
 
         # Start acquiring & logging
         self.refresh_timer.start()
         self.log_timer.start()
+        log.info("Begin data acquisition")
 
     def start_threads(self):
         self.lake218.start()
@@ -348,6 +388,7 @@ class MainWindow(MainWindowGUI):
         self.lake336.start()
         self.mkpower.start()
         # Wait until all threads are ready
+        log.info("Waiting for threads to start")
         while any(
             (
                 self.lake218.stopped.is_set(),
@@ -357,22 +398,28 @@ class MainWindow(MainWindowGUI):
             )
         ):
             time.sleep(1e-4)
+        log.info("All threads started")
 
     def stop_threads(self):
+        log.info("Stopping threads")
         self.lake218.stopped.set()
         self.lake331.stopped.set()
         self.lake336.stopped.set()
         self.mkpower.stopped.set()
+        log.info("Waiting for threads to stop")
         self.lake218.wait()
         self.lake331.wait()
         self.lake336.wait()
         self.mkpower.wait()
+        log.info("All threads stopped")
 
     def set_logging_interval(self, value: float, update_config: bool = True):
         self.log_timer.setInterval(round(value * 1000))
         if update_config:
-            self.config["logging"]["interval"] = value
-            self.overwrite_config()
+            if float(self.config["logging"]["interval"]) != value:
+                self.config["logging"]["interval"] = value
+                self.overwrite_config()
+                log.debug("Config file logging interval updated")
 
     def update(self):
         # Trigger updates
@@ -390,11 +437,13 @@ class MainWindow(MainWindowGUI):
             val = float(self.kelvin_values[0])  # TA [K]
 
             if val > tol:
+                log.info(f"Regenerating, TA = {val:.4f} K")
                 self.heatswitch.regen_check.setChecked(False)
-                self.regenerate()
+                self.mkpower.request_write("OUT0")  # Heat switch off
+                log.info(f"Heat switch off")
+                QtCore.QTimer.singleShot(1000, self.regenerate)
 
     def regenerate(self):
-        self.mkpower.request_write("OUT0")
         if 45 <= self.heater2.setpoint_spin.value() <= 55:
             # Setpoint is already within He pump target range
             self.lake336.request_write("RANGE 2,3")
@@ -403,15 +452,16 @@ class MainWindow(MainWindowGUI):
             self.lake336.request_write("SETP 2,45; RANGE 2,3")
         self.heatswitch.trigger_update()
         self.heater2.trigger_update()
+        log.info("He regen started")
 
     def refresh(self):
         # Create shareable list on first update
-
         klist = self.kelvin_values
         if self.shm is None:
             self.shm = shared_memory.SharedMemory(
                 name="Temperatures", create=True, size=8 * len(klist)
             )
+            log.debug("Shared memory created")
 
         arr = np.ndarray((len(klist),), dtype="f8", buffer=self.shm.buf)
 
@@ -428,6 +478,7 @@ class MainWindow(MainWindowGUI):
     def plotcolor_changed(self, index: int, color: QtGui.QColor):
         self.config["plotting"]["colors"][index] = list(color.getRgb())
         self.overwrite_config()
+        log.debug("Config file color updated")
 
     @property
     def header(self) -> list[str]:
