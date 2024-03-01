@@ -37,7 +37,7 @@ class LoggingProc(multiprocessing.Process):
         super().__init__()
         self.log_dir = log_dir
         self._stopped = multiprocessing.Event()
-        self.queue = multiprocessing.Queue()
+        self.queue = multiprocessing.Manager().Queue()
 
     def run(self):
         self._stopped.clear()
@@ -101,18 +101,27 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.setupUi(self)
         self.setWindowTitle("Motion Control")
 
-        # Register
-        # self.sl = shared_memory.ShareableList
+        # Shared memory for motor positions
+        self.shm = shared_memory.SharedMemory(
+            name="MotorPositions", create=True, size=8 * 6
+        )
+        arr = np.ndarray((6,), dtype="f8", buffer=self.shm.buf)
+        arr[:] = np.nan
 
         self.stop_btn.setDefaultAction(self.actionstop)
         self.stopcurrent_btn.setDefaultAction(self.actionstopcurrent)
-        self.readpos_btn.setDefaultAction(self.actionreadpos)
-        self.readavgpos_btn.setDefaultAction(self.actionreadavgpos)
+        # self.readpos_btn.setDefaultAction(self.actionreadpos)
+        # self.readavgpos_btn.setDefaultAction(self.actionreadavgpos)
+        self.readpos_btn.setVisible(False)
+        self.readavgpos_btn.setVisible(False)
+        self.actionreadpos.setVisible(False)
+        self.actionreadavgpos.setVisible(False)
+        self.actionreadavgpos100.setVisible(False)
 
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.actionreadcap.triggered.connect(self.check_capacitance)
 
-        # initialize controllers
+        # Initialize controllers
         self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = (
             SingleControllerWidget(self, address="192.168.0.210", index=0),
             SingleControllerWidget(self, address="192.168.0.211", index=1),
@@ -121,21 +130,20 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             self.verticalLayout.addWidget(con)
             con.writeLog.connect(self.write_log)
 
-            # self.actionconnect.triggered.connect(con.connect)
-            # self.actiondisconnect.triggered.connect(con.disconnect)
             self.actionreconnect.triggered.connect(con.reconnect)
             self.actionstop.triggered.connect(con.stop)
             self.actionstopcurrent.triggered.connect(con.stop_current)
             self.actiontargetcurr.triggered.connect(con.target_current_all)
-            self.actionreadpos.triggered.connect(con.refresh_positions)
-            self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
-            self.actionreadavgpos100.triggered.connect(
-                lambda *, ctrl=con: ctrl.refresh_positions(navg=100)
-            )
+            # self.actionreadpos.triggered.connect(con.refresh_positions)
+            # self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
+            # self.actionreadavgpos100.triggered.connect(
+            # lambda *, ctrl=con: ctrl.refresh_positions(navg=100)
+            # )
+
+            con.sigPositionUpdated.connect(self.position_updated)
 
             con.mmthread.sigMoveStarted.connect(self.move_started)
             con.mmthread.sigMoveFinished.connect(self.move_finished)
-
             con.plot.sigClosed.connect(lambda: self.actionplotpos.setChecked(False))
 
         # Add delta control
@@ -168,7 +176,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def parse_request(self, request: list[str]):
         if len(request) == 0:
             # `?`
-            self.refresh_positions()
+            # self.refresh_positions()
             self.sigReply.emit(self.current_positions)
         elif request[0] == "STATUS":
             # `? STATUS`
@@ -291,31 +299,32 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         chx.move()
         chy.move()
 
-    def refresh_positions(self, navg: int = 10):
-        for con in self.controllers:
-            con.refresh_positions(navg=navg)
+    # def refresh_positions(self, navg: int = 10):
+    #     for con in self.controllers:
+    #         con.refresh_positions(navg=navg)
+
+    @QtCore.Slot(int, float)
+    def position_updated(self, channel_index: int, pos: float):
+        arr = np.ndarray((6,), dtype="f8", buffer=self.shm.buf)
+        arr[channel_index] = pos
 
     @property
     def current_positions(self) -> tuple[float, float, float, float, float, float]:
-        return sum((con.current_positions for con in self.controllers), tuple())
+        # return sum((con.current_positions for con in self.controllers), tuple())
+        return tuple(np.ndarray((6,), dtype="f8", buffer=self.shm.buf))
 
     def get_current_position(self, con_idx: int, channel: int) -> float:
         con = self.controllers[con_idx]
-        con.refresh_position(channel, navg=10)
+        # con.refresh_position(channel, navg=10)
         return con.get_channel(channel).current_pos
 
     def connect(self):
         for con in self.controllers:
-            try:
-                con.connect_raise()
-            except Exception as e:
-                con.disable()
-            con.start_encoding()
+            con.connect_silent()
 
     def disconnect(self):
         for con in self.controllers:
-            if con.isEnabled():
-                con.disconnect()
+            con.disconnect()
 
     def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
         return self.controllers[con_idx].get_channel[channel]
@@ -388,8 +397,12 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
 
     def closeEvent(self, *args, **kwargs):
-        # disconnect from controllers
+        # Disconnect from controllers
         self.disconnect()
+
+        # Close shared memory
+        self.shm.close()
+        self.shm.unlink()
 
         # stop log writer
         self.log_writer.stop()
@@ -409,7 +422,7 @@ if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
-    # qapp.setStyle("Fusion")
+    qapp.setStyle("Fusion")
 
     win = MainWindow()
     win.show()

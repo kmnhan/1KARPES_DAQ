@@ -39,7 +39,7 @@ class AttributeServer(QtCore.QThread):
         # Broadcast header over socket
         while not self.stopped.is_set():
             socket.send_string(get_header())
-            time.sleep(0.01)
+            time.sleep(0.005)
 
         # Remove shared memory
         self.shm_slit.close()

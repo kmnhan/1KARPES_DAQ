@@ -10,8 +10,9 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from moee import EncoderThread, MMCommand, MMStatus, MMThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from moee import EncoderThread, MMCommand, MMStatus, MMThread
 
 CONFIG_FILE = "D:/MotionController/piezomotors.toml"
 
@@ -195,6 +196,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.amp_bwd_spin.setDisabled(value)
         self.amp_fwd_spin.setDisabled(value)
 
+    @QtCore.Slot()
     def update_motor(self):
         """Refresh calibration factors and set motion bounds."""
         self.cal_A = float(self.current_config.get("a", 1.0))
@@ -309,37 +311,6 @@ class MotionPlot(pg.PlotWidget):
         super().closeEvent(*args, **kwargs)
 
 
-# class MotionWorker(QtCore.QThread):
-#     """Thread that handles queueing of motion commands."""
-
-#     # sigMotion
-
-#     def __init__(self, queue):
-#         super().__init__()
-#         self._stopped: bool = False
-#         self.queue = queue
-
-#     def run(self):
-#         self._stopped = False
-#         while not self._stopped:
-#             time.sleep(0.1)
-#             if self.queue.qsize() > 0:
-#                 pass
-
-#     def stop(self):
-
-#         n_left = len(self.messages)
-#         if n_left != 0:
-#             print(
-#                 f"Failed to write {n_left} log "
-#                 + ("entries:" if n_left > 1 else "entry:")
-#             )
-#             for dt, msg in self.messages:
-#                 print(f"{dt} | {msg}")
-#         self._stopped = True
-#         self.join()
-
-
 class SingleControllerWidget(QtWidgets.QWidget):
     """Widget for a single controller that consists of three channels. Handles
     connection and communication with the controller, as well as plotting and queuing.
@@ -347,13 +318,19 @@ class SingleControllerWidget(QtWidgets.QWidget):
     On move, the motion parameters are placed in a queue. Each motion in the queue will
     be executed in the order it was placed. Checking for motion execution happens twice:
     when a new motion is added to the queue, and when a previous motion is finished.
+    
+    If there is a queued motion a thread `MMThread` is started. Once the motion is
+    aborted or finished, the next motion in the queue is executed. If the queue is
+    empty, the thread `EncoderThread` is started to read the position of the channels.
+
     """
 
     writeLog = QtCore.Signal(object)
+    sigPositionUpdated = QtCore.Signal(int, float)
 
     def __init__(self, parent=None, *, address: str, index: int):
-        self.address = address
-        self.index = index
+        self.address: str = address
+        self.index: int = index
 
         super().__init__(parent)
         self.setLayout(QtWidgets.QVBoxLayout(self))
@@ -420,6 +397,66 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def current_positions(self) -> tuple[float, float, float]:
         return tuple(ch.current_pos for ch in self.channels)
 
+    @QtCore.Slot()
+    def connect(self):
+        """Connect to motor controller. Displays a message box on failure."""
+        while True:
+            try:
+                self.connect_raise()
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    str(e),
+                    f"Connection to {self.address} failed. Make sure the controller is "
+                    "on and connected. If the problem persists, try restarting the "
+                    "server process on the controller.",
+                )
+            else:
+                break
+
+    @QtCore.Slot()
+    def connect_raise(self):
+        """Connect to motor controller. Raises an exception on failure."""
+        try:
+            self.mmthread.connect(self.address)
+        except Exception as e:
+            self.mmthread.sock.close()
+            self.disable()
+            raise e
+        else:
+            self.enable()
+            self.start_encoding()
+
+    @QtCore.Slot()
+    def connect_silent(self):
+        try:
+            self.connect_raise()
+        except:
+            pass
+
+    @QtCore.Slot()
+    def disconnect(self):
+        if self.isEnabled():
+            self.stop()
+            # Encoding must be stopped after mmthread is stopped
+            self.stop_encoding()
+            self.mmthread.disconnect()
+
+    @QtCore.Slot()
+    def reconnect(self):
+        if self.isEnabled():
+            try:
+                self.disconnect()
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    str(e),
+                    f"Disconnecting {self.address} failed. If the problem persists, try "
+                    "restarting the server process on the controller.",
+                )
+            else:
+                self.connect()
+
     def get_channel(self, channel: int) -> SingleChannelWidget:
         return self.channels[channel - 1]
 
@@ -430,6 +467,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
         for ch in self.channels:
             ch.checkbox.setChecked(False)
         self.setDisabled(True)
+
+    def enable(self):
+        self.setEnabled(True)
 
     def write_log(self, entry: str | list[str]):
         self.writeLog.emit(entry)
@@ -448,23 +488,23 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.reconnect()
         return res
 
-    @QtCore.Slot()
-    @QtCore.Slot(int)
-    def refresh_positions(self, navg: int = 1):
-        for ch_num in (1, 2, 3):
-            self.refresh_position(ch_num, navg=navg)
+    # @QtCore.Slot()
+    # @QtCore.Slot(int)
+    # def refresh_positions(self, navg: int = 1):
+    #     for ch_num in (1, 2, 3):
+    #         self.refresh_position(ch_num, navg=navg)
 
-    @QtCore.Slot()
-    def refresh_positions_averaged(self):
-        self.refresh_positions(navg=10)
+    # @QtCore.Slot()
+    # def refresh_positions_averaged(self):
+    #     self.refresh_positions(navg=10)
 
-    @QtCore.Slot(int)
-    @QtCore.Slot(int, int)
-    def refresh_position(self, channel: int, navg: int = 1):
-        if self.is_channel_enabled(channel):
-            if self.status != MMStatus.Moving:
-                self.mmthread.reset(channel)
-                self.mmthread.get_refreshed_position(channel, navg)
+    # @QtCore.Slot(int)
+    # @QtCore.Slot(int, int)
+    # def refresh_position(self, channel: int, navg: int = 1):
+    #     if self.is_channel_enabled(channel):
+    #         if self.status != MMStatus.Moving:
+    #             self.mmthread.reset(channel)
+    #             self.mmthread.get_refreshed_position(channel, navg)
 
     @QtCore.Slot()
     def target_current_all(self):
@@ -474,7 +514,10 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(int, float)
     @QtCore.Slot(int, int)
     def set_position(self, channel: int, pos: int | float):
-        self.get_channel(channel).set_current_pos(pos)
+        ch: SingleChannelWidget = self.get_channel(channel)
+        ch.set_current_pos(pos)
+        ch_idx = int((channel - 1) + 3 * self.index)
+        self.sigPositionUpdated.emit(ch_idx, ch.current_pos)
 
     @QtCore.Slot(int, object, object)
     def update_plot(self, channel: int, dt: list[float], delta: list[int]):
@@ -613,35 +656,6 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.mmthread.start()
 
     @QtCore.Slot()
-    def connect(self):
-        """Connect to motor controller. Displays a message box on failure."""
-        while True:
-            try:
-                self.connect_raise()
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    str(e),
-                    f"Connection to {self.address} failed. Make sure the controller is "
-                    "on and connected. If the problem persists, try restarting the "
-                    "server process on the controller.",
-                )
-            else:
-                break
-
-    @QtCore.Slot()
-    def connect_raise(self):
-        """Connect to motor controller. Raises an exception on failure."""
-        while True:
-            try:
-                self.mmthread.connect(self.address)
-            except Exception as e:
-                self.mmthread.sock.close()
-                raise e
-            else:
-                break
-
-    @QtCore.Slot()
     def empty_queue(self):
         """Clear all queued motion."""
         while not self.queue.empty():
@@ -663,29 +677,6 @@ class SingleControllerWidget(QtWidgets.QWidget):
         """Stops current motion. Will move on to the next queued motion."""
         self.mmthread.stopped = True
         self.mmthread.wait(2000)
-
-    @QtCore.Slot()
-    def disconnect(self):
-        if self.isEnabled():
-            self.stop()
-            # Encoding must be stopped after mmthread is stopped
-            self.stop_encoding()
-            self.mmthread.disconnect()
-
-    @QtCore.Slot()
-    def reconnect(self):
-        if self.isEnabled():
-            try:
-                self.disconnect()
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    str(e),
-                    f"Disconnecting {self.address} failed. If the problem persists, try "
-                    "restarting the server process on the controller.",
-                )
-            else:
-                self.connect()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         self.stop_encoding()

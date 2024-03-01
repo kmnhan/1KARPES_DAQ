@@ -33,6 +33,8 @@ TEMPERATURE_KEYS: tuple[str, ...] = (
     "T0",
 )
 
+MANIPULATOR_AXES: tuple[str, ...] = ("ch1", "ch2", "ch3", "ch4", "ch5", "ch6")
+
 
 def dict_to_header(d: dict[str, str]) -> str:
     return "".join([f"{k}={v}\n" for k, v in d.items()])
@@ -76,6 +78,14 @@ def get_pressure_dict() -> dict[str, str]:
     return dict(zip(("torr_main", "torr_middle", "torr_loadlock"), get_pressure_list()))
 
 
+def get_position_list() -> list[str]:
+    return [str(v) for v in get_shared_array("MotorPositions", 6, "f8")]
+
+
+def get_position_dict() -> dict[str, str]:
+    return dict(zip(MANIPULATOR_AXES, get_position_list()))
+
+
 def get_temperature_list() -> list[str]:
     return [str(v) for v in get_shared_array("Temperatures", len(SLIT_TABLE), "f8")]
 
@@ -106,8 +116,9 @@ def get_attribute_dict() -> dict[str, str]:
     for fn in (
         get_seqstart_dict,
         get_temperature_dict,
-        get_pressure_dict,
         get_slit_dict,
+        get_position_dict,
+        get_pressure_dict,
     ):
         try:
             d = fn()
