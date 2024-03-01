@@ -212,12 +212,9 @@ class MainWindow(MainWindowGUI):
             config_file: str | None = QtCore.QSettings("erlab", "tempcontroller").value(
                 "config_file", None
             )
-            if config_file is None:
+            if config_file is None or not os.path.isfile(config_file):
                 config_file = os.path.join(CRYO_DIR, "config.toml")
-
-            with open(
-                QtCore.QSettings("erlab", "tempcontroller").value("config_file"), "r"
-            ) as f:
+            with open(config_file, "r") as f:
                 plot_config = tomlkit.load(f)["plotting"]
             self.plot0.set_twiny_labels(plot_config["secondary_axes"])
 
@@ -225,7 +222,7 @@ class MainWindow(MainWindowGUI):
             colors += [
                 QtGui.QColor.fromRgb(*list(c)[:3], 200) for c in plot_config["colors"]
             ]
-            colors += 6 * [QtGui.QColor("white")]
+            colors += 10 * [QtGui.QColor("white")]
 
             enabled = self.settings.value("enabled_names", [])
             for i, col in enumerate(self.df.columns):
