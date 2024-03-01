@@ -1,7 +1,9 @@
+import csv
+import datetime
+import multiprocessing
 import os
 import queue
 import sys
-import threading
 import time
 import tomllib
 from collections.abc import Sequence
@@ -14,13 +16,77 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from moee import EncoderThread, MMCommand, MMStatus, MMThread
 
-CONFIG_FILE = "D:/MotionController/piezomotors.toml"
+# CONFIG_FILE = "D:/MotionController/piezomotors.toml"
+CONFIG_FILE = "/Users/khan/Downloads/piezomotors.toml"
 
 
 try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+
+class LoggingProc(multiprocessing.Process):
+    """Process for logging manipulator motion.
+
+    Parameters
+    ----------
+    log_dir
+        Directory where the log file will be stored. The filename will be automatically
+        determined from the current date and time.
+
+    """
+
+    def __init__(self, log_dir: str | os.PathLike):
+        super().__init__()
+        self.log_dir = log_dir
+        self._stopped = multiprocessing.Event()
+        self.queue = multiprocessing.Manager().Queue()
+
+    def run(self):
+        self._stopped.clear()
+        while not self._stopped.is_set():
+            time.sleep(0.2)
+
+            if self.queue.empty():
+                continue
+
+            # retrieve message from queue
+            dt, msg = self.queue.get()
+            try:
+                with open(
+                    os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
+                    "a",
+                    newline="",
+                ) as f:
+                    writer = csv.writer(f)
+                    writer.writerow([dt.isoformat()] + msg)
+            except PermissionError:
+                # put back the retrieved message in the queue
+                n_left = int(self.queue.qsize())
+                self.queue.put((dt, msg))
+                for _ in range(n_left):
+                    self.queue.put(self.queue.get())
+                continue
+
+    def stop(self):
+        n_left = int(self.queue.qsize())
+        if n_left != 0:
+            print(
+                f"Failed to write {n_left} log "
+                + ("entries:" if n_left > 1 else "entry:")
+            )
+            for _ in range(n_left):
+                dt, msg = self.queue.get()
+                print(f"{dt} | {msg}")
+        self._stopped.set()
+        self.join()
+
+    def add_content(self, content: str | list[str]):
+        now = datetime.datetime.now()
+        if isinstance(content, str):
+            content = [content]
+        self.queue.put((now, content))
 
 
 class StautsIconWidget(qta.IconWidget):
@@ -318,19 +384,26 @@ class SingleControllerWidget(QtWidgets.QWidget):
     On move, the motion parameters are placed in a queue. Each motion in the queue will
     be executed in the order it was placed. Checking for motion execution happens twice:
     when a new motion is added to the queue, and when a previous motion is finished.
-    
+
     If there is a queued motion a thread `MMThread` is started. Once the motion is
     aborted or finished, the next motion in the queue is executed. If the queue is
     empty, the thread `EncoderThread` is started to read the position of the channels.
 
     """
 
-    writeLog = QtCore.Signal(object)
     sigPositionUpdated = QtCore.Signal(int, float)
 
-    def __init__(self, parent=None, *, address: str, index: int):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        address: str,
+        index: int,
+        logwriter: LoggingProc | None = None,
+    ):
         self.address: str = address
         self.index: int = index
+        self.logwriter: LoggingProc | None = logwriter
 
         super().__init__(parent)
         self.setLayout(QtWidgets.QVBoxLayout(self))
@@ -400,19 +473,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def connect(self):
         """Connect to motor controller. Displays a message box on failure."""
-        while True:
-            try:
-                self.connect_raise()
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    str(e),
-                    f"Connection to {self.address} failed. Make sure the controller is "
-                    "on and connected. If the problem persists, try restarting the "
-                    "server process on the controller.",
-                )
-            else:
-                break
+        try:
+            self.connect_raise()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self,
+                str(e),
+                f"Connection to {self.address} failed. Make sure the controller is "
+                "on and connected. If the problem persists, try restarting the "
+                "server process on the controller.",
+            )
 
     @QtCore.Slot()
     def connect_raise(self):
@@ -444,18 +514,16 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def reconnect(self):
-        if self.isEnabled():
-            try:
-                self.disconnect()
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    str(e),
-                    f"Disconnecting {self.address} failed. If the problem persists, try "
-                    "restarting the server process on the controller.",
-                )
-            else:
-                self.connect()
+        try:
+            self.disconnect()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self,
+                str(e),
+                f"Disconnecting {self.address} failed. If the problem persists, try "
+                "restarting the server process on the controller.",
+            )
+        self.connect()
 
     def get_channel(self, channel: int) -> SingleChannelWidget:
         return self.channels[channel - 1]
@@ -472,7 +540,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.setEnabled(True)
 
     def write_log(self, entry: str | list[str]):
-        self.writeLog.emit(entry)
+        if self.logwriter is not None:
+            self.logwriter.add_content(entry)
 
     def refresh_shm(self, idx: int) -> None:
         self.sl[idx] = self.channels[idx].enabled

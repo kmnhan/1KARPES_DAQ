@@ -1,18 +1,21 @@
 """GUI for the 1K ARPES 6-axis manipulator"""
 
-import csv
-import datetime
 import multiprocessing
 import os
 import sys
-import time
 from multiprocessing import shared_memory
 
 import numpy as np
+from qtpy import QtCore, QtGui, QtWidgets, uic
+
 from maniserver import ManiServer
 from moee import MMStatus
-from motionwidgets import DeltaWidget, SingleChannelWidget, SingleControllerWidget
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from motionwidgets import (
+    DeltaWidget,
+    LoggingProc,
+    SingleChannelWidget,
+    SingleControllerWidget,
+)
 
 LOG_DIR = "D:/Logs/Motion"
 
@@ -20,69 +23,6 @@ try:
     os.chdir(sys._MEIPASS)
 except:
     pass
-
-
-class LoggingProc(multiprocessing.Process):
-    """Process for logging manipulator motion.
-
-    Parameters
-    ----------
-    log_dir
-        Directory where the log file will be stored. The filename will be automatically
-        determined from the current date and time.
-
-    """
-
-    def __init__(self, log_dir: str | os.PathLike):
-        super().__init__()
-        self.log_dir = log_dir
-        self._stopped = multiprocessing.Event()
-        self.queue = multiprocessing.Manager().Queue()
-
-    def run(self):
-        self._stopped.clear()
-        while not self._stopped.is_set():
-            time.sleep(0.2)
-
-            if self.queue.empty():
-                continue
-
-            # retrieve message from queue
-            dt, msg = self.queue.get()
-            try:
-                with open(
-                    os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
-                    "a",
-                    newline="",
-                ) as f:
-                    writer = csv.writer(f)
-                    writer.writerow([dt.isoformat()] + msg)
-            except PermissionError:
-                # put back the retrieved message in the queue
-                n_left = int(self.queue.qsize())
-                self.queue.put((dt, msg))
-                for _ in range(n_left):
-                    self.queue.put(self.queue.get())
-                continue
-
-    def stop(self):
-        n_left = int(self.queue.qsize())
-        if n_left != 0:
-            print(
-                f"Failed to write {n_left} log "
-                + ("entries:" if n_left > 1 else "entry:")
-            )
-            for _ in range(n_left):
-                dt, msg = self.queue.get()
-                print(f"{dt} | {msg}")
-        self._stopped.set()
-        self.join()
-
-    def add_content(self, content: str | list[str]):
-        now = datetime.datetime.now()
-        if isinstance(content, str):
-            content = [content]
-        self.queue.put((now, content))
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
@@ -121,14 +61,21 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.actionreadcap.triggered.connect(self.check_capacitance)
 
+        # Setup logging
+        self.logwriter = LoggingProc(LOG_DIR)
+        self.logwriter.start()
+
         # Initialize controllers
         self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = (
-            SingleControllerWidget(self, address="192.168.0.210", index=0),
-            SingleControllerWidget(self, address="192.168.0.211", index=1),
+            SingleControllerWidget(
+                self, address="192.168.0.210", index=0, logwriter=self.logwriter
+            ),
+            SingleControllerWidget(
+                self, address="192.168.0.211", index=1, logwriter=self.logwriter
+            ),
         )
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
-            con.writeLog.connect(self.write_log)
 
             self.actionreconnect.triggered.connect(con.reconnect)
             self.actionstop.triggered.connect(con.stop)
@@ -151,10 +98,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.delta_widget.sigStepped.connect(self.step_delta)
         self.delta_widget.sigMoved.connect(self.move_delta)
         self.verticalLayout.addWidget(self.delta_widget)
-
-        # Setup logging
-        self.log_writer = LoggingProc(LOG_DIR)
-        self.log_writer.start()
 
         # Setup server
         self.server = ManiServer()
@@ -329,10 +272,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
         return self.controllers[con_idx].get_channel[channel]
 
-    @QtCore.Slot(object)
-    def write_log(self, content: str | list[str]):
-        self.log_writer.add_content(content)
-
     @QtCore.Slot()
     def refresh_plot_visibility(self):
         for con in self.controllers:
@@ -405,7 +344,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.shm.unlink()
 
         # stop log writer
-        self.log_writer.stop()
+        self.logwriter.stop()
 
         # stop server
         self.server.stopped.set()
