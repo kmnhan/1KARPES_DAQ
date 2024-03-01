@@ -19,6 +19,8 @@ from motionwidgets import (
 
 LOG_DIR = "D:/Logs/Motion"
 
+CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.211")
+
 try:
     os.chdir(sys._MEIPASS)
 except:
@@ -26,11 +28,10 @@ except:
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
-    """Combines two controlller widgets to form a complete GUI. On connection failure,
-    the controller will be greyed out instead of displaying a message.
+    """Combines two controlller widgets to form a complete GUI.
 
     On initialization, starts a server so that motion can be controlled by other
-    programs.
+    programs. Also creates shared memory for motor positions with name `MotorPositions`.
 
     """
 
@@ -43,7 +44,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # Shared memory for motor positions
         self.shm = shared_memory.SharedMemory(
-            name="MotorPositions", create=True, size=8 * 6
+            name="MotorPositions", create=True, size=8 * 3 * len(CONTROLLERS)
         )
         arr = np.ndarray((6,), dtype="f8", buffer=self.shm.buf)
         arr[:] = np.nan
@@ -66,13 +67,11 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.logwriter.start()
 
         # Initialize controllers
-        self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = (
+        self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = tuple(
             SingleControllerWidget(
-                self, address="192.168.0.210", index=0, logwriter=self.logwriter
-            ),
-            SingleControllerWidget(
-                self, address="192.168.0.211", index=1, logwriter=self.logwriter
-            ),
+                self, address=address, index=idx, logwriter=self.logwriter
+            )
+            for idx, address in enumerate(CONTROLLERS)
         )
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
@@ -108,6 +107,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # Connect to controllers
         self.connect()
+
+        # Show plot by default
+        self.actionplotpos.setChecked(True)
 
     def register(self):
         pass
@@ -154,6 +156,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.sigReply.emit(0)
 
     def get_axis(self, axis: str) -> SingleChannelWidget | None:
+        # Retrieves the channel corresponding to the specified axis.
+        # Returns `None` if no matching axis is found.
         for con in self.controllers:
             for ch in con.channels:
                 if ch.enabled and ch.name == axis:
@@ -161,6 +165,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         return None
 
     def get_axis_index(self, axis: str) -> tuple[int, int] | tuple[None, None]:
+        # Returns the controller index and channel number for the specified axis.
+        # The controller index is 0-based, and the channel index is 1-based.
         for i, con in enumerate(self.controllers):
             for j, ch in enumerate(con.channels):
                 if ch.enabled and ch.name == axis:
@@ -194,17 +200,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             return MMStatus.Aborted
         else:
             return MMStatus.Done
-
-    @QtCore.Slot(int, int, int, int, object)
-    def move(
-        self,
-        con_idx: int,
-        channel: int,
-        target: int,
-        frequency: int,
-        amplitude: tuple[int, int],
-    ):
-        self.controllers[con_idx].move(channel, target, frequency, amplitude)
 
     @QtCore.Slot(float)
     def step_delta(self, value: float):
@@ -248,13 +243,17 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot(int, float)
     def position_updated(self, channel_index: int, pos: float):
-        arr = np.ndarray((6,), dtype="f8", buffer=self.shm.buf)
-        arr[channel_index] = pos
+        # Update shared memory with new position
+        np.ndarray((3 * len(CONTROLLERS),), dtype="f8", buffer=self.shm.buf)[
+            channel_index
+        ] = float(pos)
 
     @property
-    def current_positions(self) -> tuple[float, float, float, float, float, float]:
+    def current_positions(self) -> tuple[float, ...]:
         # return sum((con.current_positions for con in self.controllers), tuple())
-        return tuple(np.ndarray((6,), dtype="f8", buffer=self.shm.buf))
+        return tuple(
+            np.ndarray((3 * len(CONTROLLERS),), dtype="f8", buffer=self.shm.buf)
+        )
 
     def get_current_position(self, con_idx: int, channel: int) -> float:
         con = self.controllers[con_idx]
@@ -269,9 +268,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         for con in self.controllers:
             con.disconnect()
 
-    def get_channel(self, con_idx: int, channel: int) -> SingleChannelWidget:
-        return self.controllers[con_idx].get_channel[channel]
-
     @QtCore.Slot()
     def refresh_plot_visibility(self):
         for con in self.controllers:
@@ -285,16 +281,16 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot()
     def move_started(self):
-        self.actionreadpos.setDisabled(True)
-        self.actionreadavgpos.setDisabled(True)
-        self.actionreadavgpos100.setDisabled(True)
+        # self.actionreadpos.setDisabled(True)
+        # self.actionreadavgpos.setDisabled(True)
+        # self.actionreadavgpos100.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
     @QtCore.Slot()
     def move_finished(self):
-        self.actionreadpos.setDisabled(False)
-        self.actionreadavgpos.setDisabled(False)
-        self.actionreadavgpos100.setDisabled(False)
+        # self.actionreadpos.setDisabled(False)
+        # self.actionreadavgpos.setDisabled(False)
+        # self.actionreadavgpos100.setDisabled(False)
         self.actionreadcap.setDisabled(False)
 
     @QtCore.Slot()

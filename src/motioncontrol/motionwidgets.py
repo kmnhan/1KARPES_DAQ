@@ -378,7 +378,8 @@ class MotionPlot(pg.PlotWidget):
 
 
 class SingleControllerWidget(QtWidgets.QWidget):
-    """Widget for a single controller that consists of three channels. Handles
+    """
+    Widget for a single controller that consists of three channels. Handles
     connection and communication with the controller, as well as plotting and queuing.
 
     On move, the motion parameters are placed in a queue. Each motion in the queue will
@@ -388,6 +389,24 @@ class SingleControllerWidget(QtWidgets.QWidget):
     If there is a queued motion a thread `MMThread` is started. Once the motion is
     aborted or finished, the next motion in the queue is executed. If the queue is
     empty, the thread `EncoderThread` is started to read the position of the channels.
+
+    Parameters
+    ----------
+    address
+        IP address of the controller
+    index
+        Index of the controller. This is used to distinguish between diffent instances
+        of the controller when emitting signals and writing logs.
+    logwriter
+        Logging process, by default None
+
+    Signals
+    -------
+    sigPositionUpdated(int, float)
+        Emitted when the position of a channel is updated. The first argument is the
+        global index of the channel (0, 1, 2 for ch1, ch2, ch3 on controller 0 and 1, 2,
+        3 for ch1, ch2, ch3 on controller 1 and so on), and the second is the updated
+        position (calibration factors applied).
 
     """
 
