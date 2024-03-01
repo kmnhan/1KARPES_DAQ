@@ -436,8 +436,8 @@ class MMThread(QtCore.QThread):
                 if self.stopped:
                     break
 
-        except Exception:
-            log.exception("Exception while moving!")
+        except Exception as e:
+            log.critical(f"Exception while moving: {e}")
         self.initialized = False
         self.sigMoveFinished.emit(self._channel)
 
@@ -463,27 +463,34 @@ class EncoderThread(QtCore.QThread):
 
         sl = shared_memory.ShareableList(name=self.sharedmem)
 
-        for ch in range(1, 4):
-            self.mmthread._set_reading_params(ch)
+        try:
+            for ch in range(1, 4):
+                self.mmthread._set_reading_params(ch)
 
-        self.stopped.clear()
+            self.stopped.clear()
 
-        navg: int = 20
-        vals: list[list[float]] = [[], [], []]
-        while not self.stopped.is_set():
-            for i, ch in enumerate(range(1, 4)):
-                if sl[i]:
-                    if self.mmthread.initialized:
-                        # Motion is about to start
-                        log.warning("MMThread init detected. This should not happen")
-                        self.stopped.set()
-                        break
-                    self.mmthread._send_signal_once(ch)
-                    vals[i].append(self.mmthread.get_position(ch, emit=False))
-                    if len(vals[i]) == navg:
-                        self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
-                        vals[i] = []
+            navg: int = 20
+            vals: list[list[float]] = [[], [], []]
+            while not self.stopped.is_set():
+                for i, ch in enumerate(range(1, 4)):
+                    if sl[i]:
+                        if self.mmthread.initialized:
+                            # Motion is about to start
+                            log.warning(
+                                "MMThread init detected. This should not happen"
+                            )
+                            self.stopped.set()
+                            break
+                        self.mmthread._send_signal_once(ch)
+                        vals[i].append(self.mmthread.get_position(ch, emit=False))
+                        if len(vals[i]) == navg:
+                            self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
+                            vals[i] = []
 
+        except Exception as e:
+            log.critical(f"Exception while reading position: {e}")
+
+        self.stopped.set()
         sl.shm.close()
         del sl
 
