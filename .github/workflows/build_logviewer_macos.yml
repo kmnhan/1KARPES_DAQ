@@ -7,7 +7,7 @@ jobs:
 
   build:
     name: Build Log Viewer
-    runs-on: macos-14
+    runs-on: macos-13
     strategy:
       fail-fast: false
 
