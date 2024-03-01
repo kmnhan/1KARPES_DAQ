@@ -382,6 +382,7 @@ class MainWindow(MainWindowGUI):
 
         # Start acquiring & logging
         self.refresh_timer.start()
+        self.update()
         self.log_timer.start()
         log.info("Begin data acquisition")
 

@@ -523,7 +523,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         """Disable widget and try to reconnect."""
         self.setDisabled(True)
         restart_visathread(self.instrument, 3000)
-        log.error("Connection problem with heat switch. Trying to reconnect.")
+        log.error("Failed to communicate with heat switch. Trying to reconnect.")
 
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):

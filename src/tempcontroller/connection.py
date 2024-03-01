@@ -29,22 +29,22 @@ class RequestHandler:
         self.wait_time()
         res = self.inst.write(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  <--  {args[0]}")
+        log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
         return res
 
     def query(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  <--  {args[0]}")
-        log.log(loglevel, f"{self.resource_name}  -->  {res}")
+        log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
+        log.log(loglevel, f"{self.resource_name}  ->  {res}")
         return res
 
     def read(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  -->  {res}")
+        log.log(loglevel, f"{self.resource_name}  ->  {res}")
         log.log()
         return res
 
@@ -93,8 +93,10 @@ class VISAThread(QtCore.QThread):
         self.mutex = QtCore.QMutex()
         self.queue = queue.Queue()
         self.stopped.clear()
-
-        self.controller.open()
+        try:
+            self.controller.open()
+        except pyvisa.VisaIOError:
+            self.sigVisaIOError.emit()
 
         while not self.stopped.is_set():
             if not self.queue.empty():
