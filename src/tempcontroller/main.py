@@ -493,10 +493,14 @@ class MainWindow(MainWindowGUI):
         header += [
             "336 Setpoint1 (K)",
             "336 Heater1 (%)",
+            "336 Range1",
             "336 Setpoint2 (K)",
             "336 Heater2 (%)",
+            "336 Range2",
             "331 Setpoint (K)",
             "331 Heater (%)",
+            "331 Range",
+            "Heat Switch Out (V)",
         ]
         return header
 
@@ -531,10 +535,14 @@ class MainWindow(MainWindowGUI):
             + [
                 self.heater1.setp_raw,
                 self.heater1.htr_raw,
+                self.heater1.rng_raw,
                 self.heater2.setp_raw,
                 self.heater2.htr_raw,
+                self.heater2.rng_raw,
                 self.heater3.setp_raw,
                 self.heater3.htr_raw,
+                self.heater3.rng_raw,
+                self.heatswitch.vout_raw,
             ]
         )
 
