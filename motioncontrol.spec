@@ -7,7 +7,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ("src/motioncontrol/channel.ui", "."),
-        ("src/motioncontrol/controller_single.ui", "."),
         ("src/motioncontrol/controller.ui", "."),
         ("src/motioncontrol/icon.ico", "."),
         ("src/motioncontrol/maniserver.py", "."),
