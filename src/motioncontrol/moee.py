@@ -53,9 +53,9 @@ class MMThread(QtCore.QThread):
 
     Signals
     -------
-    sigMoveStarted(channel)
+    sigMoveStarted(channel, unique_id)
 
-    sigMoveFinished(channel)
+    sigMoveFinished(channel, unique_id)
 
     sigCapRead(channel, value)
 
@@ -65,8 +65,8 @@ class MMThread(QtCore.QThread):
 
     """
 
-    sigMoveStarted = QtCore.Signal(int)
-    sigMoveFinished = QtCore.Signal(int)
+    sigMoveStarted = QtCore.Signal(int, str)
+    sigMoveFinished = QtCore.Signal(int, str)
     sigCapRead = QtCore.Signal(int, float)
     sigPosRead = QtCore.Signal(int, int)
     sigAvgPosRead = QtCore.Signal(int, float)
@@ -311,6 +311,7 @@ class MMThread(QtCore.QThread):
         amplitude: tuple[int, int],
         threshold: int,
         high_precision: bool,
+        unique_id: str,
     ):
         log.info(
             f"Initializing parameters {channel} {target} {frequency} {amplitude} {threshold}"
@@ -321,6 +322,7 @@ class MMThread(QtCore.QThread):
         self._amplitudes: tuple[int, int] = amplitude
         self._threshold: int = int(abs(threshold))
         self._high_precision: bool = high_precision
+        self._unique_id: str = unique_id
         self.initialized: bool = True
 
     def run(self):
@@ -328,7 +330,7 @@ class MMThread(QtCore.QThread):
             log.warning("MMThread was not initialized prior to execution.")
             return
 
-        self.sigMoveStarted.emit(self._channel)
+        self.sigMoveStarted.emit(self._channel, self._unique_id)
         self.stopped = False
         try:
             # reset
@@ -438,8 +440,8 @@ class MMThread(QtCore.QThread):
 
         except Exception as e:
             log.critical(f"Exception while moving: {e}")
-        self.initialized = False
-        self.sigMoveFinished.emit(self._channel)
+        self.initialized: bool = False
+        self.sigMoveFinished.emit(self._channel, self._unique_id)
 
 
 class EncoderThread(QtCore.QThread):

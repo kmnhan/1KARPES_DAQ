@@ -148,7 +148,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     """Widget for a single channel. Internally, all positions are `raw` positions before
     applying calibration factors. This widget handles the necessary conversions."""
 
-    sigMoveRequested = QtCore.Signal(int, int, object)
+    sigMoveRequested = QtCore.Signal(int, int, object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -307,10 +307,16 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
     @QtCore.Slot()
     def move(self):
+        self.move_to(self.target_spin.value())
+
+    @QtCore.Slot(float)
+    @QtCore.Slot(float, object)
+    def move_to(self, value: float, unique_id: str | None = None):
         self.sigMoveRequested.emit(
-            self.convert_pos_inv(self.target_spin.value()),
+            self.convert_pos_inv(value),
             self.freq_spin.value(),
             (self.amp_bwd_spin.value(), self.amp_fwd_spin.value()),
+            unique_id,
         )
 
 
@@ -438,6 +444,10 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.ch1.sigMoveRequested.connect(self.move_ch1)
         self.ch2.sigMoveRequested.connect(self.move_ch2)
         self.ch3.sigMoveRequested.connect(self.move_ch3)
+
+        # Initialize unique IDs for tracking motion progress remotely
+        self.started_uid: list[str] = []
+        self.finished_uid: list[str] = []
 
         # Initialize thread object and connect appropriate signals
         self.mmthread = MMThread()
@@ -625,8 +635,11 @@ class SingleControllerWidget(QtWidgets.QWidget):
             self.encoder.stopped.set()
             self.encoder.wait()
 
-    @QtCore.Slot(int)
-    def move_started(self, channel: int):
+    @QtCore.Slot(int, str)
+    def move_started(self, channel: int, unique_id: str):
+        if unique_id != "":
+            self.started_uid.append(unique_id)
+
         # Disable input on channels
         for ch in self.channels:
             ch.set_motion_busy(True)
@@ -634,8 +647,12 @@ class SingleControllerWidget(QtWidgets.QWidget):
         # Display loading icon on running channel
         self.get_channel(channel).status.setState(True)
 
-    @QtCore.Slot(int)
-    def move_finished(self, channel: int):
+    @QtCore.Slot(int, str)
+    def move_finished(self, channel: int, unique_id: str):
+        if unique_id != "":
+            self.started_uid.remove(unique_id)
+            self.finished_uid.append(unique_id)
+
         # Mark motion as finished in queue
         self.queue.task_done()
 
@@ -662,6 +679,19 @@ class SingleControllerWidget(QtWidgets.QWidget):
         else:
             self.start_encoding()
 
+    def is_started(self, unique_id: str) -> bool:
+        if self.is_finished(unique_id):
+            return True
+        else:
+            return unique_id in self.started_uid
+
+    def is_finished(self, unique_id: str) -> bool:
+        return unique_id in self.finished_uid
+
+    def forget_uid(self, unique_id: str) -> None:
+        if unique_id in self.finished_uid:
+            self.finished_uid.remove(unique_id)
+
     @QtCore.Slot()
     def refresh_plot_visibility(self):
         if self.actionplotpos.isChecked():
@@ -672,33 +702,60 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 self.plot.hide()
 
     @QtCore.Slot(int, int, object)
-    def move_ch1(self, target: int, frequency: int, amplitude: tuple[int, int]):
-        return self.move(1, target, frequency, amplitude)
+    def move_ch1(
+        self,
+        target: int,
+        frequency: int,
+        amplitude: tuple[int, int],
+        unique_id: str | None = None,
+    ):
+        return self.move(1, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, object)
-    def move_ch2(self, target: int, frequency: int, amplitude: tuple[int, int]):
-        return self.move(2, target, frequency, amplitude)
+    def move_ch2(
+        self,
+        target: int,
+        frequency: int,
+        amplitude: tuple[int, int],
+        unique_id: str | None = None,
+    ):
+        return self.move(2, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, object)
-    def move_ch3(self, target: int, frequency: int, amplitude: tuple[int, int]):
-        return self.move(3, target, frequency, amplitude)
+    def move_ch3(
+        self,
+        target: int,
+        frequency: int,
+        amplitude: tuple[int, int],
+        unique_id: str | None = None,
+    ):
+        return self.move(3, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, int, object)
     def move(
-        self, channel: int, target: int, frequency: int, amplitude: tuple[int, int]
-    ):
+        self,
+        channel: int,
+        target: int,
+        frequency: int,
+        amplitude: tuple[int, int],
+        unique_id: str | None = None,
+    ) -> str:
         # Place motion parameters in queue
+        if unique_id is None:
+            unique_id: str = ""
         self.queue.put(
             dict(
                 channel=channel,
                 target=target,
                 frequency=frequency,
                 amplitude=amplitude,
+                unique_id=unique_id,
             )
         )
         # If not busy, go on
         if self.status != MMStatus.Moving:
             self._move()
+        return unique_id
 
     @QtCore.Slot()
     def _move(self):
@@ -738,6 +795,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
             kwargs["high_precision"] = True
         else:
             kwargs["high_precision"] = False
+
         self.mmthread.initialize_parameters(**kwargs)
 
         # Start motion

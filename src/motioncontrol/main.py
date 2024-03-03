@@ -101,6 +101,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         # Setup server
         self.server = ManiServer()
         self.server.sigRequest.connect(self.parse_request)
+        self.server.sigCommand.connect(self.parse_command)
         self.server.sigMove.connect(self.parse_move)
         self.sigReply.connect(self.server.set_value)
         self.server.start()
@@ -111,72 +112,117 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         # Show plot by default
         self.actionplotpos.setChecked(True)
 
-    def register(self):
-        pass
-        # enabled for each channel: 6
-        # tolerance for each channel: 6
-        # lb, ub for each channel: 12
-
-    @QtCore.Slot(object)
-    def parse_request(self, request: list[str]):
-        if len(request) == 0:
-            # `?`
-            # self.refresh_positions()
-            self.sigReply.emit(self.current_positions)
-        elif request[0] == "STATUS":
-            # `? STATUS`
-            self.sigReply.emit(self.status)
-        elif request[0] == "TOL":
-            # `? X TOL`
-            self.sigReply.emit(self.get_axis(request[1]).abs_tolerance)
-        elif request[0] == "MIN":
-            # `? Y MIN`
-            self.sigReply.emit(self.get_axis(request[1]).minimum)
-        elif request[0] == "MAX":
-            # `? Z MAX`
-            self.sigReply.emit(self.get_axis(request[1]).maximum)
-        else:
-            # `? X`, `? Y`, etc.
-            con_idx, channel = self.get_axis_index(request[0])
-            if con_idx is None:
-                print("AXIS NOT FOUND")
-                self.sigReply.emit(np.nan)
+    @QtCore.Slot(str, str)
+    def parse_request(self, command: str, args: str) -> None:
+        if command == "STATUS":
+            if args == "":
+                rep = str(self.status)
             else:
-                self.sigReply.emit(self.get_current_position(con_idx, channel))
+                rep = str(getattr(self.get_controller(args), "status", np.nan))
 
-    @QtCore.Slot(str, float)
-    def parse_move(self, axis: str, value: float):
-        ch = self.get_axis(axis)
-        if ch is None:
-            print("AXIS NOT FOUND")
-            self.sigReply.emit(1)
-            return
-        ch.set_target(value)
-        ch.move()
-        self.sigReply.emit(0)
+        elif command == "NAME":
+            if args == "" or args == "0":
+                rep = ",".join(
+                    [ch.name for con in self.controllers for ch in con.channels]
+                )
+            else:
+                rep = getattr(self.get_channel(args), "name", "")
 
-    def get_axis(self, axis: str) -> SingleChannelWidget | None:
+        elif command == "FIN":
+            rep = str(int(self.is_finished(args)))
+
+        elif command == "ENABLED":
+            if args == "" or args == "0":
+                rep = ",".join(
+                    [
+                        str(int(ch.enabled))
+                        for con in self.controllers
+                        for ch in con.channels
+                    ]
+                )
+            else:
+                rep = str(int(getattr(self.get_channel(args), "enabled", False)))
+
+        elif command == "POS":
+            if args == "" or args == "0":
+                rep = ",".join([str(val) for val in self.current_positions])
+            else:
+                ch = self.get_channel(args)
+                if getattr(ch, "enabled", False):
+                    rep = str(ch.current_pos)
+                else:
+                    rep = str(np.nan)
+
+        elif command == "TOL":
+            rep = str(getattr(self.get_channel(args), "tolerance", np.nan))
+
+        elif command == "ATOL":
+            rep = str(getattr(self.get_channel(args), "abs_tolerance", np.nan))
+
+        elif command == "MINMAX":
+            ch = self.get_channel(args)
+            mn, mx = getattr(ch, "minimum", np.nan), getattr(ch, "maximum", np.nan)
+            rep = f"{mn},{mx}"
+
+        self.sigReply.emit(rep)
+
+    @QtCore.Slot(str, str)
+    def parse_command(self, command: str, args: str):
+        if command == "CLR":
+            unique_id = args
+            self.forget_uid(unique_id)
+
+    @QtCore.Slot(str, float, object)
+    def parse_move(self, axis: int | str, value: float, unique_id: str | None):
+        ch = self.get_channel(axis)
+        if getattr(ch, "enabled", False):
+            ch.move_to(float(value), unique_id=unique_id)
+        else:
+            print("Axis disabled or nonexistent, not moving")
+
+    def is_finished(self, unique_id: str) -> bool:
+        for con in self.controllers:
+            if con.is_finished(unique_id):
+                return True
+        return False
+
+    def is_started(self, unique_id: str) -> bool:
+        for con in self.controllers:
+            if con.is_started(unique_id):
+                return True
+        return False
+
+    def forget_uid(self, unique_id: str):
+        for con in self.controllers:
+            con.forget_uid(unique_id)
+
+    def get_channel(self, axis: int | str) -> SingleChannelWidget | None:
         # Retrieves the channel corresponding to the specified axis.
         # Returns `None` if no matching axis is found.
-        for con in self.controllers:
-            for ch in con.channels:
-                if ch.enabled and ch.name == axis:
-                    return ch
-        return None
+        if isinstance(axis, int) or axis.isdigit():
+            axis_idx = int(axis) - 1
+            return self.controllers[axis_idx // 3].channels[axis_idx % 3]
+        else:
+            for con in self.controllers:
+                for ch in con.channels:
+                    if ch.name == axis:
+                        return ch
+            return None
 
-    def get_axis_index(self, axis: str) -> tuple[int, int] | tuple[None, None]:
-        # Returns the controller index and channel number for the specified axis.
-        # The controller index is 0-based, and the channel index is 1-based.
-        for i, con in enumerate(self.controllers):
-            for j, ch in enumerate(con.channels):
-                if ch.enabled and ch.name == axis:
-                    return i, j + 1
-        return None, None
+    def get_controller(self, axis: int | str) -> SingleControllerWidget | None:
+        if isinstance(axis, int) or axis.isdigit():
+            return self.controllers[int(axis)]
+        else:
+            for con in self.controllers:
+                for ch in con.channels:
+                    if ch.name == axis:
+                        return con
+            return None
 
     def get_xy_axes(
         self,
     ) -> tuple[SingleChannelWidget, SingleChannelWidget] | tuple[None, None]:
-        chx, chy = self.get_axis("X"), self.get_axis("Y")
+        chx, chy = self.get_channel("X"), self.get_channel("Y")
         if chx is None or chy is None:
             QtWidgets.QMessageBox.warning(
                 self, "Missing motor", "X or Y motor is not enabled."
