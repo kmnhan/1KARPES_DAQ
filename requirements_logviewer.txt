@@ -1,7 +1,7 @@
 numpy
 pandas
 tomlkit
-pyqt6<=6.5.3
+pyqt6
 qtpy
 pyqtgraph
 qtawesome
