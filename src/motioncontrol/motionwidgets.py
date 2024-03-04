@@ -16,8 +16,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from moee import EncoderThread, MMCommand, MMStatus, MMThread
 
-# CONFIG_FILE = "D:/MotionController/piezomotors.toml"
-CONFIG_FILE = "/Users/khan/Downloads/piezomotors.toml"
+CONFIG_FILE = "D:/MotionController/piezomotors.toml"
 
 
 try:
