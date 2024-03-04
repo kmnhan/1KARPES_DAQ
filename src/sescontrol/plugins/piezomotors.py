@@ -18,7 +18,7 @@ class MMStatus(enum.IntEnum):
 
 class ManiClient:
 
-    def __call__(self, port: int):
+    def __init__(self, port: int):
         self.port: int = port
         self.connected: bool = False
 
@@ -100,8 +100,11 @@ class ManiClient:
             return self.query_int(f"STATUS? {controller}")
 
     def wait_motion_finish(self, unique_id: str):
-        while not self.query_int(f"FIN? {unique_id}"):
+        while not bool(self.query_int(f"FIN? {unique_id}")):
             time.sleep(0.01)
+
+    def clear_uid(self, unique_id: str):
+        self.write(f"CLR {unique_id}")
 
     def wait_busy(self, axis: str | int | None = None):
         if axis is None:
@@ -155,9 +158,15 @@ class _PiezoMotor(Motor):
 
         # Send move command
         unique_id: str = self.client.request_move(self.AXIS, target)
+        print(f"requested move, uid {unique_id}")
 
         # Wait for motion finish
         self.client.wait_motion_finish(unique_id)
+        print("motion finished")
+
+
+        self.client.clear_uid(unique_id)
+        print("uid cleared")
 
         # get final position
         # return self._get_pos(self.AXIS)

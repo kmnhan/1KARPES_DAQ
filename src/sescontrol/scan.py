@@ -195,7 +195,7 @@ class ScanWorker(QtCore.QRunnable):
     def sequence_run_wait(self) -> int:
         """Run sequence and wait until it finishes."""
 
-        workfiles = os.listdir(os.path.join(SES_DIR, "work"))
+        # workfiles = os.listdir(os.path.join(SES_DIR, "work"))
 
         # click run button
         self.click_sequence_button("Run")
@@ -259,6 +259,7 @@ class ScanWorker(QtCore.QRunnable):
             for i, ax in enumerate(self.axes):
                 ax.pre_motion()
 
+                print("pre motion complete, sanity checking")
                 # last sanity check of bounds before motion
                 if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
                     ax.maximum is not None and max(self.coords[i]) > ax.maximum
@@ -268,13 +269,18 @@ class ScanWorker(QtCore.QRunnable):
                     print("PARAMETERS OUT OF MOTOR BOUNDS")
                     return
 
+            print("starting motion loop")
             self._motion_loop()
 
+            print("starting post motion")
             for ax in self.axes:
                 ax.post_motion()
+            print("post motion finished")
+
 
             # restore mangled filenames
             self._restore_filenames()
+            print("restored filenames")
 
         self.signals.sigFinished.emit()
 

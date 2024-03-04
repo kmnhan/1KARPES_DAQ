@@ -710,6 +710,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
                 self.plot.hide()
 
     @QtCore.Slot(int, int, object)
+    @QtCore.Slot(int, int, object, object)
     def move_ch1(
         self,
         target: int,
@@ -720,6 +721,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return self.move(1, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, object)
+    @QtCore.Slot(int, int, object, object)
     def move_ch2(
         self,
         target: int,
@@ -730,6 +732,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return self.move(2, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, object)
+    @QtCore.Slot(int, int, object, object)
     def move_ch3(
         self,
         target: int,
@@ -740,6 +743,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         return self.move(3, target, frequency, amplitude, unique_id)
 
     @QtCore.Slot(int, int, int, object)
+    @QtCore.Slot(int, int, int, object, object)
     def move(
         self,
         channel: int,
