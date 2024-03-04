@@ -506,10 +506,10 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     @instrument.setter
     def instrument(self, instrument: VISAThread | None):
         if self._instrument is not None:
-            self._instrument.sigVisaIOError.disconnect(self.connection_problem)
+            self._instrument.sigVisaError.disconnect(self.connection_error)
         self._instrument: VISAThread | None = instrument
         if self._instrument is not None:
-            self._instrument.sigVisaIOError.connect(self.connection_problem)
+            self._instrument.sigVisaError.connect(self.connection_error)
 
     @property
     def vout_raw(self) -> str:
@@ -518,12 +518,12 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         else:
             return "nan"
 
-    @QtCore.Slot()
-    def connection_problem(self):
+    @QtCore.Slot(object)
+    def connection_error(self, error):
         """Disable widget and try to reconnect."""
         self.setDisabled(True)
         restart_visathread(self.instrument, 3000)
-        log.error("Failed to communicate with heat switch. Trying to reconnect.")
+        log.error(f"Failed to communicate with heat switch: {error}")
 
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):

@@ -56,7 +56,7 @@ class VISAThread(QtCore.QThread):
 
     sigWritten = QtCore.Signal()
     sigQueried = QtCore.Signal()
-    sigVisaIOError = QtCore.Signal()
+    sigVisaError = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -95,8 +95,8 @@ class VISAThread(QtCore.QThread):
         self.stopped.clear()
         try:
             self.controller.open()
-        except pyvisa.VisaIOError:
-            self.sigVisaIOError.emit()
+        except pyvisa.VisaIOError as e:
+            self.sigVisaError.emit(e)
 
         while not self.stopped.is_set():
             if not self.queue.empty():
@@ -104,15 +104,15 @@ class VISAThread(QtCore.QThread):
                 if reply_signal is None:  # Write only
                     try:
                         self.controller.write(message, loglevel=loglevel)
-                    except pyvisa.VisaIOError:
-                        self.sigVisaIOError.emit()
+                    except (pyvisa.VisaIOError, pyvisa.InvalidSession) as e:
+                        self.sigVisaError.emit(e)
                     else:
                         self.sigWritten.emit()
                 else:  # Query
                     try:
                         rep = self.controller.query(message, loglevel=loglevel)
-                    except pyvisa.VisaIOError:
-                        self.sigVisaIOError.emit()
+                    except (pyvisa.VisaIOError, pyvisa.InvalidSession) as e:
+                        self.sigVisaError.emit(e)
                     else:
                         reply_signal.emit(rep)
                         self.sigQueried.emit()
