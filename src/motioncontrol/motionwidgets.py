@@ -579,6 +579,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot(object)
     def get_capacitance(self) -> list[str]:
+        self.stop_encoding()
         res = []
         for ch, n in zip(self.valid_channels, self.valid_channel_numbers):
             cap = self.mmthread.get_capacitance(n)
