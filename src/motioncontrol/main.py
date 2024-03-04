@@ -111,6 +111,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         # Show plot by default
         self.actionplotpos.setChecked(True)
+        self.refresh_plot_visibility()
 
     @QtCore.Slot(str, str)
     def parse_request(self, command: str, args: str) -> None:
