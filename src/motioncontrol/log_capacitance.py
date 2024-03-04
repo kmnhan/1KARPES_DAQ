@@ -11,7 +11,9 @@ import pyqtgraph as pg
 from moee import MMCommand, MMThread
 from qtpy import QtCore, QtGui, QtWidgets
 
-FILENAME = "D:/MotionController/logs_capacitance/240215_capacitance.csv"
+
+LOG_DIR = "D:/Logs/Capacitance"
+# FILENAME = "D:/MotionController/logs_capacitance/240227_capacitance.csv"
 
 
 # def write_log(content: list[str]):
@@ -41,8 +43,13 @@ class LoggingProc(multiprocessing.Process):
 
             # retrieve message from queue
             dt, msg = self.queue.get()
+
             try:
-                with open(FILENAME, "a", newline="") as f:
+                with open(
+                    os.path.join(LOG_DIR, dt.strftime("%y%m%d") + ".csv"),
+                    "a",
+                    newline="",
+                ) as f:
                     writer = csv.writer(f)
                     writer.writerow([dt.isoformat()] + msg)
             except PermissionError:
