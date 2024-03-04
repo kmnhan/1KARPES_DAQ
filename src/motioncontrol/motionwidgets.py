@@ -523,6 +523,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
             raise e
         else:
             self.enable()
+            # Start with all channels disabled
+            for ch in self.channels:
+                ch.checkbox.setChecked(False)
             self.start_encoding()
 
     @QtCore.Slot()
