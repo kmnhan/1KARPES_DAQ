@@ -580,13 +580,18 @@ class SingleControllerWidget(QtWidgets.QWidget):
     @QtCore.Slot(object)
     def get_capacitance(self) -> list[str]:
         self.stop_encoding()
+        valid_ch = self.valid_channels
         res = []
-        for ch, n in zip(self.valid_channels, self.valid_channel_numbers):
+        for ch, n in zip(valid_ch, self.valid_channel_numbers):
             cap = self.mmthread.get_capacitance(n)
             res.append(f"{n}: Nominal {ch.nominal_capacitance}, Measured {cap:.4f} μF")
-        # reconnect due to controller bug
-        # position reading does not work after capacitance check
+        # Reconnect due to controller bug
+        # Position reading does not work after capacitance check
         self.reconnect()
+
+        # Reconnect disables all channels for safety, re-enable valid channels
+        for ch in valid_ch:
+            ch.checkbox.setChecked(True)
         return res
 
     # @QtCore.Slot()
