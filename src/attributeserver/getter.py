@@ -22,6 +22,7 @@ TEMPERATURE_KEYS: tuple[str, ...] = (
     "TA",
     "TB",
     "TC",
+    "TD",
     "T1",
     "T2",
     "T3",
@@ -79,7 +80,7 @@ def get_pressure_dict() -> dict[str, str]:
 
 
 def get_position_list() -> list[str]:
-    return [str(v) for v in get_shared_array("MotorPositions", 6, "f8")]
+    return [str(np.round(v, 4)) for v in get_shared_array("MotorPositions", 6, "f8")]
 
 
 def get_position_dict() -> dict[str, str]:
@@ -87,7 +88,9 @@ def get_position_dict() -> dict[str, str]:
 
 
 def get_temperature_list() -> list[str]:
-    return [str(v) for v in get_shared_array("Temperatures", len(SLIT_TABLE), "f8")]
+    return [
+        str(v) for v in get_shared_array("Temperatures", len(TEMPERATURE_KEYS), "f8")
+    ]
 
 
 def get_temperature_dict() -> dict[str, str]:
