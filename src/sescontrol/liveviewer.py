@@ -235,6 +235,8 @@ class DataFetcher(QtCore.QRunnable):
                     wave = erlab.io.load_experiment(filename)
             except PermissionError:
                 time.sleep(0.01)
+            except FileNotFoundError:
+                filename = filename.replace("_scan_", "")
             else:
                 break
 
