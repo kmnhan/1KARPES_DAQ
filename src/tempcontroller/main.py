@@ -431,8 +431,8 @@ class MainWindow(MainWindowGUI):
         self._lastupdate: datetime.datetime = datetime.datetime.now()
 
         # Wait 100 ms for data to update
-        QtCore.QTimer.singleShot(100, self.check_regen)
-        QtCore.QTimer.singleShot(100, self.refresh)
+        QtCore.QTimer.singleShot(150, self.check_regen)
+        QtCore.QTimer.singleShot(150, self.refresh)
 
     def check_regen(self):
         if self.heatswitch.regen_check.isChecked():
@@ -558,9 +558,11 @@ class MainWindow(MainWindowGUI):
         # Free shared memory
         self.shm.close()
         self.shm.unlink()
+        log.debug("Shared memory unlinked")
 
         # Stop logging process
         self.log_writer.stop()
+        log.debug("Logging process stopped")
 
         super().closeEvent(*args, **kwargs)
 
