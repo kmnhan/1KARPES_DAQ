@@ -430,7 +430,7 @@ class MainWindow(MainWindowGUI):
         self.sigUpdate.emit()
         self._lastupdate: datetime.datetime = datetime.datetime.now()
 
-        # Wait 100 ms for data to update
+        # Wait 150 ms for data to update
         QtCore.QTimer.singleShot(150, self.check_regen)
         QtCore.QTimer.singleShot(150, self.refresh)
 
