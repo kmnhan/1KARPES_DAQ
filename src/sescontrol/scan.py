@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from multiprocessing import shared_memory
 
 import numpy as np
+import numpy.typing as npt
 import pywinauto
 import pywinauto.win32functions
 import win32.lib.pywintypes
@@ -115,7 +116,7 @@ class ScanWorkerSignals(QtCore.QObject):
 class ScanWorker(QtCore.QRunnable):
     def __init__(
         self,
-        motor_args: list[tuple[str, np.ndarray]],
+        motor_coords: dict[str, npt.NDArray],
         base_dir: str,
         base_file: str,
         data_idx: int,
@@ -126,9 +127,9 @@ class ScanWorker(QtCore.QRunnable):
 
         self.axes: list[Motor] = []
         self.coords: list[np.ndarray] = []
-        for ma in motor_args:
-            self.axes.append(Motor.plugins[ma[0]]())
-            self.coords.append(ma[1])
+        for k, v in motor_coords.items():
+            self.axes.append(Motor.plugins[k]())
+            self.coords.append(v)
 
         self.base_dir = base_dir
         self.base_file = base_file

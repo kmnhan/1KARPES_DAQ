@@ -179,7 +179,7 @@ class DataFetcher(QtCore.QRunnable):
 
     def __init__(
         self,
-        motor_args: list[tuple[str, np.ndarray]],
+        motor_coords: dict[str, np.ndarray],
         base_dir: str,
         base_file: str,
         data_idx: int,
@@ -188,14 +188,14 @@ class DataFetcher(QtCore.QRunnable):
         super().__init__()
         self.signals = DataFetcherSignals()
 
-        self._motor_args = motor_args
+        self._motor_coords = motor_coords
         self._base_dir = base_dir
         self._base_file = base_file
         self._data_idx = data_idx
         self._niter = niter
 
     def run(self):
-        if len(self._motor_args) == 0:
+        if len(self._motor_coords) == 0:
             filename = os.path.join(
                 self._base_dir, f"{self._base_file}{str(self._data_idx).zfill(4)}.pxt"
             )
@@ -249,7 +249,7 @@ class DataFetcher(QtCore.QRunnable):
         )
 
         # Bin 2D scan to save memory
-        if len(self._motor_args) > 1:
+        if len(self._motor_coords) > 1:
             wave = wave.coarsen(
                 {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
             ).mean()
@@ -257,12 +257,12 @@ class DataFetcher(QtCore.QRunnable):
         if self._niter == 1:
             # Reserve space for future scans
             wave = wave.expand_dims(
-                {name: coord for name, coord in self._motor_args},
-                axis=[wave.ndim + i for i in range(len(self._motor_args))],
+                self._motor_coords,
+                axis=[wave.ndim + i for i in range(len(self._motor_coords))],
             ).copy()
 
             # Fill reserved space with nan
-            for name, coord in self._motor_args:
+            for name, coord in self._motor_coords.items():
                 wave.loc[{name: wave.coords[name] != coord[0]}] = np.nan
 
         self.signals.sigDataFetched.emit(self._niter, wave)
@@ -297,24 +297,24 @@ class LiveImageTool(BaseImageTool):
 
     def set_params(
         self,
-        motor_args: list[tuple[str, np.ndarray]],
+        motor_coords: dict[str, np.ndarray],
         base_dir: str,
         base_file: str,
         data_idx: int,
     ):
-        self._motor_args = motor_args
+        self._motor_coords = motor_coords
         self._base_dir = base_dir
         self._base_file = base_file
         self._data_idx = data_idx
 
         self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
 
-        if len(self._motor_args) == 0:
+        if len(self._motor_coords) == 0:
             self.motor_controls.setDisabled(True)
 
     def trigger_fetch(self, niter: int):
         data_fetcher = DataFetcher(
-            self._motor_args, self._base_dir, self._base_file, self._data_idx, niter
+            self._motor_coords, self._base_dir, self._base_file, self._data_idx, niter
         )
         data_fetcher.signals.sigDataFetched.connect(self.update_data)
         self.threadpool.start(data_fetcher)
@@ -326,12 +326,14 @@ class LiveImageTool(BaseImageTool):
         else:
             indices = list(
                 np.unravel_index(
-                    niter - 1, [len(coord) for _, coord in self._motor_args]
+                    niter - 1, [len(coord) for coord in self._motor_coords.values()]
                 )
             )
             if (len(indices) == 2) and ((indices[0] % 2) != 0):
                 # if outer loop is odd, inner loop is reversed
-                indices[-1] = len(self._motor_args[-1][1]) - 1 - indices[-1]
+                indices[-1] = (
+                    len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
+                )
 
             # assign equal coordinates, energy axis might be mismatched in some cases
             wave = wave.assign_coords(
@@ -342,14 +344,14 @@ class LiveImageTool(BaseImageTool):
             wave = wave.expand_dims(
                 {
                     name: [coord[ind]]
-                    for ind, (name, coord) in zip(indices, self._motor_args)
+                    for ind, (name, coord) in zip(indices, self._motor_coords.items())
                 }
             )
 
             # this will slice the target array at the coordinates we wish to insert the received data
             target_slices = {
                 name: self.array_slicer._obj.coords[name] == coord[ind]
-                for ind, (name, coord) in zip(indices, self._motor_args)
+                for ind, (name, coord) in zip(indices, self._motor_coords.items())
             }
             # we want to know the dims of target array before assigning new values
             target = self.array_slicer._obj.loc[target_slices]

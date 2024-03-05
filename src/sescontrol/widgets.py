@@ -3,10 +3,11 @@ import gc
 import os
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import humanize
 import numpy as np
+import numpy.typing as npt
 import pyqtgraph as pg
 
 sys.coinit_flags = 2
@@ -221,7 +222,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @property
     def numpoints(self) -> int:
         """Total number of acquisition points."""
-        return self.motor1.npoints * self.motor2.npoints
+        return int(self.motor1.npoints * self.motor2.npoints)
 
     @property
     def has_motor(self) -> bool:
@@ -295,6 +296,14 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 )
                 return
 
+        # TODO
+        # Display edit motor dialog here
+        # If 2D and edited, flatten motor_coords sent to imagetool
+
+        motor_coords: dict[str, npt.NDArray] = dict()
+        for ma in motor_args:
+            motor_coords[ma[0]] = ma[1]
+
         # get file information
         base_dir, base_file, valid_ext, _, sequences = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
@@ -309,7 +318,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             self.itool = None
         else:
             self.itool = LiveImageTool(threadpool=self.threadpool)
-            self.itool.set_params(motor_args, base_dir, base_file, data_idx)
+            self.itool.set_params(motor_coords, base_dir, base_file, data_idx)
 
         # prepare before start
         self.pre_process()
@@ -319,10 +328,10 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 dirname=base_dir,
                 filename=f"{base_file}{str(data_idx).zfill(4)}_motors.csv",
                 prefix="_scan_",
-                motor_args=motor_args,
+                motors=list(motor_coords.keys()),
             )
         scan_worker = ScanWorker(
-            motor_args, base_dir, base_file, data_idx, valid_ext, has_da
+            motor_coords, base_dir, base_file, data_idx, valid_ext, has_da
         )
         scan_worker.signals.sigStepFinished.connect(self.step_finished)
         scan_worker.signals.sigStepFinished.connect(self.update_live)
@@ -429,12 +438,12 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         dirname,
         filename: str,
         prefix: str,
-        motor_args: list[tuple[str, np.ndarray]],
+        motors: Sequence[str],
     ):
         self.pos_logger.set_file(dirname, filename, prefix)
         header = [""]
-        for motor in motor_args:
-            header.append(motor[0])
+        for m in motors:
+            header.append(m)
         self.pos_logger.write_header(header)
 
     def closeEvent(self, event: QtGui.QCloseEvent):
