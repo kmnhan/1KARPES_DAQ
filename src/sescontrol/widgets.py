@@ -3,6 +3,7 @@ import gc
 import os
 import sys
 import time
+from collections.abc import Callable
 
 import humanize
 import numpy as np
@@ -459,15 +460,46 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
 
 class SESShortcuts(QtWidgets.QWidget):
+    """
+    A widget that provides shortcuts for SES.exe control.
+
+    Attributes
+    ----------
+    sigAliveChanged
+        A signal emitted when the SES connection status changes.
+    SES_ACTIONS
+        Actions to be added to the widget. The keys are the labels of the buttons, and
+        the values are tuples. The first element of the tuple is a string that indicates
+        the path to the menu item, and the second element is a callable that takes a
+        string and returns whether it matches the title of the window that is meant to
+        be opened by the action. If the action does not open a window, the second
+        element can be None.
+
+    """
 
     sigAliveChanged = QtCore.Signal(bool)
 
-    SES_ACTIONS: dict[str, tuple[str, str]] = {
-        "Calibrate Voltages": ("Calibration", "Voltages..."),
-        "File Opts.": ("Setup", "File Options..."),
-        "Sequences": ("Sequence", "Setup..."),
-        "Control Theta": ("DA30", "Control Theta..."),
-        "Center Deflection": ("DA30", "Center Deflection"),
+    SES_ACTIONS: dict[str, tuple[str, Callable[[str], bool]] | None] = {
+        "Calibrate Voltages": (
+            "Calibration->Voltages...",
+            lambda title: title == "Voltage Calibration",
+        ),
+        "File Opts.": (
+            "Setup->File Options...",
+            lambda title: title == "File Options",
+        ),
+        "Sequences": (
+            "Sequence->Setup...",
+            lambda title: title.startswith("Sequence Editor"),
+        ),
+        "Control Theta": (
+            "DA30->Control Theta...",
+            lambda title: title == "Control Theta",
+        ),
+        "Center Deflection": (
+            "DA30->Center Deflection",
+            None,
+        ),
     }
 
     def __init__(self):
@@ -500,16 +532,17 @@ class SESShortcuts(QtWidgets.QWidget):
         if not self.ses.alive:
             self.ses.try_connect()
 
-    @QtCore.Slot(object)
-    def try_click(self, menu_path: tuple[str, str]):
-        if menu_path == self.SES_ACTIONS["Calibrate Voltages"]:
+    @QtCore.Slot(str)
+    @QtCore.Slot(str, object)
+    def try_click(self, path: str, match: Callable[[str], bool] | None = None):
+        if path == self.SES_ACTIONS["Calibrate Voltages"][0]:
             QtWidgets.QMessageBox.warning(
                 self,
                 "Reminder for MCP protection",
                 "Check the slit number and photon flux!",
             )
         try:
-            self.ses.click_menu(menu_path)
+            self.ses.click_menu(path, match)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self,
@@ -525,9 +558,10 @@ class SESShortcuts(QtWidgets.QWidget):
 
     def create_buttons(self):
         self.buttons: list[QtWidgets.QPushButton] = []
-        for label, path in self.SES_ACTIONS.items():
+        for label, args in self.SES_ACTIONS.items():
             btn = QtWidgets.QPushButton(label)
-            btn.clicked.connect(lambda *, path=path: self.try_click(path))
+
+            btn.clicked.connect(lambda *, args=args: self.try_click(*args))
             self.layout().addWidget(btn)
             btn.setMinimumWidth(btn.fontMetrics().boundingRect(btn.text()).width() + 14)
             self.buttons.append(btn)

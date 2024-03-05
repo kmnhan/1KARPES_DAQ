@@ -3,7 +3,7 @@
 import glob
 import os
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Sequence, Callable
 
 sys.coinit_flags = 2
 
@@ -28,22 +28,38 @@ def get_ses_proc() -> psutil.Process:
     raise RuntimeError("SES is not running")
 
 
-def get_ses_window(process: psutil.Process) -> int:
-    """Returns the first window hwnd of process that has the title `SES`."""
+def get_matching_window(
+    process: psutil.Process | int, match: Callable[[str], bool]
+) -> int:
+    """
+    Returns the first window handle of given process that matches the given function.
+    """
+    if isinstance(process, int):
+        process = psutil.Process(process)
     windows = []
     for thread in process.threads():
+        if len(windows) > 0:
+            break
 
         def enum_windows_callback(hwnd, lParam):
-            # if win32gui.IsWindowVisible(hwnd):
-            if win32gui.GetWindowText(hwnd) == "SES":
+            if match(win32gui.GetWindowText(hwnd)):
                 windows.append(hwnd)
             return True
 
         thread_id = thread.id
         win32gui.EnumThreadWindows(thread_id, enum_windows_callback, 0)
     if len(windows) == 0:
-        raise RuntimeError("SES main window is not open")
+        raise RuntimeError("Matching window not found")
     return windows[0]
+
+
+def get_ses_window(process: psutil.Process | int) -> int:
+    """Returns the first window handle of process that has the title `SES`."""
+
+    def func(x: str) -> bool:
+        return x == "SES"
+
+    return get_matching_window(process, func)
 
 
 def get_ses_properties() -> tuple[int, int]:
@@ -117,16 +133,21 @@ class SESController:
             process=self._pid
         )
 
-    def click_menu(self, path: Sequence[str]) -> int:
+    def click_menu(self, path: str, match: Callable[[str], bool] | None = None) -> int:
+        # Click menu given by path. If the menu item opens some window, match needs to
+        # be given as a function that returns True only for the window title.
         if not self.alive:
             raise RuntimeError("SES is not running")
-        path = (
-            self._ses_app.window(handle=self._hwnd)
-            .menu()
-            .get_menu_path("->".join(path))
-        )
+        if match is not None:
+            handle = get_matching_window(self._pid, match)
+            if bool(win32gui.IsWindowVisible(handle)):
+                # If already visible, avoid queuing another message
+                win32gui.BringWindowToTop(handle)
+                return 0
+
+        path = self._ses_app.window(handle=self._hwnd).menu().get_menu_path(path)
         if path[-1].is_enabled():
-            path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
+            path[-1].ctrl.post_message(path[-1].menu.COMMAND, path[-1].item_id())
             pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
             return 0
         else:
@@ -144,4 +165,4 @@ class SESController:
         return proc.name() == "Ses.exe"
 
     def run_sequence(self):
-        return self.click_menu("Sequence", "Run")
+        return self.click_menu("Sequence->Run")
