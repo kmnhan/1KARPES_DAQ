@@ -1,8 +1,10 @@
 import csv
 import datetime
 import glob
+import logging
 import os
 import shutil
+import sys
 import tempfile
 import time
 import zipfile
@@ -21,6 +23,13 @@ from sescontrol.ses_win import get_ses_properties
 
 SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
 
+log = logging.getLogger("scan")
+log.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+)
+log.addHandler(handler)
 
 """
 Limitations
@@ -198,22 +207,26 @@ class ScanWorker(QtCore.QRunnable):
         # workfiles = os.listdir(os.path.join(SES_DIR, "work"))
 
         # click run button
+        log.debug("Clicking sequence run")
         self.click_sequence_button("Run")
         self.update_seq_start_time()
 
-        time.sleep(0.01)
+        time.sleep(0.1)
 
         # keep checking for abort during scan
         aborted: bool = False
         while True:
             if (not aborted) and self._stopnow:
+                log.debug("Clicking force stop")
                 self.click_sequence_button("Force Stop")
                 aborted = True
             if self.check_finished():
+                log.debug("Sequence finished")
                 break
             time.sleep(0.001)
 
         if self.has_da:
+            log.debug("Checking if the DA map is completely saved")
             # DA maps take time to save even after scan ends, let's try to wait
             timeout_start = time.perf_counter()
             fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
@@ -230,6 +243,7 @@ class ScanWorker(QtCore.QRunnable):
                     except zipfile.BadZipFile:
                         continue
                     else:
+                        log.debug("DA map file appears to be intact")
                         # zipfile is intact, check work folder to confirm
                         # <- workfile checking is not reliable, turn off for now
 
@@ -237,11 +251,12 @@ class ScanWorker(QtCore.QRunnable):
                         #     os.listdir(os.path.join(SES_DIR, "work"))
                         # ):
                         break
-                elif self._stop and time.perf_counter() > timeout_start + 20:
+                elif self._stop and time.perf_counter() > timeout_start + 10:
                     # SES 상에서 stop after something 누른 다음 stop after point를 통해
-                    # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 20초
+                    # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 10초
                     # 기다려서 안 되면 그냥 안 되는갑다 하기
                     break
+            time.sleep(1)
         if aborted:
             return 1
         return 0
@@ -258,8 +273,7 @@ class ScanWorker(QtCore.QRunnable):
 
             for i, ax in enumerate(self.axes):
                 ax.pre_motion()
-
-                print("pre motion complete, sanity checking")
+                log.debug(f"Pre-motion for axis {i+1} complete, checking bounds")
                 # last sanity check of bounds before motion
                 if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
                     ax.maximum is not None and max(self.coords[i]) > ax.maximum
@@ -269,18 +283,16 @@ class ScanWorker(QtCore.QRunnable):
                     print("PARAMETERS OUT OF MOTOR BOUNDS")
                     return
 
-            print("starting motion loop")
+            log.info("Starting motion loop")
             self._motion_loop()
 
-            print("starting post motion")
-            for ax in self.axes:
+            for i, ax in enumerate(self.axes):
                 ax.post_motion()
-            print("post motion finished")
-
+                log.debug(f"Post-motion for axis {i+1} complete")
 
             # restore mangled filenames
             self._restore_filenames()
-            print("restored filenames")
+            log.info("Restored filenames")
 
         self.signals.sigFinished.emit()
 
@@ -353,7 +365,8 @@ class ScanWorker(QtCore.QRunnable):
         niter: int = 1
         for i, val0 in enumerate(self.coords[0]):
             if self._stopnow:
-                # aborted before initial move
+                # aborted before move
+                log.info("Aborted before move")
                 break
 
             # move outer loop to val 0
@@ -377,6 +390,7 @@ class ScanWorker(QtCore.QRunnable):
                 ret = self.sequence_run_wait()
                 if ret == 1:
                     # aborted during scan, return
+                    log.info("Aborted during scan")
                     return
 
                 # mangle filename so that SES ignores it
@@ -385,6 +399,7 @@ class ScanWorker(QtCore.QRunnable):
 
                 if self._stop:
                     # aborted after scan
+                    log.info("Aborted after scan finished")
                     return
 
                 niter += 1

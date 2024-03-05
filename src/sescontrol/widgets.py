@@ -446,11 +446,15 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             if not ret == QtWidgets.QMessageBox.Yes:
                 event.ignore()
                 return
-        # for win in self._itools:
-        #     if win:
-        #         win.close()
         self.pos_logger.stop()
-        self.threadpool.waitForDone()
+
+        flag = self.threadpool.waitForDone(15000)
+        if not flag:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Threadpool timed out after 15 seconds",
+                f"Remaining threads: {self.threadpool.activeThreadCount()}",
+            )
         super().closeEvent(event)
 
 
