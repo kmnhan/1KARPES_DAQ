@@ -3,9 +3,11 @@ import os
 import threading
 import time
 import zipfile
+from collections.abc import Sequence
 
 import erlab.io
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
 from erlab.interactive.imagetool.controls import ItoolControlsBase
@@ -298,11 +300,13 @@ class LiveImageTool(BaseImageTool):
     def set_params(
         self,
         motor_coords: dict[str, np.ndarray],
+        raster: bool,
         base_dir: str,
         base_file: str,
         data_idx: int,
     ):
         self._motor_coords = motor_coords
+        self._raster = raster
         self._base_dir = base_dir
         self._base_file = base_file
         self._data_idx = data_idx
@@ -329,7 +333,7 @@ class LiveImageTool(BaseImageTool):
                     niter - 1, [len(coord) for coord in self._motor_coords.values()]
                 )
             )
-            if (len(indices) == 2) and ((indices[0] % 2) != 0):
+            if (not self._raster) and (len(indices) == 2) and ((indices[0] % 2) != 0):
                 # if outer loop is odd, inner loop is reversed
                 indices[-1] = (
                     len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]

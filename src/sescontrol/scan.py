@@ -1,6 +1,7 @@
 import csv
 import datetime
 import glob
+import itertools
 import logging
 import os
 import shutil
@@ -9,7 +10,7 @@ import tempfile
 import time
 import zipfile
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from multiprocessing import shared_memory
 
 import numpy as np
@@ -108,7 +109,7 @@ class MotorPosWriter(QtCore.QRunnable):
 
 
 class ScanWorkerSignals(QtCore.QObject):
-    sigStepFinished = QtCore.Signal(int, object, object)
+    sigStepFinished = QtCore.Signal(int, object)
     sigStepStarted = QtCore.Signal(int)
     sigFinished = QtCore.Signal()
 
@@ -116,7 +117,8 @@ class ScanWorkerSignals(QtCore.QObject):
 class ScanWorker(QtCore.QRunnable):
     def __init__(
         self,
-        motor_coords: dict[str, npt.NDArray],
+        motors: Sequence[str],
+        motion_array: npt.NDArray[np.float64],
         base_dir: str,
         base_file: str,
         data_idx: int,
@@ -125,17 +127,13 @@ class ScanWorker(QtCore.QRunnable):
     ):
         super().__init__()
 
-        self.axes: list[Motor] = []
-        self.coords: list[np.ndarray] = []
-        for k, v in motor_coords.items():
-            self.axes.append(Motor.plugins[k]())
-            self.coords.append(v)
-
-        self.base_dir = base_dir
-        self.base_file = base_file
-        self.data_idx = data_idx
-        self.valid_ext = valid_ext
-        self.has_da = has_da
+        self.motors: list[Motor] = [Motor.plugins[k]() for k in motors]
+        self.array: npt.NDArray[np.float64] = motion_array
+        self.base_dir: str = base_dir
+        self.base_file: str = base_file
+        self.data_idx: int = data_idx
+        self.valid_ext: Iterable[str] = valid_ext
+        self.has_da: bool = has_da
 
         self.signals = ScanWorkerSignals()
         self._pid, self._hwnd = get_ses_properties()
@@ -205,8 +203,6 @@ class ScanWorker(QtCore.QRunnable):
     def sequence_run_wait(self) -> int:
         """Run sequence and wait until it finishes."""
 
-        # workfiles = os.listdir(os.path.join(SES_DIR, "work"))
-
         # click run button
         log.debug("Clicking sequence run")
         self.click_sequence_button("Run")
@@ -263,35 +259,32 @@ class ScanWorker(QtCore.QRunnable):
         return 0
 
     def run(self):
-        if len(self.axes) == 0:
-            # no motors, single scan
+        if len(self.motors) == 0:
+            # No motors, single scan
             self.signals.sigStepStarted.emit(1)
             self.sequence_run_wait()
-            self.signals.sigStepFinished.emit(1, 0, 0)
+            self.signals.sigStepFinished.emit(1, tuple())
         else:
-            if len(self.axes) == 1:
-                self.coords.append([[0]])
-
-            for i, ax in enumerate(self.axes):
+            for i, ax in enumerate(self.motors):
                 ax.pre_motion()
                 log.debug(f"Pre-motion for axis {i+1} complete, checking bounds")
-                # last sanity check of bounds before motion
-                if (ax.minimum is not None and min(self.coords[i]) < ax.minimum) or (
-                    ax.maximum is not None and max(self.coords[i]) > ax.maximum
+                # Last sanity check of bounds before motion
+                if (ax.minimum is not None and min(self.array[:, i]) < ax.minimum) or (
+                    ax.maximum is not None and max(self.array[:, i]) > ax.maximum
                 ):
                     ax.post_motion()
                     self.signals.sigFinished.emit()
-                    print("PARAMETERS OUT OF MOTOR BOUNDS")
+                    log.error("Parameters outside motor bounds, aborting")
                     return
 
             log.info("Starting motion loop")
             self._motion_loop()
 
-            for i, ax in enumerate(self.axes):
+            for i, ax in enumerate(self.motors):
                 ax.post_motion()
                 log.debug(f"Post-motion for axis {i+1} complete")
 
-            # restore mangled filenames
+            # Restore mangled filenames
             self._restore_filenames()
             log.info("Restored filenames")
 
@@ -363,44 +356,32 @@ class ScanWorker(QtCore.QRunnable):
                     break
 
     def _motion_loop(self):
-        niter: int = 1
-        for i, val0 in enumerate(self.coords[0]):
+        for i in range(self.array.shape[0]):
             if self._stopnow:
-                # aborted before move
+                # Aborted before move
                 log.info("Aborted before move")
                 break
 
-            # move outer loop to val 0
-            pos0 = self.axes[0].move(val0)
+            self.signals.sigStepStarted.emit(i + 1)  # Step index is 1-based
+            for j in range(self.array.shape[1]):
+                if i != 0 and np.isclose(self.array[i, j], self.array[i - 1, j]):
+                    # Not first iteration and same position as previous, skip move
+                    continue
+                # Execute move
+                self.motors[j].move(self.array[i, j])
 
-            if (i % 2) != 0:
-                # if outer loop index is odd, inner loop is reversed
-                coord1_iter = reversed(self.coords[1])
-            else:
-                coord1_iter = self.coords[1]
-            for val1 in coord1_iter:
-                if len(self.axes) == 2:
-                    # move inner loop to val 1
-                    pos1 = self.axes[1].move(val1)
-                else:
-                    pos1 = None
+            # Execute sequence and wait until it finishes
+            ret = self.sequence_run_wait()
+            if ret == 1:
+                # Aborted during scan, return
+                log.info("Aborted during scan")
+                return
 
-                self.signals.sigStepStarted.emit(niter)
+            # Mangle filename so that SES ignores it
+            self._rename_file(i + 1)
 
-                # execute sequence and wait until it finishes
-                ret = self.sequence_run_wait()
-                if ret == 1:
-                    # aborted during scan, return
-                    log.info("Aborted during scan")
-                    return
-
-                # mangle filename so that SES ignores it
-                self._rename_file(niter)
-                self.signals.sigStepFinished.emit(niter, pos0, pos1)
-
-                if self._stop:
-                    # aborted after scan
-                    log.info("Aborted after scan finished")
-                    return
-
-                niter += 1
+            self.signals.sigStepFinished.emit(i + 1, tuple(self.array[i, :]))
+            if self._stop:
+                # Aborted after scan
+                log.info("Aborted after step finished")
+                return

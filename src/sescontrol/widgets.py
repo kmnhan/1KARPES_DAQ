@@ -1,5 +1,6 @@
 import datetime
 import gc
+import logging
 import os
 import sys
 import time
@@ -26,6 +27,8 @@ try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+log = logging.getLogger("scan")
 
 
 class SingleMotorSetup(QtWidgets.QGroupBox):
@@ -164,6 +167,172 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
         self._refresh_values()
 
 
+class ArrayTableModel(QtCore.QAbstractTableModel):
+    def __init__(self, parent: QtCore.QObject | None = None):
+        super().__init__(parent)
+        self.set_array(np.array([[]]), [])
+
+    def set_array(self, array: npt.NDArray, clabels: Sequence[str]):
+        self.beginResetModel()
+        self._array = array
+        self._clabels = clabels
+        self.endResetModel()
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return self._array.shape[0]
+
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        return self._array.shape[1]
+
+    def data(self, index: QtCore.QModelIndex, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+        if (
+            role == QtCore.Qt.ItemDataRole.DisplayRole
+            or role == QtCore.Qt.ItemDataRole.EditRole
+        ):
+            return str(self._array[index.row(), index.column()])
+        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            return int(
+                QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
+            )
+        return None
+
+    def setData(
+        self, index: QtCore.QModelIndex, value, role=QtCore.Qt.ItemDataRole.EditRole
+    ):
+        if index.isValid() and role == QtCore.Qt.ItemDataRole.EditRole:
+            try:
+                self._array[index.row(), index.column()] = float(value)
+            except ValueError:
+                return False
+            self.dataChanged.emit(index, index, [role])
+            return True
+
+        return False
+
+    def flags(self, index: QtCore.QModelIndex):
+        if not index.isValid():
+            return QtCore.Qt.ItemFlag.NoItemFlags
+
+        return (
+            QtCore.Qt.ItemFlag.ItemIsEditable
+            | QtCore.Qt.ItemFlag.ItemIsSelectable
+            | QtCore.Qt.ItemFlag.ItemIsEnabled
+        )
+
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role: int = QtCore.Qt.ItemDataRole.DisplayRole,
+    ):
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            if orientation == QtCore.Qt.Orientation.Horizontal:
+                return str(self._clabels[section])
+            elif orientation == QtCore.Qt.Orientation.Vertical:
+                return str(section + 1)
+
+
+class MotorDialog(*uic.loadUiType("motordialog.ui")):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowTitle("Motor Coordinates")
+        self.table.setModel(ArrayTableModel())
+        self.table.model().dataChanged.connect(self.update)
+        self.table.model().modelReset.connect(self.update)
+        self.raster_check.toggled.connect(self.refresh_raster)
+        self.reset_btn.clicked.connect(self.refresh_raster)
+
+    @staticmethod
+    def get_motion_array(
+        motor_coords: dict[str, npt.NDArray], raster: bool = False
+    ) -> npt.NDArray[np.float64]:
+        """Given coordinates, returns all positions to be visited in a scan.
+
+        Parameters
+        ----------
+        motor_coords : dict[str, npt.NDArray]
+            Mapping of motor names to their coordinates.
+        raster : bool, optional
+            If True, the second axis is repeated in reverse order every odd iteration.
+            Has no effect if the number of axes is not 2.
+
+        Returns
+        -------
+        npt.NDArray[np.float64]
+            N by M array, where N is the number of points and M is the number of axes.
+        """
+        numpoints: int = 1
+        for v in motor_coords.values():
+            numpoints *= len(v)
+
+        out = np.zeros((numpoints, len(motor_coords)), dtype=np.float64)
+        if len(motor_coords) == 1:
+            out[:, 0] = tuple(motor_coords.values())[0]
+        elif len(motor_coords) == 2:
+            coords = tuple(motor_coords.values())
+            shape = tuple(c.size for c in coords)
+
+            for i in range(shape[0]):
+                out[i * shape[1] : (i + 1) * shape[1], 0] = coords[0][i]
+                if raster or i % 2 == 0:
+                    out[i * shape[1] : (i + 1) * shape[1], 1] = coords[1]
+                else:
+                    out[i * shape[1] : (i + 1) * shape[1], 1] = np.flip(coords[1])
+        return out
+
+    def set_motor_coords(self, motor_coords: dict[str, npt.NDArray]):
+        self.motor_coords = motor_coords
+        self.raster_check.setEnabled(len(self.motor_coords) == 2)
+        self.refresh_raster()
+
+    def refresh_raster(self):
+        self.table.model().set_array(self.array, tuple(self.motor_coords.keys()))
+
+    @property
+    def edited(self) -> bool:
+        return not np.allclose(self.array, self.modified_array)
+
+    @property
+    def rasterized(self) -> bool:
+        return self.raster_check.isChecked()
+
+    @property
+    def array(self) -> npt.NDArray[np.float64]:
+        return self.get_motion_array(self.motor_coords, self.rasterized)
+
+    @property
+    def modified_array(self) -> npt.NDArray[np.float64]:
+        return self.table.model()._array.astype(np.float64)
+
+    def update(self):
+        self.reset_btn.setEnabled(self.edited)
+        arr = self.table.model()._array
+        labels = self.table.model()._clabels
+        plot_kw = dict(
+            symbol="o",
+            pen="#0380fc",
+            symbolSize=6,
+            symbolPen="#0380fc",
+            symbolBrush="#0380fc",
+        )
+        self.pw.clear()
+        if arr.shape[1] == 0:
+            pass
+        elif arr.shape[1] == 1:
+            self.pw.setLabel("left", labels[0])
+            self.pw.setLabel("bottom", "Iteration")
+            self.pw.plot(arr[:, 0], **plot_kw)
+        elif arr.shape[1] == 2:
+            self.pw.setLabel("left", labels[1])
+            self.pw.setLabel("bottom", labels[0])
+            self.pw.plot(arr[:, 0], arr[:, 1], **plot_kw)
+        self.pw.showGrid(x=True, y=True, alpha=0.5)
+
+
 class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     sigStopPoint = QtCore.Signal()
     sigCancelStopPoint = QtCore.Signal()
@@ -194,6 +363,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.workfileitool: WorkFileImageTool = WorkFileImageTool()
 
         self._itools: list[LiveImageTool | None] = []
+
+        self.motor_dialog: MotorDialog = MotorDialog()
 
     @property
     def itool(self):
@@ -286,7 +457,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
         ]
-
         if len(motor_args) == 2:
             if motor_args[0][0] == motor_args[1][0]:
                 QtWidgets.QMessageBox.warning(
@@ -296,13 +466,23 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 )
                 return
 
-        # TODO
-        # Display edit motor dialog here
-        # If 2D and edited, flatten motor_coords sent to imagetool
-
         motor_coords: dict[str, npt.NDArray] = dict()
         for ma in motor_args:
             motor_coords[ma[0]] = ma[1]
+
+        self.motor_dialog.set_motor_coords(motor_coords)
+
+        if len(motor_coords) != 0:
+            # Open motor edit dialog
+            ret = self.motor_dialog.exec()
+            motor_coords
+            if not ret:
+                # Cancelled
+                return
+
+        motion_array: npt.NDArray[np.float64] = self.motor_dialog.modified_array
+        motion_edited: bool = self.motor_dialog.edited
+        motion_raster: bool = self.motor_dialog.rasterized
 
         # get file information
         base_dir, base_file, valid_ext, _, sequences = get_file_info()
@@ -318,20 +498,29 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             self.itool = None
         else:
             self.itool = LiveImageTool(threadpool=self.threadpool)
-            self.itool.set_params(motor_coords, base_dir, base_file, data_idx)
+            if motion_edited:
+                iter_coords = {"Iteration": np.arange(self.numpoints)}
+                self.itool.set_params(
+                    iter_coords, motion_raster, base_dir, base_file, data_idx
+                )
+            else:
+                self.itool.set_params(
+                    motor_coords, motion_raster, base_dir, base_file, data_idx
+                )
 
         # prepare before start
         self.pre_process()
 
+        motors: list[str] = list(motor_coords.keys())
         if self.has_motor:
             self.initialize_logging(
                 dirname=base_dir,
                 filename=f"{base_file}{str(data_idx).zfill(4)}_motors.csv",
                 prefix="_scan_",
-                motors=list(motor_coords.keys()),
+                motors=motors,
             )
         scan_worker = ScanWorker(
-            motor_coords, base_dir, base_file, data_idx, valid_ext, has_da
+            motors, motion_array, base_dir, base_file, data_idx, valid_ext, has_da
         )
         scan_worker.signals.sigStepFinished.connect(self.step_finished)
         scan_worker.signals.sigStepFinished.connect(self.update_live)
@@ -364,17 +553,16 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             text += f"{timeleft} left ({steptime} per point)"
         self.line.setText(text)
 
-    @QtCore.Slot(int, object, object)
-    def step_finished(self, niter: int, pos0, pos1):
+    @QtCore.Slot(int, object)
+    def step_finished(self, niter: int, pos: tuple[float, ...]):
         self.step_times.append(time.perf_counter() - self.start_time)
 
-        # display status
+        # Display status
         text: str = f"{self.current_file} | "
 
         motor_info: list[str] = []
-        for pos, motor in zip((pos0, pos1), self.motors):
-            if pos is not None:
-                motor_info.append(f"{motor.name} = {pos0:.3f}")
+        for p, motor in zip(pos, self.motors):
+            motor_info.append(f"{motor.name} = {p:.3f}")
         text += ", ".join(motor_info)
         text += " done"
         if niter < self.numpoints:
@@ -383,13 +571,13 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.line.setText(text)
         self.progress.setValue(niter)
         if self.has_motor:
-            # enter log entry
-            entry = [niter, np.float32(pos0)]
-            if pos1 is not None:
-                entry.append(np.float32(pos1))
+            # Enter log entry
+            entry = [niter]
+            for p in pos:
+                entry.append(np.float32(p))
             self.pos_logger.write_pos([str(x) for x in entry])
 
-    @QtCore.Slot(int, object, object)
+    @QtCore.Slot(int, object)
     def update_live(self, niter, *args):
         if self.itool is None:
             return
