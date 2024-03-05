@@ -1,5 +1,6 @@
 """GUI for the 1K ARPES 6-axis manipulator"""
 
+import logging
 import multiprocessing
 import os
 import sys
@@ -17,14 +18,16 @@ from motionwidgets import (
     SingleControllerWidget,
 )
 
-LOG_DIR = "D:/Logs/Motion"
-
-CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.211")
-
 try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+LOG_DIR = "D:/Logs/Motion"
+
+CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.211")
+
+log = logging.getLogger("moee")
 
 
 class MainWindow(*uic.loadUiType("controller.ui")):
@@ -179,7 +182,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         if getattr(ch, "enabled", False):
             ch.move_to(float(value), unique_id=unique_id)
         else:
-            print("Axis disabled or nonexistent, not moving")
+            log.warning(
+                f"Move sent to axis {axis} which is disabled or nonexistent ignored"
+            )
 
     def is_finished(self, unique_id: str) -> bool:
         for con in self.controllers:

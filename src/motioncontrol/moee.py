@@ -10,7 +10,7 @@ from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("moee")
 log.setLevel(logging.INFO)
 # handler = logging.FileHandler("motion_logs.log", encoding="utf-8")
 # handler = logging.NullHandler()

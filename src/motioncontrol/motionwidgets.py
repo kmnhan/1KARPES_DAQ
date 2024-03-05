@@ -1,5 +1,6 @@
 import csv
 import datetime
+import logging
 import multiprocessing
 import os
 import queue
@@ -16,13 +17,14 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from moee import EncoderThread, MMCommand, MMStatus, MMThread
 
-CONFIG_FILE = "D:/MotionController/piezomotors.toml"
-
-
 try:
     os.chdir(sys._MEIPASS)
 except:
     pass
+
+CONFIG_FILE = "D:/MotionController/piezomotors.toml"
+
+log = logging.getLogger("moee")
 
 
 class LoggingProc(multiprocessing.Process):
@@ -779,12 +781,12 @@ class SingleControllerWidget(QtWidgets.QWidget):
         # Various sanity checks
         if not self.is_channel_enabled(ch_num):
             # This may happen when the channel is disabled after the motion was queued.
-            print("Move called on a disabled channel ignored.")
+            log.warning(f"Move called on a disabled channel {ch_num} ignored.")
             self.queue.task_done()
             return
         if self.mmthread.isRunning():
             # This normally should not happen, but exists as a safety check.
-            print("Motion already in progress.")
+            log.error(f"Move called while motion is ongoing. Ignored.")
             self.queue.task_done()
             return
 
