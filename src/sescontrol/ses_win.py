@@ -149,6 +149,9 @@ class SESController:
         if path[-1].is_enabled():
             path[-1].ctrl.post_message(path[-1].menu.COMMAND, path[-1].item_id())
             pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
+            if match is not None:
+                # Bring the window to the top
+                win32gui.BringWindowToTop(handle)
             return 0
         else:
             return 1
