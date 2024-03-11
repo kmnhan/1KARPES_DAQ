@@ -107,6 +107,7 @@ class ColorButtonDelegate(QtWidgets.QItemDelegate):
     def createEditor(self, parent, option, index):
         editor = pg.ColorButton(parent, padding=10)
         editor.setFlat(True)
+        editor.setStyleSheet("background-color: rgba(255, 255, 255, 0); ")
         editor.sigColorChanged.connect(self.commitAndCloseEditor)
         return editor
 

@@ -92,7 +92,11 @@
             </widget>
            </item>
            <item>
-            <widget class="LegendTableView" name="legendtable"/>
+            <widget class="LegendTableView" name="legendtable">
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+            </widget>
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_7">
