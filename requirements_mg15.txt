@@ -1,5 +1,5 @@
-pyqtgraph
+pyqtgraph>=0.13.4
 numpy
 pymodbus
-pyqt6<=6.5.3
+pyqt6
 qtpy

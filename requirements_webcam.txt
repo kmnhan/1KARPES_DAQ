@@ -1,4 +1,4 @@
 opencv-python
-pyqt6<=6.5.3
+pyqt6
 qtpy
-pyqtgraph
+pyqtgraph>=0.13.4
