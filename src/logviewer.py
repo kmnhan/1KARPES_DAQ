@@ -96,11 +96,11 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
             pi.showGrid(x=True, y=True, alpha=1.0)
         self.plot1.setLogMode(False, True)
 
-        self.startdateedit.dateTimeChanged.connect(self.enddateedit.setMinimumDateTime)
+        # Set start to 00:00 today
         self.startdateedit.setDate(QtCore.QDate.currentDate())
         self.startdateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
-        self.enddateedit.dateTimeChanged.connect(self.startdateedit.setMaximumDateTime)
+        # Set start to current date and time
         self.enddateedit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.enddateedit.setSelectedSection(QtWidgets.QDateTimeEdit.DaySection)
 
@@ -205,6 +205,14 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def load_data(self, *, update: bool = True):
+        if self.end_datetime < self.start_datetime:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Invalid Date Range",
+                "The end date must be after the start date.",
+            )
+            return
+
         self.df = get_cryocooler_log(self.start_datetime, self.end_datetime)
         if self.df is not None:
             self.plot0.set_labels(self.df.columns)
