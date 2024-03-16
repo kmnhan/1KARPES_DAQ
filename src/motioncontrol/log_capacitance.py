@@ -117,11 +117,16 @@ class Widget(QtWidgets.QWidget):
         self.timer.setInterval(1000 * 60)  # 60 secs
         self.timer.timeout.connect(self.update_data)
 
+        self.channels: tuple[int, ...] = (1, 2, 3)
+
         self.soc = MMThread()
         self.soc.connect("192.168.0.210")
 
         self.datetimes: list[datetime.datetime] = []
-        self.caplist: list[list[float]] = [[], [], []]
+        self.caplist: list[list[float]] = []
+
+        for i in range(len(self.channels)):
+            self.caplist.append([])
 
     @QtCore.Slot()
     def toggle_logging(self):
@@ -134,7 +139,8 @@ class Widget(QtWidgets.QWidget):
     def update_data(self):
         self.datetimes.append(datetime.datetime.now())
 
-        for i, ch in enumerate((1, 2, 3)):
+        # for i, ch in enumerate((1, 2, 3)):
+        for i, ch in enumerate(self.channels):
             self.caplist[i].append(self.soc.get_capacitance(ch))
 
         self.log_writer.add_content(
