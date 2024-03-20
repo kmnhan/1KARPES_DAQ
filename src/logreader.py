@@ -65,7 +65,11 @@ def parse_single_cryo(filename):
     with open(filename, "r") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
-            if line.startswith(lines[0][:10]) or line.startswith("Time"):
+            if (
+                line.startswith(lines[0][:10])
+                or line.startswith("Time")
+                or line.startswith("Running")
+            ):
                 header_rows.append(i)
         if not lines[header_rows[-1]].startswith("Time"):
             legacy = True
