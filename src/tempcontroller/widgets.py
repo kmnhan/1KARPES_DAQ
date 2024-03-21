@@ -103,7 +103,7 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     @QtCore.Slot(str)
     def update_setpoint(self, value: str | float):
         self._raw_data[0] = [datetime.datetime.now(), str(value).strip()]
-        self.setpoint_spin.setValue(self._raw_data[0][1])
+        self.setpoint_spin.setValue(float(self._raw_data[0][1]))
 
     @QtCore.Slot(str)
     def update_output(self, value: str | float):
@@ -580,7 +580,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     def update_vout(self, value: str | float):
         self.setDisabled(False)
         self._raw_vout = (datetime.datetime.now(), str(value).strip())
-        self.vout_spin.setValue(float(self._raw_vout))
+        self.vout_spin.setValue(float(self._raw_vout[1]))
 
         if not self.dial.isSliderDown():
             self.dial.blockSignals(True)
