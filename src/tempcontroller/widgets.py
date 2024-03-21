@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import sys
+import time
 from collections.abc import Sequence
 
 import pyqtgraph as pg
@@ -409,19 +410,23 @@ class ReadingWidget(ReadingWidgetGUI):
         self.sigSRDG.connect(self.update_srdg)
 
     def get_raw_krdg(self, threshold: float) -> list[str]:
+        if self._raw_krdg[0] is None:
+            time.sleep(0.1)
+            return self.get_raw_krdg(threshold)
+
         now = datetime.datetime.now()
-        if self._raw_krdg[0] is None or now - self._raw_krdg[0] > datetime.timedelta(
-            seconds=threshold
-        ):
+        if now - self._raw_krdg[0] > datetime.timedelta(seconds=threshold):
             return ["nan"] * len(self._raw_krdg[1])
         else:
             return self._raw_krdg[1]
 
     def get_raw_srdg(self, threshold: float) -> list[str]:
+        if self._raw_srdg[0] is None:
+            time.sleep(0.1)
+            return self.get_raw_krdg(threshold)
+
         now = datetime.datetime.now()
-        if self._raw_srdg[0] is None or now - self._raw_srdg[0] > datetime.timedelta(
-            seconds=threshold
-        ):
+        if now - self._raw_srdg[0] > datetime.timedelta(seconds=threshold):
             return ["nan"] * len(self._raw_srdg[1])
         else:
             return self._raw_srdg[1]
