@@ -4,24 +4,39 @@ import threading
 import time
 
 import pyvisa
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 log = logging.getLogger("tempctrl")
 
 
 class RequestHandler:
+    """A wrapper around pyvisa that limits the rate of requests.
+
+    Parameters
+    ----------
+    resource_name (str)
+        The name of the resource.
+    interval_ms (int)
+        The interval in milliseconds between requests.
+    **kwargs
+        Additional keyword arguments to be passed to the resource.
+
+    """
+
     def __init__(self, resource_name: str, interval_ms: int = 50, **kwargs):
         self.resource_name = resource_name
         self.interval_ms = interval_ms
         self._resource_kwargs = kwargs
 
     def open(self):
+        """Opens the pyvisa resource."""
         self.inst = pyvisa.ResourceManager().open_resource(
             self.resource_name, **self._resource_kwargs
         )
         self._last_update = time.perf_counter_ns()
 
     def wait_time(self):
+        """Wait until the interval between requests has passed."""
         while (time.perf_counter_ns() - self._last_update) <= self.interval_ms * 1e3:
             time.sleep(5e-4)
 
@@ -41,11 +56,15 @@ class RequestHandler:
         return res
 
     def read(self, *args, loglevel: int = logging.DEBUG, **kwargs):
+        """Reads data from the resource.
+
+        This is not very likely to be used. It may cause problems due to the wait time.
+        Use `query` instead.
+        """
         self.wait_time()
-        res = self.inst.query(*args, **kwargs)
+        res = self.inst.read(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
         log.log(loglevel, f"{self.resource_name}  ->  {res}")
-        log.log()
         return res
 
     def close(self):
@@ -53,6 +72,11 @@ class RequestHandler:
 
 
 class VISAThread(QtCore.QThread):
+    """A QThread subclass for handling communication with a VISA instrument.
+
+    This class provides a thread for sending queries and write commands to a VISA device.
+    It uses a queue to manage the requests and executes them in a separate thread.
+    """
 
     sigWritten = QtCore.Signal()
     sigQueried = QtCore.Signal()
@@ -66,10 +90,12 @@ class VISAThread(QtCore.QThread):
         self.mutex: QtCore.QMutex | None = None
 
     def lock_mutex(self):
+        """Locks the mutex to ensure thread safety."""
         if self.mutex is not None:
             self.mutex.lock()
 
     def unlock_mutex(self):
+        """Unlocks the mutex to release the lock."""
         if self.mutex is not None:
             self.mutex.unlock()
 
@@ -80,11 +106,36 @@ class VISAThread(QtCore.QThread):
         *,
         loglevel: int = logging.DEBUG,
     ):
+        """Add a query request to the queue.
+
+        Parameters
+        ----------
+        message : str
+            The query message to send.
+        signal : QtCore.SignalInstance
+            The signal to emit the result of the query when the query is complete.
+        loglevel : int, optional
+            The log level for the query. Defaults to `logging.DEBUG`.
+        """
         self.lock_mutex()
         self.queue.put((message, signal, loglevel))
         self.unlock_mutex()
 
-    def request_write(self, message: str, *, loglevel: int = logging.DEBUG):
+    def request_write(
+        self,
+        message: str,
+        *,
+        loglevel: int = logging.DEBUG,
+    ):
+        """Add a write request to the queue.
+
+        Parameters
+        ----------
+        message : str
+            The message to write.
+        loglevel : int, optional
+            The log level for the write. Defaults to `logging.DEBUG`.
+        """
         self.lock_mutex()
         self.queue.put((message, None, loglevel))
         self.unlock_mutex()
