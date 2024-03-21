@@ -538,12 +538,9 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
     sigSTATUSRead = QtCore.Signal(str)
 
     def __init__(self, instrument: VISAThread | None = None, parent=None):
-        super().__init__(parent)
+        super().__init__(parent, instrument=instrument)
         self.setupUi(self)
-        self._instrument: VISAThread | None = None
         self._raw_vout: tuple[datetime.datetime, str] = (None, "nan")
-
-        self.instrument = instrument
 
         self.check.toggled.connect(self.change_output)
 
@@ -556,18 +553,6 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
         self.dial.setEnabled(self.check.isChecked())
 
-    @property
-    def instrument(self) -> VISAThread | None:
-        return self._instrument
-
-    @instrument.setter
-    def instrument(self, instrument: VISAThread | None):
-        if self._instrument is not None:
-            self._instrument.sigVisaError.disconnect(self.connection_error)
-        self._instrument: VISAThread | None = instrument
-        if self._instrument is not None:
-            self._instrument.sigVisaError.connect(self.connection_error)
-
     def get_raw_vout(self, threshold: float) -> str:
         now = datetime.datetime.now()
         if self._raw_vout[0] is None or now - self._raw_vout[0] > datetime.timedelta(
@@ -576,13 +561,6 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
             return "nan"
         else:
             return self._raw_vout[1]
-
-    @QtCore.Slot(object)
-    def connection_error(self, error):
-        """Disable widget and try to reconnect."""
-        self.setDisabled(True)
-        restart_visathread(self.instrument, 3000)
-        log.error(f"Failed to communicate with heat switch: {error}")
 
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
