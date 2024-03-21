@@ -410,16 +410,23 @@ class ReadingWidget(ReadingWidgetGUI):
         self.sigKRDG.connect(self.update_krdg)
         self.sigSRDG.connect(self.update_srdg)
 
-    def get_raw_krdg(self, threshold: float) -> list[str]:
+    def get_raw_krdg(
+        self, threshold: float, return_datetime: bool = False
+    ) -> list[str] | tuple[list[str], datetime.datetime]:
         if self._raw_krdg[0] is None:
             time.sleep(0.1)
-            return self.get_raw_krdg(threshold)
+            return self.get_raw_krdg(threshold, return_datetime)
 
         now = datetime.datetime.now()
         if now - self._raw_krdg[0] > datetime.timedelta(seconds=threshold):
-            return ["nan"] * len(self._raw_krdg[1])
+            out = ["nan"] * len(self._raw_krdg[1])
         else:
-            return self._raw_krdg[1]
+            out = self._raw_krdg[1]
+
+        if return_datetime:
+            return out, self._raw_krdg[0]
+        else:
+            return out
 
     def get_raw_srdg(self, threshold: float) -> list[str]:
         if self._raw_srdg[0] is None:

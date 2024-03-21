@@ -437,8 +437,8 @@ class MainWindow(MainWindowGUI):
     def check_regen(self):
         if self.heatswitch.regen_check.isChecked():
 
-            tol = self.heatswitch.regen_spin.value()
-            val = float(self.kelvin_values[0])  # TA [K]
+            tol: float = self.heatswitch.regen_spin.value()
+            val: float = float(self.kelvins[0])  # TA [K]
 
             if np.isnan(val):
                 log.critical(
@@ -449,9 +449,12 @@ class MainWindow(MainWindowGUI):
 
             if val > tol:
                 log.info(f"Regenerating, TA = {val:.4f} K")
+
                 self.heatswitch.regen_check.setChecked(False)
+
                 self.mkpower.request_write("OUT0")  # Heat switch off
-                log.info(f"Heat switch off")
+                log.info(f"Heat switch OFF")
+
                 QtCore.QTimer.singleShot(1000, self.regenerate)
 
     def regenerate(self):
@@ -463,21 +466,22 @@ class MainWindow(MainWindowGUI):
             self.lake336.request_write("SETP 2,45; RANGE 2,3")
         self.heatswitch.trigger_update()
         self.heater2.trigger_update()
-        log.info("He regen started")
+        log.info("GL4 regenerate started")
 
     def refresh(self):
-        # Create shareable list on first update
-        klist: list[str] = self.kelvin_values
+        dt, vals = self.get_kelvin_values()
+
         if self.shm is None:
+            # Create shared memory on first update
             self.shm = shared_memory.SharedMemory(
-                name="Temperatures", create=True, size=8 * len(klist)
+                name="Temperatures", create=True, size=8 * len(vals)
             )
             log.debug("Shared memory created")
 
-        arr = np.ndarray((len(klist),), dtype="f8", buffer=self.shm.buf)
+        arr = np.ndarray((len(vals),), dtype="f8", buffer=self.shm.buf)
 
-        self.plot_values[0].append(self._lastupdate.timestamp())
-        for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], klist)):
+        self.plot_values[0].append(dt.timestamp())
+        for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals)):
             # Update plot value
             kval = float(kstr)
             dq.append(kval)
@@ -520,18 +524,26 @@ class MainWindow(MainWindowGUI):
         )
 
     @property
-    def kelvin_values(self) -> list[str]:
-        return (
-            self.readings_336.get_raw_krdg(self.refresh_time)
-            + self.readings_218_0.get_raw_krdg(self.refresh_time)
-            + self.readings_218_1.get_raw_krdg(self.refresh_time)
-            + self.readings_331.get_raw_krdg(self.refresh_time)
-        )
+    def kelvins(self) -> list[str]:
+        return self.get_kelvin_values()[1]
 
-    @property
-    def values(self) -> list[str]:
-        return (
-            self.readings_336.get_raw_krdg(self.log_interval)
+    def get_kelvin_values(self) -> tuple[datetime.datetime, list[str]]:
+        # Time is selected from the 336 readings
+        out, dt = self.readings_336.get_raw_krdg(
+            self.refresh_time, return_datetime=True
+        )
+        out += self.readings_218_0.get_raw_krdg(self.refresh_time)
+        out += self.readings_218_1.get_raw_krdg(self.refresh_time)
+        out += self.readings_331.get_raw_krdg(self.refresh_time)
+        return dt, out
+
+    def get_values(self) -> tuple[datetime.datetime, list[str]]:
+        # Time is selected from the 336 readings
+        out, dt = self.readings_336.get_raw_krdg(
+            self.log_interval, return_datetime=True
+        )
+        out = (
+            out
             + self.readings_218_0.get_raw_krdg(self.log_interval)
             + self.readings_218_1.get_raw_krdg(self.log_interval)
             + self.readings_331.get_raw_krdg(self.log_interval)
@@ -544,14 +556,15 @@ class MainWindow(MainWindowGUI):
             + self.heater3.get_raw_data(self.log_interval)[:3]
             + [self.heatswitch.get_raw_vout(self.log_interval)]
         )
+        return dt, out
 
     def write_log(self):
-        dt = datetime.datetime.now()
-        self.log_writer.append(dt, [v.lstrip("+") for v in self.values])
+        dt, vals = self.get_values()
+        self.log_writer.append(dt, [v.lstrip("+") for v in vals])
 
     def write_nans(self):
         dt = datetime.datetime.now()
-        self.log_writer.append(dt, ["nan"] * len(self.values))
+        self.log_writer.append(dt, ["nan"] * (len(self.header) - 1))
 
     def closeEvent(self, *args, **kwargs):
         # Write NaNs to log file to indicate break
