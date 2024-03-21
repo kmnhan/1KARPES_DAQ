@@ -65,6 +65,8 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     sigRampChanged = QtCore.Signal(int, float)
 
     def __init__(self, *args, **kwargs):
+        # Do not reconnect on error, reconnecting will be handled by CommandWidget
+        kwargs["reconnect_on_error"] = False
         super().__init__(*args, **kwargs)
         self.setupUi(self)
 
@@ -246,6 +248,8 @@ class ReadingWidgetGUI(VISAWidgetBase):
         decimals: int = 3,
         **kwargs,
     ):
+        # Do not reconnect on error, reconnecting will be handled by CommandWidget
+        kwargs["reconnect_on_error"] = False
         super().__init__(*args, **kwargs)
         self.inputs = inputs
 
@@ -458,11 +462,7 @@ class CommandWidget(*uic.loadUiType("command.ui")):
 
     def __init__(self, *args, instrument: VISAThread | None = None, **kwargs):
         super().__init__(
-            *args,
-            instrument=instrument,
-            # Do not reconnect on error, reconnecting will be handled by ReadingWidget
-            reconnect_on_error=False,
-            **kwargs,
+            *args, instrument=instrument, reconnect_on_error=True, **kwargs
         )
         self.setupUi(self)
 
