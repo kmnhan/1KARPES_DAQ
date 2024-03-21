@@ -1,3 +1,4 @@
+import datetime
 import logging
 import queue
 import threading
@@ -38,7 +39,7 @@ class RequestHandler:
     def wait_time(self):
         """Wait until the interval between requests has passed."""
         while (time.perf_counter_ns() - self._last_update) <= self.interval_ms * 1e3:
-            time.sleep(5e-4)
+            time.sleep(1e-4)
 
     def write(self, *args, loglevel: int = logging.DEBUG, **kwargs):
         self.wait_time()
@@ -78,8 +79,8 @@ class VISAThread(QtCore.QThread):
     It uses a queue to manage the requests and executes them in a separate thread.
     """
 
-    sigWritten = QtCore.Signal()
-    sigQueried = QtCore.Signal()
+    sigWritten = QtCore.Signal(object)
+    sigQueried = QtCore.Signal(object)
     sigVisaError = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
@@ -154,19 +155,21 @@ class VISAThread(QtCore.QThread):
                 message, reply_signal, loglevel = self.queue.get()
                 if reply_signal is None:  # Write only
                     try:
+                        time_written = datetime.datetime.now()
                         self.controller.write(message, loglevel=loglevel)
                     except (pyvisa.VisaIOError, pyvisa.InvalidSession) as e:
                         self.sigVisaError.emit(e)
                     else:
-                        self.sigWritten.emit()
+                        self.sigWritten.emit(time_written)
                 else:  # Query
                     try:
+                        time_queried = datetime.datetime.now()
                         rep = self.controller.query(message, loglevel=loglevel)
                     except (pyvisa.VisaIOError, pyvisa.InvalidSession) as e:
                         self.sigVisaError.emit(e)
                     else:
                         reply_signal.emit(rep)
-                        self.sigQueried.emit()
+                        self.sigQueried.emit(time_queried)
                 self.queue.task_done()
             time.sleep(1e-3)
 

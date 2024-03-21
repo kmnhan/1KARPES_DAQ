@@ -404,8 +404,6 @@ class ReadingWidget(ReadingWidgetGUI):
         self._raw_krdg: tuple[datetime.datetime, list[str]] = (None, [])
         self._raw_srdg: tuple[datetime.datetime, list[str]] = (None, [])
 
-        self.last_update: datetime.datetime | None = None
-
         self.sigKRDG.connect(self.update_krdg)
         self.sigSRDG.connect(self.update_srdg)
 
