@@ -45,7 +45,7 @@ def parse_single_mg15(filename):
             usecols=(0, 1, 2),
             names=("Time", "IG Main", "IG Middle"),
             converters={0: parse_mg15_time},
-        )
+        ).rename_axis("time")
     except pd.errors.ParserError:
         return pd.read_csv(
             filename,
@@ -55,7 +55,7 @@ def parse_single_mg15(filename):
             usecols=(0, 1, 2),
             names=("Time", "IG Main", "IG Middle"),
             converters={0: parse_mg15_time_old},
-        )
+        ).rename_axis("time")
 
 
 def parse_single_cryo(filename):
@@ -87,7 +87,7 @@ def parse_single_cryo(filename):
         usecols=lambda x: x not in ["Running Time (s)", "Date&Time", "Clear"],
         skip_blank_lines=True,
         converters={time_col: parse_cryo_time},
-    ).rename_axis("Time")
+    ).rename_axis("time")
 
 
 def get_log(
