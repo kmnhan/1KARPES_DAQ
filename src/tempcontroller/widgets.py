@@ -413,31 +413,33 @@ class ReadingWidget(ReadingWidgetGUI):
     def get_raw_krdg(
         self, threshold: float, return_datetime: bool = False
     ) -> list[str] | tuple[list[str], datetime.datetime]:
-        if self._raw_krdg[0] is None:
+        dt, vals = self._raw_krdg
+        if dt is None:
             time.sleep(0.1)
             return self.get_raw_krdg(threshold, return_datetime)
 
         now = datetime.datetime.now()
-        if now - self._raw_krdg[0] > datetime.timedelta(seconds=threshold):
-            out = ["nan"] * len(self._raw_krdg[1])
+        if now - dt > datetime.timedelta(seconds=threshold):
+            out = ["nan"] * len(vals)
         else:
-            out = self._raw_krdg[1]
+            out = vals
 
         if return_datetime:
-            return out, self._raw_krdg[0]
+            return out, dt
         else:
             return out
 
     def get_raw_srdg(self, threshold: float) -> list[str]:
-        if self._raw_srdg[0] is None:
+        dt, vals = self._raw_srdg
+        if dt is None:
             time.sleep(0.1)
-            return self.get_raw_krdg(threshold)
+            return self.get_raw_srdg(threshold)
 
         now = datetime.datetime.now()
-        if now - self._raw_srdg[0] > datetime.timedelta(seconds=threshold):
-            return ["nan"] * len(self._raw_srdg[1])
+        if now - dt > datetime.timedelta(seconds=threshold):
+            return ["nan"] * len(vals)
         else:
-            return self._raw_srdg[1]
+            return vals
 
     def trigger_update(self):
         self.instrument.request_query(self.krdg_command, self.sigKRDG, loglevel=5)
