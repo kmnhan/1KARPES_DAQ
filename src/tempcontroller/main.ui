@@ -126,20 +126,32 @@
    <property name="text">
     <string>Show Heaters</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
+   </property>
   </action>
   <action name="actionsensorunit">
    <property name="text">
     <string>Toggle Sensor Unit Readings</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actioncommand">
    <property name="text">
     <string>Show Command Window</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
   </action>
   <action name="actionplot">
    <property name="text">
     <string>Show Plot</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
    </property>
   </action>
  </widget>
