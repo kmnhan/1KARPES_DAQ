@@ -156,11 +156,10 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
 class HeaterWidget(HeaterWidgetGUI):
 
-    sigSETP = QtCore.Signal(str)
-    sigRAMP = QtCore.Signal(str)
-    sigHTR = QtCore.Signal(str)
-    sigRANGE = QtCore.Signal(str)
-    # sigRAMPST = QtCore.Signal(str)
+    sigSETP = QtCore.Signal(str, object)
+    sigRAMP = QtCore.Signal(str, object)
+    sigHTR = QtCore.Signal(str, object)
+    sigRANGE = QtCore.Signal(str, object)
 
     def __init__(
         self,
