@@ -282,6 +282,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.pressure_widget.set_value(i, value)
 
     def closeEvent(self, *args, **kwargs):
+        # Log NaNs to signal end of data acquisition
+        self.log_writer.append(
+            datetime.datetime.now(), [np.nan] * len(self.mg15.pressures(self.log_units))
+        )
+
         # Halt data acquisition
         self.mg15.disconnect()
 
