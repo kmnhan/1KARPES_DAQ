@@ -549,7 +549,14 @@ class MainWindow(MainWindowGUI):
         dt = datetime.datetime.now()
         self.log_writer.append(dt, [v.lstrip("+") for v in self.values])
 
+    def write_nans(self):
+        dt = datetime.datetime.now()
+        self.log_writer.append(dt, ["nan"] * len(self.values))
+
     def closeEvent(self, *args, **kwargs):
+        # Write NaNs to log file to indicate break
+        self.write_nans()
+
         # Halt data acquisition
         self.stop_threads()
         pyvisa.ResourceManager().close()
