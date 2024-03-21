@@ -114,7 +114,10 @@ class VISAThread(QtCore.QThread):
         message : str
             The query message to send.
         signal : QtCore.SignalInstance
-            The signal to emit the result of the query when the query is complete.
+            The signal to emit the result of the query when the query is complete. The
+            signal must take a string as the first argument and a object as the second.
+            The second argument is the datetime object indicating the time the query was
+            placed.
         loglevel : int, optional
             The log level for the query. Defaults to `logging.DEBUG`.
         """
@@ -168,7 +171,7 @@ class VISAThread(QtCore.QThread):
                     except (pyvisa.VisaIOError, pyvisa.InvalidSession) as e:
                         self.sigVisaError.emit(e)
                     else:
-                        reply_signal.emit(rep)
+                        reply_signal.emit(rep, time_queried)
                         self.sigQueried.emit(time_queried)
                 self.queue.task_done()
             time.sleep(1e-3)

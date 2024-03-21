@@ -101,26 +101,26 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
                 out.append(val)
         return out
 
-    @QtCore.Slot(str)
-    def update_setpoint(self, value: str | float):
-        self._raw_data[0] = [datetime.datetime.now(), str(value).strip()]
+    @QtCore.Slot(str, object)
+    def update_setpoint(self, value: str | float, dt: datetime.datetime):
+        self._raw_data[0] = [dt, str(value).strip()]
         self.setpoint_spin.setValue(float(self._raw_data[0][1]))
 
-    @QtCore.Slot(str)
-    def update_output(self, value: str | float):
-        self._raw_data[1] = [datetime.datetime.now(), str(value).strip()]
+    @QtCore.Slot(str, object)
+    def update_output(self, value: str | float, dt: datetime.datetime):
+        self._raw_data[1] = [dt, str(value).strip()]
         self.pbar.setValue(round(float(self._raw_data[1][1]) * 100))
 
-    @QtCore.Slot(str)
-    def update_range(self, value: str | int):
-        self._raw_data[2] = [datetime.datetime.now(), str(value).strip()]
+    @QtCore.Slot(str, object)
+    def update_range(self, value: str | int, dt: datetime.datetime):
+        self._raw_data[2] = [dt, str(value).strip()]
         self.combo.blockSignals(True)
         self.combo.setCurrentIndex(int(self._raw_data[2][1]))
         self.combo.blockSignals(False)
 
-    @QtCore.Slot(str)
-    def update_rampst(self, value: str | int):
-        self._raw_data[3] = [datetime.datetime.now(), str(value).strip()]
+    @QtCore.Slot(str, object)
+    def update_rampst(self, value: str | int, dt: datetime.datetime):
+        self._raw_data[3] = [dt, str(value).strip()]
         self.ramp_check.blockSignals(True)
         if int(value) == 0:
             self.ramp_check.setChecked(False)
@@ -128,9 +128,9 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
             self.ramp_check.setChecked(True)
         self.ramp_check.blockSignals(False)
 
-    @QtCore.Slot(str)
-    def update_ramprate(self, value: str | float):
-        self._raw_data[4] = [datetime.datetime.now(), str(value).strip()]
+    @QtCore.Slot(str, object)
+    def update_ramprate(self, value: str | float, dt: datetime.datetime):
+        self._raw_data[4] = [dt, str(value).strip()]
         self.rate_spin.blockSignals(True)
         self.rate_spin.setValue(float(value))
         self.rate_spin.blockSignals(False)
@@ -188,11 +188,11 @@ class HeaterWidget(HeaterWidgetGUI):
         self.sigRangeChanged.connect(self.change_range)
         self.sigUpdateTarget.connect(self.target_current)
 
-    @QtCore.Slot(str)
-    def update_ramp(self, value: str):
+    @QtCore.Slot(str, object)
+    def update_ramp(self, value: str, dt: datetime.datetime):
         st, rate = value.split(",")
-        self.update_rampst(st)
-        self.update_ramprate(rate)
+        self.update_rampst(st, dt)
+        self.update_ramprate(rate, dt)
 
     @QtCore.Slot(float)
     def change_setpoint(self, value: float):
@@ -379,8 +379,8 @@ class ReadingWidgetGUI(VISAWidgetBase):
 
 class ReadingWidget(ReadingWidgetGUI):
 
-    sigKRDG = QtCore.Signal(str)
-    sigSRDG = QtCore.Signal(str)
+    sigKRDG = QtCore.Signal(str, object)
+    sigSRDG = QtCore.Signal(str, object)
 
     def __init__(
         self,
@@ -433,33 +433,29 @@ class ReadingWidget(ReadingWidgetGUI):
         self.instrument.request_query(self.krdg_command, self.sigKRDG, loglevel=5)
         self.instrument.request_query(self.srdg_command, self.sigSRDG, loglevel=5)
 
-    @QtCore.Slot(str)
-    def update_krdg(self, message):
-        now = datetime.datetime.now()
-
+    @QtCore.Slot(str, object)
+    def update_krdg(self, message: str, dt: datetime.datetime):
         krdg_raw: list[str] = message.strip().split(",")
         if self.indexer is not None:
             krdg_raw = krdg_raw[self.indexer]
 
-        self._raw_krdg = (now, krdg_raw)
+        self._raw_krdg = (dt, krdg_raw)
         super().update_krdg([float(t) for t in krdg_raw])
 
-    @QtCore.Slot(str)
-    def update_srdg(self, message):
-        now = datetime.datetime.now()
-
+    @QtCore.Slot(str, object)
+    def update_srdg(self, message: str, dt: datetime.datetime):
         srdg_raw: list[str] = message.strip().split(",")
         if self.indexer is not None:
             srdg_raw = srdg_raw[self.indexer]
 
-        self._raw_srdg = (now, srdg_raw)
+        self._raw_srdg = (dt, srdg_raw)
         super().update_srdg([float(t) for t in srdg_raw])
 
 
 class CommandWidget(*uic.loadUiType("command.ui")):
     sigWrite = QtCore.Signal(str)
     sigQuery = QtCore.Signal(str)
-    sigReply = QtCore.Signal(str)
+    sigReply = QtCore.Signal(str, object)
 
     def __init__(self, *args, instrument: VISAThread | None = None, **kwargs):
         super().__init__(
@@ -480,8 +476,8 @@ class CommandWidget(*uic.loadUiType("command.ui")):
     def input(self) -> str:
         return self.text_in.toPlainText().strip()
 
-    @QtCore.Slot(str)
-    def set_reply(self, message: str):
+    @QtCore.Slot(str, object)
+    def set_reply(self, message: str, _: datetime.datetime):
         self.text_out.setPlainText(message)
 
     @QtCore.Slot()
@@ -531,9 +527,9 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
 
 
 class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
-    sigVOUTRead = QtCore.Signal(str)
-    sigVSETRead = QtCore.Signal(str)
-    sigSTATUSRead = QtCore.Signal(str)
+    sigVOUTRead = QtCore.Signal(str, object)
+    sigVSETRead = QtCore.Signal(str, object)
+    sigSTATUSRead = QtCore.Signal(str, object)
 
     def __init__(self, instrument: VISAThread | None = None, parent=None):
         super().__init__(parent, instrument=instrument)
@@ -560,9 +556,9 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
         else:
             return self._raw_vout[1]
 
-    @QtCore.Slot(str)
-    def update_vout(self, value: str | float):
-        self._raw_vout = (datetime.datetime.now(), str(value).strip())
+    @QtCore.Slot(str, object)
+    def update_vout(self, value: str | float, dt: datetime.datetime):
+        self._raw_vout = (dt, str(value).strip())
         self.vout_spin.setValue(float(self._raw_vout[1]))
 
         if not self.dial.isSliderDown():
@@ -570,12 +566,12 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
             self.dial.setValue(round(float(value) * 100))
             self.dial.blockSignals(False)
 
-    @QtCore.Slot(str)
-    def update_vset(self, value: str | float):
+    @QtCore.Slot(str, object)
+    def update_vset(self, value: str | float, _: datetime.datetime):
         self.vset_spin.setValue(float(value))
 
-    @QtCore.Slot(str)
-    def update_status(self, message: str):
+    @QtCore.Slot(str, object)
+    def update_status(self, message: str, _: datetime.datetime):
         # 0: 0 CC, 1 CV (when output is on)
         # 4: Beep
         # 5: OCP
