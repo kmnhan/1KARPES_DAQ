@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>Form</class>
- <widget class="QWidget" name="Form">
+ <widget class="VISAWidgetBase" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -71,6 +71,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VISAWidgetBase</class>
+   <extends>QWidget</extends>
+   <header>connection</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -7,7 +7,7 @@ from collections.abc import Sequence
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from connection import VISAThread, restart_visathread
+from connection import VISAThread, VISAWidgetBase, restart_visathread
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 
@@ -63,8 +63,8 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
     sigSetpChanged = QtCore.Signal(float)
     sigRampChanged = QtCore.Signal(int, float)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.setupUi(self)
 
         self.pbar.valueChanged.connect(self._format_output)
@@ -169,8 +169,7 @@ class HeaterWidget(HeaterWidgetGUI):
         loop: str | None = None,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
-        self.instrument = instrument
+        super().__init__(*args, instrument=instrument, **kwargs)
         self.output = output
         if loop is None:
             loop = self.output
@@ -237,7 +236,7 @@ class HeaterWidget(HeaterWidgetGUI):
         )
 
 
-class ReadingWidgetGUI(QtWidgets.QWidget):
+class ReadingWidgetGUI(VISAWidgetBase):
     def __init__(
         self,
         *args,
@@ -392,8 +391,7 @@ class ReadingWidget(ReadingWidgetGUI):
         srdg_command: str | None = None,
         **kwargs,
     ):
-        super().__init__(*args, inputs=inputs, **kwargs)
-        self.instrument = instrument
+        super().__init__(*args, instrument=instrument, inputs=inputs, **kwargs)
         self.indexer = indexer
         if krdg_command is None:
             krdg_command = "KRDG? 0"
@@ -460,10 +458,15 @@ class CommandWidget(*uic.loadUiType("command.ui")):
     sigQuery = QtCore.Signal(str)
     sigReply = QtCore.Signal(str)
 
-    def __init__(self, instrument: VISAThread | None = None, parent=None):
-        super().__init__(parent)
+    def __init__(self, *args, instrument: VISAThread | None = None, **kwargs):
+        super().__init__(
+            *args,
+            instrument=instrument,
+            # Do not reconnect on error, reconnecting will be handled by ReadingWidget
+            reconnect_on_error=False,
+            **kwargs,
+        )
         self.setupUi(self)
-        self.instrument = instrument
 
         self.write_btn.clicked.connect(self.write)
         self.query_btn.clicked.connect(self.query)
@@ -578,7 +581,6 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
     @QtCore.Slot(str)
     def update_vout(self, value: str | float):
-        self.setDisabled(False)
         self._raw_vout = (datetime.datetime.now(), str(value).strip())
         self.vout_spin.setValue(float(self._raw_vout[1]))
 
@@ -589,7 +591,6 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
     @QtCore.Slot(str)
     def update_vset(self, value: str | float):
-        self.setDisabled(False)
         self.vset_spin.setValue(float(value))
 
     @QtCore.Slot(str)
