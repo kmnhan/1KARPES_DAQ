@@ -340,9 +340,9 @@ class MainWindow(MainWindowGUI):
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
 
         # Setup plotting
-        refresh_time = float(self.config["acquisition"]["refresh_time"])
+        self.refresh_time = float(self.config["acquisition"]["refresh_time"])
         minutes = self.config["plotting"].get("range_minutes", 30)
-        maxlen = round((minutes * 60) / refresh_time)
+        maxlen = round((minutes * 60) / self.refresh_time)
 
         # Initialize plot data queue
         self.plot_values: list[collections.deque] = [
@@ -363,12 +363,12 @@ class MainWindow(MainWindowGUI):
 
         # Setup refresh timer
         self.refresh_timer = QtCore.QTimer(self)
-        self.refresh_timer.setInterval(round(refresh_time * 1000))
+        self.refresh_timer.setInterval(round(self.refresh_time * 1000))
         self.refresh_timer.timeout.connect(self.update)
 
         # Get logging parameters from config
         log_dir = str(self.config["logging"]["directory"])
-        log_interval = float(self.config["logging"]["interval"])
+        self.log_interval = float(self.config["logging"]["interval"])
 
         # Setup log writing process
         self.log_writer = LoggingProc(log_dir, header=self.header)
@@ -376,9 +376,9 @@ class MainWindow(MainWindowGUI):
 
         # Setup logging timer
         self.log_timer = QtCore.QTimer(self)
-        self.set_logging_interval(log_interval, update_config=False)
+        self.set_logging_interval(self.log_interval, update_config=False)
         self.log_timer.timeout.connect(self.write_log)
-        log.info(f"Logging to {log_dir} every {log_interval} seconds")
+        log.info(f"Logging to {log_dir} every {self.log_interval} seconds")
 
         # Start acquiring & logging
         self.refresh_timer.start()
@@ -440,6 +440,13 @@ class MainWindow(MainWindowGUI):
             tol = self.heatswitch.regen_spin.value()
             val = float(self.kelvin_values[0])  # TA [K]
 
+            if np.isnan(val):
+                log.critical(
+                    "TA is NaN, check controller connection. Regeneration aborted."
+                )
+                self.heatswitch.regen_check.setChecked(False)
+                return
+
             if val > tol:
                 log.info(f"Regenerating, TA = {val:.4f} K")
                 self.heatswitch.regen_check.setChecked(False)
@@ -460,7 +467,7 @@ class MainWindow(MainWindowGUI):
 
     def refresh(self):
         # Create shareable list on first update
-        klist = self.kelvin_values
+        klist: list[str] = self.kelvin_values
         if self.shm is None:
             self.shm = shared_memory.SharedMemory(
                 name="Temperatures", create=True, size=8 * len(klist)
@@ -515,35 +522,27 @@ class MainWindow(MainWindowGUI):
     @property
     def kelvin_values(self) -> list[str]:
         return (
-            self.readings_336.krdg_raw
-            + self.readings_218_0.krdg_raw
-            + self.readings_218_1.krdg_raw
-            + self.readings_331.krdg_raw
+            self.readings_336.get_raw_krdg(self.refresh_time)
+            + self.readings_218_0.get_raw_krdg(self.refresh_time)
+            + self.readings_218_1.get_raw_krdg(self.refresh_time)
+            + self.readings_331.get_raw_krdg(self.refresh_time)
         )
 
     @property
     def values(self) -> list[str]:
         return (
-            self.readings_336.krdg_raw
-            + self.readings_218_0.krdg_raw
-            + self.readings_218_1.krdg_raw
-            + self.readings_331.krdg_raw
-            + self.readings_336.srdg_raw
-            + self.readings_218_0.srdg_raw
-            + self.readings_218_1.srdg_raw
-            + self.readings_331.srdg_raw
-            + [
-                self.heater1.setp_raw,
-                self.heater1.htr_raw,
-                self.heater1.rng_raw,
-                self.heater2.setp_raw,
-                self.heater2.htr_raw,
-                self.heater2.rng_raw,
-                self.heater3.setp_raw,
-                self.heater3.htr_raw,
-                self.heater3.rng_raw,
-                self.heatswitch.vout_raw,
-            ]
+            self.readings_336.get_raw_krdg(self.log_interval)
+            + self.readings_218_0.get_raw_krdg(self.log_interval)
+            + self.readings_218_1.get_raw_krdg(self.log_interval)
+            + self.readings_331.get_raw_krdg(self.log_interval)
+            + self.readings_336.get_raw_srdg(self.log_interval)
+            + self.readings_218_0.get_raw_srdg(self.log_interval)
+            + self.readings_218_1.get_raw_srdg(self.log_interval)
+            + self.readings_331.get_raw_srdg(self.log_interval)
+            + self.heater1.get_raw_data(self.log_interval)[:3]
+            + self.heater2.get_raw_data(self.log_interval)[:3]
+            + self.heater3.get_raw_data(self.log_interval)[:3]
+            + [self.heatswitch.get_raw_vout(self.log_interval)]
         )
 
     def write_log(self):
