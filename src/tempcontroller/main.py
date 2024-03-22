@@ -579,7 +579,10 @@ class MainWindow(MainWindowGUI):
 
         # Halt data acquisition
         self.stop_threads()
-        pyvisa.ResourceManager().close()
+        try:
+            pyvisa.ResourceManager().close()
+        except pyvisa.VisaIOError as e:
+            log.critical(f"ResourceManager failed to close: {e}")
 
         # Free shared memory
         self.shm.close()

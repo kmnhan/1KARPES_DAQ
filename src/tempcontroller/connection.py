@@ -152,6 +152,7 @@ class VISAThread(QtCore.QThread):
             self.controller.open()
         except pyvisa.VisaIOError as e:
             self.sigVisaError.emit(e)
+            return
 
         while not self.stopped.is_set():
             if not self.queue.empty():
@@ -175,8 +176,11 @@ class VISAThread(QtCore.QThread):
                         self.sigQueried.emit(time_queried)
                 self.queue.task_done()
             time.sleep(1e-3)
+        try:
+            self.controller.close()
+        except pyvisa.VisaIOError:
+            pass
 
-        self.controller.close()
 
 
 def start_visathread(thread: VISAThread):
