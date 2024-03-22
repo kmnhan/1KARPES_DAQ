@@ -100,6 +100,11 @@ class MotorPosWriter(QtCore.QRunnable):
 
         If a file with the same name already exists, it will be removed.
 
+        Parameters
+        ----------
+        header : str or list of str
+            Header content to write to file.
+
         """
 
         file_name = os.path.join(self.dirname, self.prefix + str(self.filename))
