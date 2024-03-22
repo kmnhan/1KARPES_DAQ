@@ -481,7 +481,8 @@ class MainWindow(MainWindowGUI):
         try:
             arr = np.ndarray((len(vals),), dtype="f8", buffer=self.shm.buf)
         except TypeError:
-            log.critical(f"type error : vals given as {vals}")
+            log.critical(f"Shared memory size mismatch : vals given as {vals}")
+            return
 
         self.plot_values[0].append(dt.timestamp())
         for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals)):
@@ -535,9 +536,12 @@ class MainWindow(MainWindowGUI):
         out, dt = self.readings_336.get_raw_krdg(
             self.refresh_time, return_datetime=True
         )
-        out += self.readings_218_0.get_raw_krdg(self.refresh_time)
-        out += self.readings_218_1.get_raw_krdg(self.refresh_time)
-        out += self.readings_331.get_raw_krdg(self.refresh_time)
+        out = (
+            out
+            + self.readings_218_0.get_raw_krdg(self.refresh_time)
+            + self.readings_218_1.get_raw_krdg(self.refresh_time)
+            + self.readings_331.get_raw_krdg(self.refresh_time)
+        )
         return dt, out
 
     def get_values(self) -> tuple[datetime.datetime, list[str]]:

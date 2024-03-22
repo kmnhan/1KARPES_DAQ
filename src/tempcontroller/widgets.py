@@ -424,6 +424,9 @@ class ReadingWidget(ReadingWidgetGUI):
         else:
             out = vals
 
+        if len(out) >= 9:
+            log.critical(f"Raw krdg read as {self._raw_krdg[1]}")
+
         if return_datetime:
             return out, dt
         else:
