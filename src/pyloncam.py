@@ -264,6 +264,7 @@ class MainWindowGUI(uiclass, baseclass):
 
         # Setup autosave timer
         self.autosave_timer = QtCore.QTimer(self)
+        self.autosave_check.toggled.connect(self.toggle_autosave)
 
         # Initialize calibration factors
         self._cal_h: float = 0.011
@@ -424,6 +425,7 @@ class FrameGrabber(QtCore.QThread):
         self._live: bool = True
         self._camera = None
         self.save_requested: bool = False
+        self._img_file: str | None = None
         self.mutex: QtCore.QMutex | None = None
         self.set_srgb(False)
 
@@ -444,10 +446,14 @@ class FrameGrabber(QtCore.QThread):
             self.mutex.unlock()
 
     @QtCore.Slot()
-    def request_save(self):
+    @QtCore.Slot(str)
+    def request_save(self, filename: str | None = None):
         if self.mutex is not None:
             self.mutex.lock()
+
         self.save_requested: bool = True
+        self._img_file: str | None = filename
+
         if self.mutex is not None:
             self.mutex.unlock()
 
@@ -512,17 +518,18 @@ class FrameGrabber(QtCore.QThread):
                 else:
                     if self.save_requested:
                         img.AttachGrabResultBuffer(grab_result)
-                        filename = os.path.join(
-                            SAVE_DIR, f"Image_{format_datetime(grab_time)}"
-                        )
-                        if platform.system() == "Windows":
-                            ipo = pylon.ImagePersistenceOptions()
-                            ipo.SetQuality(100)
-                            img.Save(pylon.ImageFileFormat_Jpeg, f"{filename}.jpg", ipo)
+
+                        if self._img_file is None:
+                            filename = os.path.join(
+                                SAVE_DIR, f"Image_{format_datetime(grab_time)}.tiff"
+                            )
                         else:
-                            img.Save(pylon.ImageFileFormat_Png, f"{filename}.png")
+                            filename = self._img_file
+                        img.Save(pylon.ImageFileFormat_Tiff, filename)
                         img.Release()
+
                         self.save_requested = False
+                        self._img_file = None
             else:
                 try:
                     pass
@@ -558,7 +565,7 @@ class MainWindow(MainWindowGUI):
         # Store grabbed time here
         self.grab_time: datetime.datetime | None = None
 
-        # handle image grabbing
+        # Handle image grabbing
         self.frame_grabber = FrameGrabber()
         self.frame_grabber.sigGrabbed.connect(self.grabbed)
         self.frame_grabber.sigExposureRead.connect(self.update_exposure_slider)
@@ -568,7 +575,7 @@ class MainWindow(MainWindowGUI):
         self.live_check.stateChanged.connect(self.toggle_grabbing)
         self.live_check.setChecked(True)
 
-        # connect srgb and exposure settings
+        # Connect srgb and exposure settings
         self.exposure_slider.valueChanged.connect(self.set_exposure)
         self.sigExposureChanged.connect(self.frame_grabber.set_exposure)
         self.srgb_check.stateChanged.connect(
@@ -576,13 +583,10 @@ class MainWindow(MainWindowGUI):
         )
         self.sigGammaToggled.connect(self.frame_grabber.set_srgb)
 
-        # save image
+        # Setup image saving
         self.save_img_btn.clicked.connect(self.save_image)
         self.save_h5_btn.clicked.connect(self.save_hdf5)
-        # self.save_h5_btn.setDisabled(True)  # not implemented
-
         self.autosave_timer.timeout.connect(self.save_image)
-        self.autosave_check.toggled.connect(self.toggle_autosave)
 
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
@@ -629,7 +633,7 @@ class MainWindow(MainWindowGUI):
 
     @property
     def image_array(self) -> xr.DataArray:
-        image = self.image_item.image
+        image = self._image_array
         shape = image.shape
         xlim, zlim = self._cal_h * (shape[1] - 1) / 2, self._cal_v * (shape[0] - 1) / 2
         return xr.DataArray(
@@ -643,7 +647,7 @@ class MainWindow(MainWindowGUI):
 
     @property
     def rect(self) -> QtCore.QRectF:
-        shape = self.image_item.image.shape
+        shape = self._image_array.shape
         x, y = -self._cal_h * (shape[1] - 1) / 2, -self._cal_v * (shape[0] - 1) / 2
         w, h = -2 * x, -2 * y
         x += self._off_h
@@ -652,21 +656,30 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot(object, object)
     def grabbed(self, grabtime: datetime.datetime, image: npt.NDArray):
-        image = np.flip(image, axis=0)
         self.grab_time: datetime.datetime = grabtime
+        self._image_array = np.flip(image, axis=0)
+
         if self.image_item.image is None:
-            self.image_item.setImage(image, autoLevels=False, axisOrder="row-major")
+            self.image_item.setImage(
+                self._image_array, autoLevels=False, axisOrder="row-major"
+            )
             self.update_rect()
         else:
             self.image_item.setImage(
-                image, autoLevels=False, axisOrder="row-major", rect=self.rect
+                self._image_array,
+                autoLevels=False,
+                axisOrder="row-major",
+                rect=self.rect,
             )
 
         msg = "Last Update "
         msg += self.grab_time.isoformat(sep=" ", timespec="milliseconds")
 
         max_val = 2**PIXEL_BITS - 1
-        if np.amax(image) == max_val and sum(image.flatten() == max_val) > 1:
+        if (
+            np.amax(self._image_array) == max_val
+            and sum(self._image_array.flatten() == max_val) > 1
+        ):
             msg += " | "
             msg += "Saturation detected! Consider lowering exposure."
 
@@ -697,6 +710,10 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def save_image(self):
         self.frame_grabber.request_save()
+
+    @QtCore.Slot(str)
+    def save_image_as(self, filename: str):
+        self.frame_grabber.request_save(filename)
 
     @QtCore.Slot()
     def save_hdf5(self):
