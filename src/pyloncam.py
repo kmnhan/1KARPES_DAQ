@@ -584,9 +584,28 @@ class MainWindow(MainWindowGUI):
         self.sigGammaToggled.connect(self.frame_grabber.set_srgb)
 
         # Setup image saving
-        self.save_img_btn.clicked.connect(self.save_image)
-        self.save_h5_btn.clicked.connect(self.save_hdf5)
+        self.actionsave.triggered.connect(self.save_image)
+        self.actionsaveh5.triggered.connect(self.save_hdf5)
+        self.actionsaveas.triggered.connect(self.save_dialog)
         self.autosave_timer.timeout.connect(self.save_image)
+
+    def save_dialog(self):
+        # Set the file filters
+        filters = [
+            "TIFF Image (*.tiff *.tif)",
+            "HDF5 File (*.h5)",
+        ]
+
+        # Show the file dialog
+        file_dialog = QtWidgets.QFileDialog()
+        file_dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
+        file_dialog.setFileMode(QtWidgets.QFileDialog.FileMode.AnyFile)
+        file_dialog.setNameFilters(filters)
+        file_dialog.setDirectory(SAVE_DIR)
+
+        if file_dialog.exec():
+            file = file_dialog.selectedFiles()[0]
+            self.save_image_as(file)
 
     def closeEvent(self, *args, **kwargs):
         self.live_check.setChecked(False)
@@ -713,13 +732,17 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot(str)
     def save_image_as(self, filename: str):
-        self.frame_grabber.request_save(filename)
+        if filename.endswith(".h5"):
+            self.save_hdf5(filename)
+        else:
+            self.frame_grabber.request_save(filename)
 
     @QtCore.Slot()
-    def save_hdf5(self):
+    def save_hdf5(self, filename: str | None = None):
         dt, data = self.grab_time, self.image_array
 
-        filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
+        if filename is None:
+            filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
 
         # Compatibility with Igor HDF5 loader
         scaling = [[1, 0]]
@@ -751,8 +774,10 @@ class MainWindow(MainWindowGUI):
                 )
                 self.frame_grabber.start()
                 self.frame_grabber.live = True
+            self.actionsave.setEnabled(True)
         else:
             self.frame_grabber.live = False
+            self.actionsave.setEnabled(False)
 
 
 if __name__ == "__main__":

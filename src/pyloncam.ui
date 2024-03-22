@@ -116,6 +116,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="save_img_btn">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Save Image</string>
            </property>
@@ -315,6 +318,15 @@
     <addaction name="actioncircle"/>
     <addaction name="actioninvert"/>
    </widget>
+   <widget class="QMenu" name="menuFile_2">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionsave"/>
+    <addaction name="actionsaveh5"/>
+    <addaction name="actionsaveas"/>
+   </widget>
+   <addaction name="menuFile_2"/>
    <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -348,6 +360,33 @@
    </property>
    <property name="text">
     <string>Reverse Colors</string>
+   </property>
+  </action>
+  <action name="actionsave">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionsaveh5">
+   <property name="text">
+    <string>Save HDF5</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+S</string>
+   </property>
+  </action>
+  <action name="actionsaveas">
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
  </widget>
@@ -400,6 +439,70 @@
     <hint type="destinationlabel">
      <x>98</x>
      <y>504</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>save_img_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>actionsave</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>169</x>
+     <y>137</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>169</x>
+     <y>137</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>save_h5_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>actionsaveh5</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>274</x>
+     <y>137</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionsave</sender>
+   <signal>enabledChanged(bool)</signal>
+   <receiver>save_img_btn</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>156</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>156</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionsaveh5</sender>
+   <signal>enabledChanged(bool)</signal>
+   <receiver>save_h5_btn</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>136</y>
     </hint>
    </hints>
   </connection>
