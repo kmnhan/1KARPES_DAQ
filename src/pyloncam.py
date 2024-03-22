@@ -3,9 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
-import platform
 import sys
-import time
 
 # import cv2
 import numpy as np
@@ -25,17 +23,17 @@ except:
 EXCLUDED_DEVICES: tuple[str, ...] = (
     "40049666",
 )  #: Tuple of string of serial numbers to exclude from search.
+
 DEVICE_ALIASES: dict[str, str] = {
     "40155047": "sample camera"
 }  #: Mapping from serial number to custom label.
-SAVE_DIR: str = os.path.join(
-    os.path.expanduser("~"), "Pictures", "Sample Camera"
-)  #: Directory to save the image to.
+
+SAVE_DIR: str = "D:/Camera/Sample Camera"  #: Directory to save the image to.
+
 PIXEL_BITS: int = 10  #: Pixel format bits, 8 or 10 for our sample camera.
 
 tlf: pylon.TlFactory = pylon.TlFactory.GetInstance()  #: The transport layer factory.
 img: pylon.PylonImage = pylon.PylonImage()  #: Handles image saving.
-pylon.PylonImage
 
 
 def format_datetime(dt: datetime.datetime) -> str:
