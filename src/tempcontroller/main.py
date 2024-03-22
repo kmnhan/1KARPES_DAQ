@@ -478,7 +478,10 @@ class MainWindow(MainWindowGUI):
             )
             log.debug("Shared memory created")
 
-        arr = np.ndarray((len(vals),), dtype="f8", buffer=self.shm.buf)
+        try:
+            arr = np.ndarray((len(vals),), dtype="f8", buffer=self.shm.buf)
+        except TypeError:
+            log.critical(f"type error : vals given as {vals}")
 
         self.plot_values[0].append(dt.timestamp())
         for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals)):
