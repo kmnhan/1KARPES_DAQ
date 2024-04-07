@@ -26,7 +26,6 @@ except:
 
 
 class PressureSnapCurvePlotDataItem(XDateSnapCurvePlotDataItem):
-
     @staticmethod
     def format_y(y: float) -> str:
         return f"{y:.3g}"
@@ -55,7 +54,6 @@ class BetterCalendarWidget(QtWidgets.QCalendarWidget):
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
     def __init__(self):
-
         super().__init__()
         self.setupUi(self)
 

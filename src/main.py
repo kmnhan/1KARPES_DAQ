@@ -22,7 +22,6 @@ class QHLine(QtWidgets.QFrame):
 
 
 class MainWindowGUI(*uic.loadUiType("main.ui")):
-
     def __init__(self):
         super().__init__()
         self.setupUi(self)

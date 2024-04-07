@@ -445,7 +445,6 @@ class MMThread(QtCore.QThread):
 
 
 class EncoderThread(QtCore.QThread):
-
     def __init__(
         self,
         parent: QtWidgets.QWidget | None = None,

@@ -160,7 +160,6 @@ class Widget(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
-
     qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setStyle("Fusion")
 

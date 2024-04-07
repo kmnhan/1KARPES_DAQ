@@ -17,7 +17,6 @@ class MMStatus(enum.IntEnum):
 
 
 class ManiClient:
-
     def __init__(self, port: int):
         self.port: int = port
         self.connected: bool = False
@@ -163,7 +162,6 @@ class _PiezoMotor(Motor):
         # Wait for motion finish
         self.client.wait_motion_finish(unique_id)
         print("motion finished")
-
 
         self.client.clear_uid(unique_id)
         print("uid cleared")

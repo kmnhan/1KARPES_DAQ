@@ -12,22 +12,22 @@ passing zero. Values for nonexistent axes will be returned as `nan` unless other
 specified.
 
 STATUS? <controller>
-    Returns the status integer. <controller> is a 0-based controller index. 
+    Returns the status integer. <controller> is a 0-based controller index.
 NAME? [<axis>]
     Returns the name of the given channel, regardless of its enabled state. If the given
     channel is not found, returns an empty string.
 ENABLED? [<axis>]
     Returns 0 or 1 based on whether the channel is enabled. If the given channel is not
-    found, returns 0. 
+    found, returns 0.
 POS? [<axis>]
     Returns the current calibrated position of the given channel. If the given channel
     is disabled or not found, returns `nan`.
 TOL? <axis>
     Returns the raw tolerance (integer-like) of the given channel regardless of its
-    enabled state. 
+    enabled state.
 ATOL? <axis>
     Returns the absolute (calibrated) tolerance (float-like) of the given channel
-    regardless of its enabled state. 
+    regardless of its enabled state.
 MINMAX? <axis>
     Returns the configured minimum and maximum position of the given channel, given as a
     comma-separated string of two floats.

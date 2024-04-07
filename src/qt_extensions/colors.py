@@ -1,6 +1,5 @@
-"""Functions for manipulating colors in Qt.
+"""Functions for manipulating colors in Qt."""
 
-"""
 from __future__ import annotations
 
 __all__ = [
@@ -528,7 +527,7 @@ def color_to_QColor(
 
 
 def pg_colormap_names(
-    source: Literal["local", "all", "matplotlib"] = "all"
+    source: Literal["local", "all", "matplotlib"] = "all",
 ) -> list[str]:
     """Get all valid :obj:`pyqtgraph` colormap names.
 

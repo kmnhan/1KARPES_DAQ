@@ -436,7 +436,6 @@ class MainWindow(MainWindowGUI):
 
     def check_regen(self):
         if self.heatswitch.regen_check.isChecked():
-
             tol: float = self.heatswitch.regen_spin.value()
             val: float = float(self.kelvins[0])  # TA [K]
 

@@ -292,8 +292,9 @@ class MainWindowGUI(uiclass, baseclass):
     @QtCore.Slot()
     def load_position(self):
         row_idx = self.pos_table.currentRow()
-        x_item, y_item = self.pos_table.item(row_idx, 1), self.pos_table.item(
-            row_idx, 2
+        x_item, y_item = (
+            self.pos_table.item(row_idx, 1),
+            self.pos_table.item(row_idx, 2),
         )
         self.target.setPos(
             x_item.data(QtCore.Qt.EditRole), y_item.data(QtCore.Qt.EditRole)

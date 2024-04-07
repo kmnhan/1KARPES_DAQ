@@ -107,7 +107,6 @@ class SnapCurvePlotDataItem(pg.PlotDataItem):
 
 
 class XDateSnapCurvePlotDataItem(SnapCurvePlotDataItem):
-
     @staticmethod
     def format_x(x: float) -> str:
         return datetime.datetime.fromtimestamp(max(x, 0)).strftime("%m/%d %H:%M:%S")

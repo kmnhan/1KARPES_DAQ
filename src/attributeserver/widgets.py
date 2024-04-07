@@ -46,7 +46,6 @@ class SlitTableModel(QtCore.QAbstractTableModel):
 
 
 class SlitWidget(QtWidgets.QComboBox):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -79,7 +78,6 @@ class SlitWidget(QtWidgets.QComboBox):
 
 
 class StatusThread(QtCore.QThread):
-
     sigTUpdate = QtCore.Signal(object)
     sigPUpdate = QtCore.Signal(object)
 
@@ -114,7 +112,6 @@ class StatusThread(QtCore.QThread):
 
 
 class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
-
     def __init__(self):
         super().__init__()
         self.setupUi(self)

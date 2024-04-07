@@ -157,7 +157,6 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
 
 class HeaterWidget(HeaterWidgetGUI):
-
     sigSETP = QtCore.Signal(str, object)
     sigRAMP = QtCore.Signal(str, object)
     sigHTR = QtCore.Signal(str, object)
@@ -357,7 +356,6 @@ class ReadingWidgetGUI(VISAWidgetBase):
 
     def set_srdg_visible(self, visible: bool):
         for i in range(len(self.krdg_spins)):
-
             self.srdg_spins[i].setVisible(visible)
             self.srdg_units[i].setVisible(visible)
             # if visible:
@@ -381,7 +379,6 @@ class ReadingWidgetGUI(VISAWidgetBase):
 
 
 class ReadingWidget(ReadingWidgetGUI):
-
     sigKRDG = QtCore.Signal(str, object)
     sigSRDG = QtCore.Signal(str, object)
 
@@ -628,7 +625,6 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
 
 if __name__ == "__main__":
-
     qapp = QtWidgets.QApplication(sys.argv)
     # qapp.setStyle("Fusion")
 

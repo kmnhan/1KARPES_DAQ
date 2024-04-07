@@ -182,7 +182,6 @@ class VISAThread(QtCore.QThread):
             pass
 
 
-
 def start_visathread(thread: VISAThread):
     thread.start()
     while thread.stopped.is_set():

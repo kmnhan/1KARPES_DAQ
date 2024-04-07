@@ -16,6 +16,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 import mg15
 
+
 class PressuresWidget(*uic.loadUiType("pressures.ui")):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,6 +36,7 @@ class PressuresWidget(*uic.loadUiType("pressures.ui")):
     def labels(self) -> tuple[QtWidgets.QLabel, ...]:
         return self.label1, self.label2, self.label3
 
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
 
@@ -43,13 +45,10 @@ if __name__ == "__main__":
     qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
 
     win = PressuresWidget()
-    
+
     def parse_value(val):
-        return (
-                    np.format_float_scientific(val, 3)
-                    .replace("e", "E")
-                    .replace("-", "−")
-                )
+        return np.format_float_scientific(val, 3).replace("e", "E").replace("-", "−")
+
     win.set_value(0, mg15.GAUGE_STATE[19])
     win.set_value(1, parse_value(1.983534e-9))
     win.set_value(2, parse_value(2.1315352e-11))

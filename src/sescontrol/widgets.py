@@ -235,7 +235,6 @@ class ArrayTableModel(QtCore.QAbstractTableModel):
 
 
 class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
