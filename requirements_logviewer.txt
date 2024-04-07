@@ -4,4 +4,4 @@ tomlkit
 pyqt6
 qtpy
 pyqtgraph>=0.13.4
-qtawesome
+qtawesome>=1.3.1
