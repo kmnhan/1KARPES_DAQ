@@ -2,19 +2,17 @@ import datetime
 import logging
 import os
 import sys
-import time
 from collections.abc import Sequence
 
 import pyqtgraph as pg
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
-from connection import VISAThread, VISAWidgetBase, restart_visathread
-from qt_extensions.legendtable import LegendTableView
+from connection import VISAThread, VISAWidgetBase
+from qt_extensions.legendtable import LegendTableView  # noqa: F401
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 log = logging.getLogger("tempctrl")
@@ -196,21 +194,21 @@ class HeaterWidget(HeaterWidgetGUI):
 
     @QtCore.Slot(float)
     def change_setpoint(self, value: float):
-        cmd = f"SETP "
+        cmd = "SETP "
         cmd += ",".join([self.loop, str(value)])
         self.instrument.request_write(cmd)
         self.trigger_update()
 
     @QtCore.Slot(int, float)
     def change_ramp(self, state: int, rate: float):
-        cmd = f"RAMP "
+        cmd = "RAMP "
         cmd += ",".join([self.loop, str(state), str(rate)])
         self.instrument.request_write(cmd)
         self.trigger_update()
 
     @QtCore.Slot(int)
     def change_range(self, value: int):
-        cmd = f"RANGE "
+        cmd = "RANGE "
         if len(self.output) > 0:
             cmd += f"{self.output},"
         cmd += str(value)

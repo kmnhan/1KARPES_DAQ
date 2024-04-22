@@ -27,7 +27,7 @@ from widgets import (
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 logging.addLevelName(5, "TRACE")
@@ -213,10 +213,10 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.heater2 = HeaterWidget(output="2")
         self.heater3 = HeaterWidget(output="", loop="1")
         self.heatswitch = HeatSwitchWidget()
-        d1 = Dock(f"336 Heater1 (D) Control", widget=self.heater1)
-        d2 = Dock(f"336 Heater2 (C) Control", widget=self.heater2)
-        d3 = Dock(f"331 Heater Control", widget=self.heater3)
-        d4 = Dock(f"Heat Switch", widget=self.heatswitch)
+        d1 = Dock("336 Heater1 (D) Control", widget=self.heater1)
+        d2 = Dock("336 Heater2 (C) Control", widget=self.heater2)
+        d3 = Dock("331 Heater Control", widget=self.heater3)
+        d4 = Dock("Heat Switch", widget=self.heatswitch)
         area.addDock(d2, "left")
         area.addDock(d1, "right", d2)
         area.addDock(d3, "right", d1)
@@ -460,7 +460,7 @@ class MainWindow(MainWindowGUI):
                 self.heatswitch.regen_check.setChecked(False)
 
                 self.mkpower.request_write("OUT0")  # Heat switch off
-                log.info(f"Heat switch OFF")
+                log.info("Heat switch OFF")
 
                 QtCore.QTimer.singleShot(1000, self.regenerate)
         else:
@@ -648,7 +648,7 @@ class ConfigFileDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(
                 self,
                 "Invalid Config File",
-                f"An error occurred while parsing the file.",
+                "An error occurred while parsing the file.",
             )
         super().accept()
 
