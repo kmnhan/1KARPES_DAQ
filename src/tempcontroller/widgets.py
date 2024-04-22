@@ -387,6 +387,7 @@ class ReadingWidget(ReadingWidgetGUI):
         *args,
         instrument: VISAThread | None = None,
         inputs: Sequence[str],
+        num_raw_readings: int,
         indexer: slice | None = None,
         krdg_command: str | None = None,
         srdg_command: str | None = None,
@@ -401,8 +402,17 @@ class ReadingWidget(ReadingWidgetGUI):
         self.krdg_command = krdg_command
         self.srdg_command = srdg_command
 
-        self._raw_krdg: tuple[datetime.datetime, list[str]] = (None, [])
-        self._raw_srdg: tuple[datetime.datetime, list[str]] = (None, [])
+        # number of values returned by krdg_command and srdg_command
+        self.n_raw = int(num_raw_readings)
+
+        self._raw_krdg: tuple[datetime.datetime, list[str]] = (
+            datetime.datetime.now(),
+            ["nan"] * self.n_raw,
+        )
+        self._raw_srdg: tuple[datetime.datetime, list[str]] = (
+            datetime.datetime.now(),
+            ["nan"] * self.n_raw,
+        )
 
         self.sigKRDG.connect(self.update_krdg)
         self.sigSRDG.connect(self.update_srdg)
@@ -411,9 +421,6 @@ class ReadingWidget(ReadingWidgetGUI):
         self, threshold: float, return_datetime: bool = False
     ) -> list[str] | tuple[list[str], datetime.datetime]:
         dt, vals = self._raw_krdg
-        if dt is None:
-            time.sleep(0.1)
-            return self.get_raw_krdg(threshold, return_datetime)
 
         now = datetime.datetime.now()
         if now - dt > datetime.timedelta(seconds=threshold):
@@ -422,7 +429,9 @@ class ReadingWidget(ReadingWidgetGUI):
             out = vals
 
         if len(out) >= 9:
-            log.critical(f"Raw krdg read as {self._raw_krdg[1]}")
+            log.critical(
+                f"KRDG size mismatch for our controllers, raw krdg read as {self._raw_krdg[1]}"
+            )
 
         if return_datetime:
             return out, dt
@@ -431,9 +440,6 @@ class ReadingWidget(ReadingWidgetGUI):
 
     def get_raw_srdg(self, threshold: float) -> list[str]:
         dt, vals = self._raw_srdg
-        if dt is None:
-            time.sleep(0.1)
-            return self.get_raw_srdg(threshold)
 
         now = datetime.datetime.now()
         if now - dt > datetime.timedelta(seconds=threshold):

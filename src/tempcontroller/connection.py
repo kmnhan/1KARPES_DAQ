@@ -42,14 +42,18 @@ class RequestHandler:
             time.sleep(1e-4)
 
     def write(self, *args, loglevel: int = logging.DEBUG, **kwargs):
+        log.log(logging.TRACE, f"{self.resource_name} wait write...")
         self.wait_time()
+        log.log(logging.TRACE, f"{self.resource_name} wait write finished...")
         res = self.inst.write(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
         log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
         return res
 
     def query(self, *args, loglevel: int = logging.DEBUG, **kwargs):
+        log.log(logging.TRACE, f"{self.resource_name} wait query...")
         self.wait_time()
+        log.log(logging.TRACE, f"{self.resource_name} wait query finished...")
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
         log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
@@ -62,7 +66,9 @@ class RequestHandler:
         This is not very likely to be used. It may cause problems due to the wait time.
         Use `query` instead.
         """
+        log.log(logging.TRACE, f"{self.resource_name} wait read...")
         self.wait_time()
+        log.log(logging.TRACE, f"{self.resource_name} wait read finished...")
         res = self.inst.read(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
         log.log(loglevel, f"{self.resource_name}  ->  {res}")

@@ -158,16 +158,19 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.readings_336 = ReadingWidget(
             inputs=("A", "B", "C", "D"),
+            num_raw_readings=4,
             names=self.config["general"]["names_336"],
             decimals=4,
         )
         self.readings_218_0 = ReadingWidget(
             inputs=tuple(str(i) for i in range(1, 5)),
+            num_raw_readings=8,
             names=list(self.config["general"]["names_218"])[:4],
             indexer=slice(0, 4),
         )
         self.readings_218_1 = ReadingWidget(
             inputs=tuple(str(i) for i in range(5, 9)),
+            num_raw_readings=8,
             names=list(self.config["general"]["names_218"])[4:],
             indexer=slice(4, 8),
         )
@@ -180,6 +183,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         readings_218_combined.layout().addWidget(self.readings_218_1)
         self.readings_331 = ReadingWidget(
             inputs=(" ",),
+            num_raw_readings=1,
             names=self.config["general"]["names_331"],
             hide_srdg=True,
             krdg_command="KRDG? B",
@@ -427,15 +431,19 @@ class MainWindow(MainWindowGUI):
 
     def update(self):
         # Trigger updates
+        log.log(logging.TRACE, "Sending update signal")
         self.sigUpdate.emit()
+        log.log(logging.TRACE, "Setting last update time")
         self._lastupdate: datetime.datetime = datetime.datetime.now()
 
         # Wait 150 ms for data to update
+        log.log(logging.TRACE, "Setup singleshot timers for upate")
         QtCore.QTimer.singleShot(150, self.check_regen)
         QtCore.QTimer.singleShot(150, self.refresh)
 
     def check_regen(self):
         if self.heatswitch.regen_check.isChecked():
+            log.log(logging.TRACE, "Regen enabled, checking for tolerance")
             tol: float = self.heatswitch.regen_spin.value()
             val: float = float(self.kelvins[0])  # TA [K]
 
@@ -455,6 +463,8 @@ class MainWindow(MainWindowGUI):
                 log.info(f"Heat switch OFF")
 
                 QtCore.QTimer.singleShot(1000, self.regenerate)
+        else:
+            log.log(logging.TRACE, "Regen disabled, skip")
 
     def regenerate(self):
         if 45 <= self.heater2.setpoint_spin.value() <= 55:
@@ -468,6 +478,7 @@ class MainWindow(MainWindowGUI):
         log.info("GL4 regenerate started")
 
     def refresh(self):
+        log.log(logging.TRACE, "Start refresh")
         dt, vals = self.get_kelvin_values()
 
         if self.shm is None:
@@ -484,13 +495,16 @@ class MainWindow(MainWindowGUI):
             return
 
         self.plot_values[0].append(dt.timestamp())
+        log.log(logging.TRACE, "Updating shared memory")
         for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals)):
             # Update plot value
             kval = float(kstr)
             dq.append(kval)
             # Update shared memory
             arr[i] = kval
+        log.log(logging.TRACE, "Updating plot")
         self.plotwindow.plotItem.set_datalist(self.plot_values[0], self.plot_values[1:])
+        log.log(logging.TRACE, "End refresh")
 
     @QtCore.Slot(int, object)
     def plotcolor_changed(self, index: int, color: QtGui.QColor):
@@ -565,12 +579,17 @@ class MainWindow(MainWindowGUI):
         return dt, out
 
     def write_log(self):
+        log.log(logging.TRACE, "Writing log...")
         dt, vals = self.get_values()
+        log.log(logging.TRACE, "Log values retrieved...")
         self.log_writer.append(dt, [v.lstrip("+") for v in vals])
+        log.log(logging.TRACE, "Values appended to log")
 
     def write_nans(self):
+        log.log(logging.TRACE, "Writing NaNs to log...")
         dt = datetime.datetime.now()
         self.log_writer.append(dt, ["nan"] * (len(self.header) - 1))
+        log.log(logging.TRACE, "NaNs appended to log")
 
     def closeEvent(self, *args, **kwargs):
         # Write NaNs to log file to indicate break
