@@ -1,2 +1,2 @@
-call "%UserProfile%\miniconda3\condabin\conda" activate erlab
+call "C:\ProgramData\miniforge3\condabin\mamba" activate daq
 python main.py
