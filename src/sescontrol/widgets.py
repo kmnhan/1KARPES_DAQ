@@ -367,10 +367,15 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     @property
     def itool(self):
-        return self._itools[-1]
+        try:
+            return self._itools[-1]
+        except IndexError:
+            return None
 
     @itool.setter
     def itool(self, imagetool: LiveImageTool):
+        if imagetool is None:
+            return
         self._itools.append(imagetool)
         imagetool.sigClosed.connect(self.itool_closed)
 
