@@ -125,7 +125,7 @@ class MainWindow(F70GUI):
             self.statusBar().showMessage(f"System OFF | {state}")
 
         for k, v in F70H_ALARM_BITS.items():
-            label = self.alarms_status_labels[v - 1]
+            label = self.alarm_status_labels[v - 1]
             if int(bits[-v - 1]) == 1:
                 label.setText(self.ON_LABEL)
                 log.error(f"{k} alarm")

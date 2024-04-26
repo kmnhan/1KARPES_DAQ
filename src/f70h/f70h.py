@@ -92,7 +92,7 @@ def _compute_checksum(data) -> int:
 
 def checksum_message(message: str) -> str:
     checksum = _compute_checksum([ord(s) for s in message])
-    return hex(checksum)[2:].upper()
+    return f"{checksum:#06x}"[2:].upper()
 
 
 def make_command(command: str) -> str:
@@ -107,7 +107,9 @@ def parse_message(message: str) -> list[str]:
     checksum_msg = checksum_message(message[:-4])
 
     if checksum != checksum_msg:
-        log.error(f"Checksum error for {message[1:4]}: {checksum} != {checksum_msg}")
+        log.error(
+            f"Checksum error for {message[1:4]}: {checksum} != {checksum_msg}, received {data}"
+        )
         return None
 
     return data.split(",")
