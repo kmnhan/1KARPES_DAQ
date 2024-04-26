@@ -91,16 +91,20 @@ class F70GUI(QtWidgets.QMainWindow):
 class UpdateThread(QtCore.QThread):
     sigUpdate = QtCore.Signal(str, object, int)
 
-    def __init__(self, instrument) -> None:
+    def __init__(self, instrument, timeout=50.0) -> None:
         super().__init__()
         self.instrument = instrument
+        self.timeout = timeout * 1e-3
 
     def run(self):
         bits = self.instrument.status
-        time.sleep(50e-3)
+
+        time.sleep(self.timeout)
         temps = self.instrument.temperature
-        time.sleep(50e-3)
+
+        time.sleep(self.timeout)
         pressure = self.instrument.pressure
+
         self.sigUpdate.emit(bits, temps, pressure)
 
 
@@ -155,7 +159,7 @@ class MainWindow(F70GUI):
             label = self.alarm_status_labels[v - 1]
             if int(bits[-v - 1]) == 1:
                 label.setText(self.ON_LABEL)
-                log.error(f"{k} alarm")
+                log.critical(f"ALARM: {k}")
             else:
                 label.setText(self.OFF_LABEL)
 

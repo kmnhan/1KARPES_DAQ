@@ -53,15 +53,21 @@ class F70HInstrument:
         return float(self.query("ID1")[1])
 
     def query(self, cmd: str):
-        return parse_message(self.instrument.query(make_command(cmd)))
+        log.debug(f"Querying {cmd}")
+        out = parse_message(self.instrument.query(make_command(cmd)))
+        log.debug(f"Received {out}")
+        return out
 
     def turn_on(self) -> None:
+        log.info("TURNING ON")
         self.query("ON1")
 
     def turn_off(self) -> None:
+        log.info("TURNING OFF")
         self.query("OFF")
 
     def reset(self) -> None:
+        log.info("RESETTING")
         self.query("RST")
 
     def check_alarms(self) -> None:
