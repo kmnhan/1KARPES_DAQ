@@ -35,14 +35,14 @@ class F70HInstrument:
         self.instrument.read_termination = "\r"
 
     @property
-    def temperature(self) -> tuple[float, float, float]:
+    def temperature(self) -> tuple[int, int, int]:
         # He discharge, water outlet, water inlet temperature in degrees C
-        return tuple(float(t) for t in self.query("TEA")[:3])
+        return tuple(int(t) for t in self.query("TEA")[:3])
 
     @property
-    def pressure(self) -> float:
+    def pressure(self) -> int:
         # Compressor return pressure in psig
-        return float(self.query("PR1")[0])
+        return int(self.query("PR1")[0])
 
     @property
     def status(self) -> str:

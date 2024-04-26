@@ -1,10 +1,9 @@
 import logging
 import sys
-
-from qtpy import QtWidgets, QtCore
 import time
 
-from f70h import F70HInstrument, F70H_ALARM_BITS, F70H_STATE
+from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
+from qtpy import QtCore, QtWidgets
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
@@ -25,6 +24,7 @@ class QHLine(QtWidgets.QFrame):
 class F70GUI(QtWidgets.QMainWindow):
     ON_LABEL = "🔴"
     OFF_LABEL = "🟢"
+    NEUTRAL_LABEL = "⚪"
 
     def __init__(self):
         super().__init__()
@@ -38,7 +38,7 @@ class F70GUI(QtWidgets.QMainWindow):
         alarms_layout = QtWidgets.QGridLayout()
         self.alarm_status_labels = []
         for k, v in F70H_ALARM_BITS.items():
-            alarm_status_label = QtWidgets.QLabel(self.OFF_LABEL)
+            alarm_status_label = QtWidgets.QLabel(self.NEUTRAL_LABEL)
             alarm_status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
             alarm_status_label.setSizePolicy(
                 QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Fixed
@@ -88,6 +88,22 @@ class F70GUI(QtWidgets.QMainWindow):
         layout.addWidget(self.reset_button)
 
 
+class UpdateThread(QtCore.QThread):
+    sigUpdate = QtCore.Signal(str, object, int)
+
+    def __init__(self, instrument) -> None:
+        super().__init__()
+        self.instrument = instrument
+
+    def run(self):
+        bits = self.instrument.status
+        time.sleep(50e-3)
+        temps = self.instrument.temperature
+        time.sleep(50e-3)
+        pressure = self.instrument.pressure
+        self.sigUpdate.emit(bits, temps, pressure)
+
+
 class MainWindow(F70GUI):
     def __init__(self):
         super().__init__()
@@ -97,26 +113,37 @@ class MainWindow(F70GUI):
         self.stop_button.clicked.connect(self.stop_button_clicked)
         self.reset_button.clicked.connect(self.reset_button_clicked)
 
+        self.update_thread = UpdateThread(self.instr)
+        self.update_thread.sigUpdate.connect(self.update_status)
+
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update_status)
+        self.timer.timeout.connect(self.refresh)
         self.timer.start(1000)
 
     def start_button_clicked(self):
+        if self.update_thread.isRunning():
+            self.update_thread.wait()
         self.instr.turn_on()
 
     def stop_button_clicked(self):
+        if self.update_thread.isRunning():
+            self.update_thread.wait()
         self.instr.turn_off()
 
     def reset_button_clicked(self):
+        if self.update_thread.isRunning():
+            self.update_thread.wait()
         self.instr.reset()
 
-    def update_status(self):
-        bits = self.instr.status
-        time.sleep(50e-3)
-        temps = self.instr.temperature
-        time.sleep(50e-3)
-        pressure = self.instr.pressure
+    def refresh(self):
+        if self.update_thread.isRunning():
+            self.update_thread.wait()
+        self.update_thread.start()
 
+    @QtCore.Slot(str, object, int)
+    def update_status(
+        self, bits: str, temperature: tuple[int, int, int], pressure: int
+    ):
         state = F70H_STATE[int(bits[4:7], 2)]
 
         if bits[-1] == "1":
@@ -132,13 +159,17 @@ class MainWindow(F70GUI):
             else:
                 label.setText(self.OFF_LABEL)
 
-        for label, value in zip(self.labels[:3], temps):
+        for label, value in zip(self.labels[:3], temperature):
             label.setText(f"{value} °C")
 
         self.labels[3].setText(f"{pressure} psig")
 
     def closeEvent(self, event):
         self.timer.stop()
+
+        if self.update_thread.isRunning():
+            self.update_thread.wait()
+
         self.instr.instrument.close()
 
         super().closeEvent(event)
