@@ -30,7 +30,7 @@ DEVICE_ALIASES: dict[str, str] = {
 
 SAVE_DIR: str = "D:/Camera/Sample Camera"  #: Directory to save the image to.
 
-PIXEL_BITS: int = 10  #: Pixel format bits, 8 or 10 for our sample camera.
+PIXEL_BITS: int = 8  #: Pixel format bits, 8 or 10 for our sample camera.
 
 tlf: pylon.TlFactory = pylon.TlFactory.GetInstance()  #: The transport layer factory.
 img: pylon.PylonImage = pylon.PylonImage()  #: Handles image saving.
@@ -649,9 +649,7 @@ class MainWindow(MainWindowGUI):
         # self.exposure_spin.blockSignals(False)
         # self.exposure_slider.blockSignals(False)
 
-    @property
-    def image_array(self) -> xr.DataArray:
-        image = self._image_array
+    def image_to_xarray(self, image) -> xr.DataArray:
         shape = image.shape
         xlim, zlim = self._cal_h * (shape[1] - 1) / 2, self._cal_v * (shape[0] - 1) / 2
         return xr.DataArray(
@@ -663,9 +661,7 @@ class MainWindow(MainWindowGUI):
             ),
         )
 
-    @property
-    def rect(self) -> QtCore.QRectF:
-        shape = self._image_array.shape
+    def get_rect(self, shape) -> QtCore.QRectF:
         x, y = -self._cal_h * (shape[1] - 1) / 2, -self._cal_v * (shape[0] - 1) / 2
         w, h = -2 * x, -2 * y
         x += self._off_h
@@ -675,33 +671,32 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot(object, object)
     def grabbed(self, grabtime: datetime.datetime, image: npt.NDArray):
         self.grab_time: datetime.datetime = grabtime
-        self._image_array = np.flip(image, axis=0)
+        image = np.flip(image, axis=0)
 
         if self.image_item.image is None:
-            self.image_item.setImage(
-                self._image_array, autoLevels=False, axisOrder="row-major"
-            )
-            self.update_rect()
+            self.image_item.setImage(image, autoLevels=False, axisOrder="row-major")
+            # self.update_rect()
+            self.image_item.setRect(self.get_rect(image.shape))
         else:
             self.image_item.setImage(
-                self._image_array,
+                image,
                 autoLevels=False,
                 axisOrder="row-major",
-                rect=self.rect,
+                rect=self.get_rect(image.shape),
             )
+        self._image_array = image
 
-        msg = "Last Update "
-        msg += self.grab_time.isoformat(sep=" ", timespec="milliseconds")
+        # msg = "Last Update "
+        # msg += self.grab_time.isoformat(sep=" ", timespec="milliseconds")
 
-        max_val = 2**PIXEL_BITS - 1
-        if (
-            np.amax(self._image_array) == max_val
-            and sum(self._image_array.flatten() == max_val) > 1
-        ):
-            msg += " | "
-            msg += "Saturation detected! Consider lowering exposure."
-
-        self.statusBar().showMessage(msg)
+        # max_val = 2**PIXEL_BITS - 1
+        # if (
+        #     np.amax(self._image_array) == max_val
+        #     and sum(self._image_array.flatten() == max_val) > 1
+        # ):
+        #     msg += " | "
+        #     msg += "Saturation detected! Consider lowering exposure."\
+        # self.statusBar().showMessage(msg)
         # self.statusBar().showMessage(
         #     f"focus parameter: {cv2.Laplacian(image, cv2.CV_64F).var()}"
         # )
@@ -709,7 +704,7 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def update_rect(self):
         try:
-            self.image_item.setRect(self.rect)
+            self.image_item.setRect(self.get_rect(self.image_item.image.shape))
         except AttributeError as e:
             pass
 
@@ -738,10 +733,12 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def save_hdf5(self, filename: str | None = None):
-        dt, data = self.grab_time, self.image_array
+        data = self.image_to_xarray(self._image_array)
 
         if filename is None:
-            filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
+            filename = os.path.join(
+                SAVE_DIR, f"Image_{format_datetime(self.grab_time)}.h5"
+            )
 
         # Compatibility with Igor HDF5 loader
         scaling = [[1, 0]]
