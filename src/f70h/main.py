@@ -1,9 +1,14 @@
+import datetime
 import logging
+import os
 import sys
 import time
 
-from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
+import slack_sdk
+import slack_sdk.errors
 from qtpy import QtCore, QtWidgets
+
+from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
@@ -12,6 +17,22 @@ handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )
 log.addHandler(handler)
+
+
+client = slack_sdk.WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+
+
+def send_message(message: str | list[str]):
+    if isinstance(message, list):
+        message = "\n".join(message)
+    try:
+        _ = client.chat_postMessage(
+            channel="C070N0MDBE2",
+            text=message,
+            mrkdwn=True,
+        )
+    except slack_sdk.errors.SlackApiError as e:
+        log.error(f"Error posting message: {e}")
 
 
 class QHLine(QtWidgets.QFrame):
@@ -117,6 +138,8 @@ class MainWindow(F70GUI):
         self.stop_button.clicked.connect(self.stop_button_clicked)
         self.reset_button.clicked.connect(self.reset_button_clicked)
 
+        self.alarm_notified: bool = False
+
         self.update_thread = UpdateThread(self.instr)
         self.update_thread.sigUpdate.connect(self.update_status)
 
@@ -124,25 +147,46 @@ class MainWindow(F70GUI):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(1000)
 
+    @property
+    def current_time_formatted(self) -> str:
+        return datetime.datetime.now().isoformat(sep=" ", timespec="seconds")
+
     def start_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.instr.turn_on()
+
+        send_message(f"{self.current_time_formatted} Compressor ON")
 
     def stop_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.instr.turn_off()
 
+        send_message(f"{self.current_time_formatted} Compressor OFF")
+
     def reset_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.instr.reset()
+        self.alarm_notified = False
 
     def refresh(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.update_thread.start()
+
+    def notify_alarm(
+        self, alarms: list[str], temperature: tuple[int, int, int], pressure: int
+    ):
+        temp_str = ", ".join([f"{t}°C" for t in temperature])
+        send_message(
+            [
+                ":warning: Alarms raised:",
+                ", ".join(alarms),
+                f"Current status: {temp_str}, Return pressure {pressure} psig",
+            ]
+        )
 
     @QtCore.Slot(str, object, int)
     def update_status(
@@ -155,13 +199,20 @@ class MainWindow(F70GUI):
         elif bits[-1] == "0":
             self.statusBar().showMessage(f"System OFF | {state}")
 
+        alarms = []
         for k, v in F70H_ALARM_BITS.items():
             label = self.alarm_status_labels[v - 1]
             if int(bits[-v - 1]) == 1:
                 label.setText(self.ON_LABEL)
                 log.critical(f"ALARM: {k}")
+                alarms.append(k)
             else:
                 label.setText(self.OFF_LABEL)
+
+        if len(alarms) > 0:
+            if not self.alarm_notified:
+                self.notify_alarm(alarms, temperature, pressure)
+            self.alarms_notified = True
 
         for label, value in zip(self.labels[:3], temperature):
             label.setText(f"{value} °C")
