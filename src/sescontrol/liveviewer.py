@@ -414,6 +414,9 @@ class WorkFileImageTool(BaseImageTool):
         self.norm_check = QtWidgets.QCheckBox("Norm")
         self.norm_check.toggled.connect(self.reload)
 
+        self.autoupdate_check = QtWidgets.QCheckBox("Auto update")
+        self.autoupdate_check.toggled.connect(self.toggle_update_timer)
+
         self.reload_btn = QtWidgets.QPushButton("Load")
         self.reload_btn.clicked.connect(self.reload)
 
@@ -421,6 +424,7 @@ class WorkFileImageTool(BaseImageTool):
         lowerwidget.layout().addWidget(self.reload_btn)
         widget.layout().addWidget(self.region_combo)
         widget.layout().addWidget(lowerwidget)
+        widget.layout().addWidget(self.autoupdate_check)
 
         load_dock = QtWidgets.QDockWidget("Work file", self)
         load_dock.setFeatures(
@@ -431,11 +435,21 @@ class WorkFileImageTool(BaseImageTool):
 
         self.regions: list[str] = []
         self.regionscan_timer = QtCore.QTimer(self)
-        self.regionscan_timer.setInterval(500)
+        self.regionscan_timer.setInterval(250)
         self.regionscan_timer.timeout.connect(self.update_regions)
         self.regionscan_timer.start()
 
+        self.update_timer = QtCore.QTimer(self)
+        self.update_timer.setInterval(250)
+        self.update_timer.timeout.connect(self.reload)
+
         self.mnb = ItoolMenuBar(self.slicer_area, self)
+
+    def toggle_update_timer(self):
+        if self.autoupdate_check.isChecked():
+            self.update_timer.start()
+        else:
+            self.update_timer.stop()
 
     def update_regions(self):
         """Scan for regions in work directory."""
@@ -450,23 +464,26 @@ class WorkFileImageTool(BaseImageTool):
             self.region_combo.clear()
             self.region_combo.addItems(self.regions)
 
-    def reload(self):
+    def get_workfile(self, norm: bool = False) -> xr.DataArray | None:
         region: str = self.region_combo.currentText()
 
-        if self.norm_check.isChecked():
+        if norm:
             binfile: str = f"Spectrum_{region}_Norm.bin"
         else:
             binfile: str = f"Spectrum_{region}.bin"
+
         binfile = os.path.join(self.workdir, binfile)
 
         if not os.path.isfile(binfile):
-            print("File not found, abort")
-            return
+            return None
 
+        # tmpdir = tempfile.TemporaryDirectory()
+        # arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
         arr = np.fromfile(binfile, dtype=np.float32)
 
         ini_file = os.path.join(self.workdir, f"Spectrum_{region}.ini")
         if os.path.isfile(ini_file):
+            # region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
             region_info = parse_ini(ini_file)["spectrum"]
             shape, coords = get_shape_and_coords(region_info)
             arr = xr.DataArray(
@@ -479,26 +496,67 @@ class WorkFileImageTool(BaseImageTool):
             nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
             arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
 
-        if self.array_slicer._obj.shape == arr.shape:
-            self.array_slicer._obj[:] = arr.values
+        # tmpdir.cleanup()
+        return arr
+
+    def reload(self):
+        arr = self.get_workfile(norm=False)
+
+        if arr is None:
+            print("File not found, abort")
+            return
+
+        if self.norm_check.isChecked():
+            arr_norm = self.get_workfile(norm=True)
+            if arr_norm is not None:
+                arr = arr / arr_norm
+                del arr_norm
+
+        if check_same_coord_limits(self.array_slicer._obj, arr):
+            if self.array_slicer._obj.shape == arr.shape:
+                self.array_slicer._obj[:] = arr.values
+            else:
+                self.array_slicer._obj[:] = arr.transpose(
+                    *self.array_slicer._obj.dims
+                ).values
+
             for prop in (
                 "nanmax",
                 "nanmin",
                 "absnanmax",
                 "absnanmin",
-                "coords",
-                "coords_uniform",
-                "incs",
-                "incs_uniform",
-                "lims",
-                "lims_uniform",
+                # "coords",
+                # "coords_uniform",
+                # "incs",
+                # "incs_uniform",
+                # "lims",
+                # "lims_uniform",
                 "data_vals_T",
             ):
                 self.array_slicer.reset_property_cache(prop)
             self.slicer_area.refresh_all()
         else:
-            self.slicer_area.set_data(arr)
-        self.setWindowTitle(f"work: {region}")
+            if set(self.array_slicer._obj.dims) == set(arr.dims):
+                self.array_slicer.set_data(arr.transpose(*self.array_slicer._obj.dims))
+            else:
+                self.slicer_area.set_data(arr)
+        self.setWindowTitle(f"Work : {self.region_combo.currentText()}")
+
+
+def check_same_coord_limits(arr1, arr2):
+    if arr1.ndim != arr2.ndim:
+        return False
+    if set(arr1.shape) != set(arr2.shape):
+        return False
+    if set(arr1.dims) != set(arr2.dims):
+        return False
+
+    for d in arr1.dims:
+        if not np.isclose(arr1.coords[d][0], arr2.coords[d][0]):
+            return False
+        if not np.isclose(arr1.coords[d][-1], arr2.coords[d][-1]):
+            return False
+    return True
 
 
 def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
