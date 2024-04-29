@@ -1,5 +1,7 @@
 import configparser
 import os
+import shutil
+import tempfile
 import threading
 import time
 import zipfile
@@ -477,26 +479,25 @@ class WorkFileImageTool(BaseImageTool):
         if not os.path.isfile(binfile):
             return None
 
-        # tmpdir = tempfile.TemporaryDirectory()
-        # arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
-        arr = np.fromfile(binfile, dtype=np.float32)
+        tmpdir = tempfile.TemporaryDirectory()
+        arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
 
         ini_file = os.path.join(self.workdir, f"Spectrum_{region}.ini")
         if os.path.isfile(ini_file):
-            # region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
-            region_info = parse_ini(ini_file)["spectrum"]
+            region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
             shape, coords = get_shape_and_coords(region_info)
             arr = xr.DataArray(
                 arr.reshape(shape), coords=coords, name=region_info["name"]
             )
         else:
             ses_config = configparser.ConfigParser(strict=False)
-            with open(os.path.join(SES_DIR, "ini\Ses.ini"), "r") as f:
+            ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+            with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
                 ses_config.read_file(f)
             nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
             arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
 
-        # tmpdir.cleanup()
+        tmpdir.cleanup()
         return arr
 
     def reload(self):
