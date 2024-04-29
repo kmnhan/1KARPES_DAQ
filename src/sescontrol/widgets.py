@@ -748,7 +748,7 @@ class SESShortcuts(QtWidgets.QWidget):
             QtWidgets.QMessageBox.critical(
                 self,
                 str(e),
-                f"SES control failed",
+                "SES control failed",
             )
             self.check_alive()
 

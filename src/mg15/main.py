@@ -328,7 +328,7 @@ class ConfigFileDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(
                 self,
                 "Invalid Config File",
-                f"An error occurred while parsing the file.",
+                "An error occurred while parsing the file.",
             )
         super().accept()
 

@@ -125,7 +125,7 @@ def get_attribute_dict() -> dict[str, str]:
     ):
         try:
             d = fn()
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             pass
             # print(f"Getting attribute from shared memory failed with error {e}")
         else:

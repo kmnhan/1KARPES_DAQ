@@ -15,7 +15,7 @@ import pyqtgraph as pg
 import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from moee import EncoderThread, MMCommand, MMStatus, MMThread
+from moee import EncoderThread, MMStatus, MMThread
 
 try:
     os.chdir(sys._MEIPASS)
@@ -786,7 +786,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
             return
         if self.mmthread.isRunning():
             # This normally should not happen, but exists as a safety check.
-            log.error(f"Move called while motion is ongoing. Ignored.")
+            log.error("Move called while motion is ongoing. Ignored.")
             self.queue.task_done()
             return
 

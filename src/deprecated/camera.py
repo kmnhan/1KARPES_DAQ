@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import os
 import sys
-import numpy as np
-import pyqtgraph as pg
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtCore, QtWidgets, uic
 
-import pyloncam, webcam
+import pyloncam
+import webcam
 
 
 uiclass, baseclass = uic.loadUiType("camera.ui")

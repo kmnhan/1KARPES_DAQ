@@ -1,18 +1,8 @@
-import configparser
-import csv
-import datetime
-import json
 import multiprocessing
-import os
 import sys
-import time
 
 import numpy as np
-import pymodbus
-import pyqtgraph as pg
-from pyqtgraph.dockarea.Dock import Dock
-from pyqtgraph.dockarea.DockArea import DockArea
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtGui, QtWidgets, uic
 
 import mg15
 

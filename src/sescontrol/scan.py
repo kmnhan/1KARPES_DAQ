@@ -1,7 +1,6 @@
 import csv
 import datetime
 import glob
-import itertools
 import logging
 import os
 import shutil

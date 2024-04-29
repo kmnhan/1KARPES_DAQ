@@ -3,18 +3,20 @@ import os
 import threading
 import time
 import zipfile
-from collections.abc import Sequence
 
 import erlab.io
 import numpy as np
-import numpy.typing as npt
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
 from erlab.interactive.imagetool.controls import ItoolControlsBase
-from qtpy import QtCore, QtWidgets, QtGui
-
+from qtpy import QtCore, QtGui, QtWidgets
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import SES_DIR
+
+
+class CasePreservingConfigParser(configparser.ConfigParser):
+    def optionxform(self, optionstr):
+        return str(optionstr)
 
 
 class MotorThread(threading.Thread):
@@ -513,10 +515,10 @@ def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
     return tuple(shape), coords
 
 
-def parse_ini(filename):
-    parser = configparser.ConfigParser(strict=False)
-    out = dict()
-    with open(filename, "r") as f:
+def parse_ini(filename: str | os.PathLike) -> dict:
+    parser = CasePreservingConfigParser(strict=False)
+    out = {}
+    with open(filename) as f:
         parser.read_file(f)
         for section in parser.sections():
             out[section] = dict(parser.items(section))

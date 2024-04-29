@@ -3,7 +3,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui
 
 from qt_extensions.legendtable import LegendTableView
 

@@ -1,7 +1,8 @@
 import multiprocessing
-import sys, os
+import sys
+import os
 
-from qtpy import QtCore, QtGui, QtWidgets, uic
+from qtpy import QtGui, QtWidgets, uic
 
 from attributeserver.widgets import StatusWidget
 from sescontrol.widgets import ScanType, SESShortcuts

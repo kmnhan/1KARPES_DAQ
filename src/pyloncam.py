@@ -705,7 +705,7 @@ class MainWindow(MainWindowGUI):
     def update_rect(self):
         try:
             self.image_item.setRect(self.get_rect(self.image_item.image.shape))
-        except AttributeError as e:
+        except AttributeError:
             pass
 
     # @QtCore.Slot(object)
