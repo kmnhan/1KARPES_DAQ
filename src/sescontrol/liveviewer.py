@@ -7,6 +7,7 @@ import time
 import zipfile
 
 import erlab.io
+import erlab.io.plugins
 import numpy as np
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
@@ -236,13 +237,18 @@ class DataFetcher(QtCore.QRunnable):
         while True:
             try:
                 if os.path.splitext(filename)[-1] == ".zip":
-                    wave = erlab.io.da30.load_zip(filename)
+                    from erlab.io.plugins.da30 import load_zip
+
+                    wave = load_zip(filename)
                 else:
                     wave = erlab.io.load_experiment(filename)
+
             except PermissionError:
                 time.sleep(0.01)
+
             except FileNotFoundError:
                 filename = filename.replace("_scan_", "")
+
             else:
                 break
 
@@ -393,6 +399,67 @@ class LiveImageTool(BaseImageTool):
         super().closeEvent(event)
 
 
+class WorkFileUpdateThread(QtCore.QThread):
+    sigUpdate = QtCore.Signal(object, object)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.region = None
+        self.workdir = None
+
+    def run(self):
+        try:
+            arr = get_workfile(self.region, self.workdir, norm=False)
+        except Exception as e:
+            print(e)
+            arr = None
+
+        try:
+            arr_norm = get_workfile(self.region, self.workdir, norm=True)
+        except Exception as e:
+            print(e)
+            arr_norm = None
+
+        self.sigUpdate.emit(arr, arr_norm)
+
+
+def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray | None:
+    if norm:
+        binfile: str = f"Spectrum_{region}_Norm.bin"
+    else:
+        binfile: str = f"Spectrum_{region}.bin"
+
+    binfile = os.path.join(workdir, binfile)
+
+    if not os.path.isfile(binfile):
+        return None
+
+    tmpdir = tempfile.TemporaryDirectory()
+    arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
+
+    ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
+
+    if os.path.isfile(ini_file):
+        region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
+        shape, coords = get_shape_and_coords(region_info)
+        arr = xr.DataArray(arr.reshape(shape), coords=coords, name=region_info["name"])
+
+    else:
+        ses_config = configparser.ConfigParser(strict=False)
+        ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+
+        with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
+            ses_config.read_file(f)
+
+        nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+
+        arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
+
+    tmpdir.cleanup()
+
+    return arr
+
+
 class WorkFileImageTool(BaseImageTool):
     def __init__(self, parent=None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
@@ -447,6 +514,9 @@ class WorkFileImageTool(BaseImageTool):
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
 
+        self.workfilethread = WorkFileUpdateThread()
+        self.workfilethread.sigUpdate.connect(self.update_data)
+
     def toggle_update_timer(self):
         if self.autoupdate_check.isChecked():
             self.update_timer.start()
@@ -466,49 +536,22 @@ class WorkFileImageTool(BaseImageTool):
             self.region_combo.clear()
             self.region_combo.addItems(self.regions)
 
-    def get_workfile(self, norm: bool = False) -> xr.DataArray | None:
-        region: str = self.region_combo.currentText()
-
-        if norm:
-            binfile: str = f"Spectrum_{region}_Norm.bin"
-        else:
-            binfile: str = f"Spectrum_{region}.bin"
-
-        binfile = os.path.join(self.workdir, binfile)
-
-        if not os.path.isfile(binfile):
-            return None
-
-        tmpdir = tempfile.TemporaryDirectory()
-        arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
-
-        ini_file = os.path.join(self.workdir, f"Spectrum_{region}.ini")
-        if os.path.isfile(ini_file):
-            region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
-            shape, coords = get_shape_and_coords(region_info)
-            arr = xr.DataArray(
-                arr.reshape(shape), coords=coords, name=region_info["name"]
-            )
-        else:
-            ses_config = configparser.ConfigParser(strict=False)
-            ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
-            with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
-                ses_config.read_file(f)
-            nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
-            arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
-
-        tmpdir.cleanup()
-        return arr
-
+    @QtCore.Slot()
     def reload(self):
-        arr = self.get_workfile(norm=False)
+        if self.workfilethread.isRunning():
+            self.workfilethread.wait()
 
+        self.workfilethread.region = self.region_combo.currentText()
+        self.workfilethread.workdir = self.workdir
+        self.workfilethread.start()
+
+    @QtCore.Slot(object, object)
+    def update_data(self, arr, arr_norm):
         if arr is None:
-            print("File not found, abort")
+            print("File not found or corrupt, cancel workfile update")
             return
 
         if self.norm_check.isChecked():
-            arr_norm = self.get_workfile(norm=True)
             if arr_norm is not None:
                 arr = arr / arr_norm
                 del arr_norm

@@ -231,8 +231,9 @@ class ScanWorker(QtCore.QRunnable):
             # DA maps take time to save even after scan ends, let's try to wait
             timeout_start = time.perf_counter()
             fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
+            time.sleep(1)
             while True:
-                time.sleep(0.2)
+                time.sleep(1)
                 if os.path.isfile(fname) and os.stat(fname).st_size != 0:
                     try:
                         # Copy the zipfile and try opening
@@ -257,7 +258,6 @@ class ScanWorker(QtCore.QRunnable):
                     # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 10초
                     # 기다려서 안 되면 그냥 안 되는갑다 하기
                     break
-            time.sleep(1)
         if aborted:
             return 1
         return 0
