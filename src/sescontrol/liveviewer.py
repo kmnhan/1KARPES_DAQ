@@ -397,7 +397,7 @@ class LiveImageTool(BaseImageTool):
 
 
 class WorkFileFetcherSignals(QtCore.QObject):
-    sigUpdate = QtCore.Signal(object, object)
+    sigUpdate = QtCore.Signal(object)
 
 
 class WorkFileFetcher(QtCore.QRunnable):
@@ -428,7 +428,7 @@ class WorkFileFetcher(QtCore.QRunnable):
             return
 
         if not self.norm:
-            self.signals.sigUpdate.emit(arr, None)
+            self.signals.sigUpdate.emit(arr)
             return
 
         try:
@@ -446,7 +446,12 @@ class WorkFileFetcher(QtCore.QRunnable):
             )
             arr_norm = None
 
-        self.signals.sigUpdate.emit(arr, arr_norm)
+        if arr_norm is None:
+            self.signals.sigUpdate.emit(arr)
+
+        arr = arr / arr_norm
+        arr.values[~np.isfinite(arr.values)] = np.nan
+        self.signals.sigUpdate.emit(arr)
 
 
 def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
@@ -642,12 +647,8 @@ class WorkFileImageTool(BaseImageTool):
         fetcher.signals.sigUpdate.connect(self.update_data)
         self.threadpool.start(fetcher)
 
-    @QtCore.Slot(object, object)
-    def update_data(self, arr, arr_norm):
-        if arr_norm is not None:
-            arr[:] = arr / arr_norm
-            del arr_norm
-
+    @QtCore.Slot(object)
+    def update_data(self, arr):
         if check_same_coord_limits(self.array_slicer._obj, arr):
             if self.array_slicer._obj.shape == arr.shape:
                 self.array_slicer._obj[:] = arr.values
@@ -670,6 +671,12 @@ class WorkFileImageTool(BaseImageTool):
 
 
 def check_same_coord_limits(arr1, arr2):
+    """Check if two xarray DataArrays have the same coordinate limits.
+
+    Returns True if the shape and dimensions are the same and the bounds of the
+    coordinates for each dimension are the same.
+
+    """
     if arr1.ndim != arr2.ndim:
         return False
     if set(arr1.shape) != set(arr2.shape):
