@@ -406,23 +406,60 @@ class WorkFileUpdateThread(QtCore.QThread):
         self.region = None
         self.workdir = None
 
+    def set_params(self, region, workdir):
+        self.region, self.workdir = region, workdir
+
     def run(self):
         try:
-            arr = get_workfile(self.region, self.workdir, norm=False)
+            shape, kwargs = get_workfile_shape_kwargs(self.region, self.workdir)
         except Exception as e:
-            print(e)
+            print("Exception while fetching workfile shape", e)
+            self.sigUpdate.emit(None, None)
+            return
+
+        try:
+            arr = get_workfile_array(
+                self.region, self.workdir, shape, kwargs, norm=False
+            )
+        except Exception as e:
+            print("Exception while fetching workfile array", e)
             arr = None
 
         try:
-            arr_norm = get_workfile(self.region, self.workdir, norm=True)
+            arr_norm = get_workfile_array(
+                self.region, self.workdir, shape, kwargs, norm=True
+            )
         except Exception as e:
-            print(e)
+            print("Exception while fetching workfile norm array", e)
             arr_norm = None
 
         self.sigUpdate.emit(arr, arr_norm)
 
 
-def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray | None:
+def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
+    ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
+
+    tmpdir = tempfile.TemporaryDirectory()
+
+    if os.path.isfile(ini_file):
+        region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
+        shape, coords = get_shape_and_coords(region_info)
+        kwargs = {"coords": coords, "name": region_info["name"]}
+        return shape, kwargs
+    else:
+        ses_config = configparser.ConfigParser(strict=False)
+        ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+
+        with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
+            ses_config.read_file(f)
+
+        nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+        return nslices, {}
+
+
+def get_workfile_array(
+    region: str, workdir: str, shape: int | tuple[int], kwargs: dict, norm: bool = False
+) -> xr.DataArray | None:
     if norm:
         binfile: str = f"Spectrum_{region}_Norm.bin"
     else:
@@ -436,27 +473,65 @@ def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray 
     tmpdir = tempfile.TemporaryDirectory()
     arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
 
-    ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
-
-    if os.path.isfile(ini_file):
-        region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
-        shape, coords = get_shape_and_coords(region_info)
-        arr = xr.DataArray(arr.reshape(shape), coords=coords, name=region_info["name"])
-
+    if isinstance(shape, int):
+        return xr.DataArray(arr.reshape(shape, (int(len(arr) / shape))), **kwargs)
     else:
-        ses_config = configparser.ConfigParser(strict=False)
-        ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+        return xr.DataArray(arr.reshape(shape), **kwargs)
 
-        with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
-            ses_config.read_file(f)
 
-        nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+# def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray | None:
+#     if norm:
+#         binfile: str = f"Spectrum_{region}_Norm.bin"
+#     else:
+#         binfile: str = f"Spectrum_{region}.bin"
 
-        arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
+#     binfile = os.path.join(workdir, binfile)
 
-    tmpdir.cleanup()
+#     if not os.path.isfile(binfile):
+#         return None
 
-    return arr
+#     tmpdir = tempfile.TemporaryDirectory()
+#     arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
+
+#     ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
+
+#     if os.path.isfile(ini_file):
+#         region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
+#         shape, coords = get_shape_and_coords(region_info)
+#         arr = xr.DataArray(arr.reshape(shape), coords=coords, name=region_info["name"])
+
+#     else:
+#         ses_config = configparser.ConfigParser(strict=False)
+#         ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+
+#         with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
+#             ses_config.read_file(f)
+
+#         nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+
+#         arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
+
+#     tmpdir.cleanup()
+
+#     return arr
+
+
+# class WorkFileListUpdateThread(QtCore.QThread):
+#     sigUpdate = QtCore.Signal(list[str])
+
+#     def __init__(self) -> None:
+#         super().__init__()
+#         self.workdir = None
+
+#     def set_workdir(self, workdir):
+#         self.workdir = workdir
+
+#     def run(self):
+#         regions: list[str] = []
+#         for f in os.listdir(self.workdir):
+#             if f.startswith("Spectrum_") and f.endswith("_Norm.bin"):
+#                 regions.append(f[9:-9])
+#         self.sigUpdate.emit(regions)
 
 
 class WorkFileImageTool(BaseImageTool):
@@ -540,8 +615,7 @@ class WorkFileImageTool(BaseImageTool):
         if self.workfilethread.isRunning():
             self.workfilethread.wait()
 
-        self.workfilethread.region = self.region_combo.currentText()
-        self.workfilethread.workdir = self.workdir
+        self.workfilethread.set_params(self.region_combo.currentText(), self.workdir)
         self.workfilethread.start()
 
     @QtCore.Slot(object, object)
@@ -563,26 +637,15 @@ class WorkFileImageTool(BaseImageTool):
                     *self.array_slicer._obj.dims
                 ).values
 
-            for prop in (
-                "nanmax",
-                "nanmin",
-                "absnanmax",
-                "absnanmin",
-                # "coords",
-                # "coords_uniform",
-                # "incs",
-                # "incs_uniform",
-                # "lims",
-                # "lims_uniform",
-                "data_vals_T",
-            ):
-                self.array_slicer.reset_property_cache(prop)
+            self.array_slicer.clear_val_cache(include_vals=True)
             self.slicer_area.refresh_all()
+
         else:
             if set(self.array_slicer._obj.dims) == set(arr.dims):
                 self.array_slicer.set_data(arr.transpose(*self.array_slicer._obj.dims))
             else:
                 self.slicer_area.set_data(arr)
+
         self.setWindowTitle(f"Work : {self.region_combo.currentText()}")
 
 
