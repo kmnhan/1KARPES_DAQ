@@ -435,12 +435,12 @@ def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray 
         return None
 
     tmpdir = tempfile.TemporaryDirectory()
-    arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
+    arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
 
     ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
 
     if os.path.isfile(ini_file):
-        region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
+        region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
         shape, coords = get_shape_and_coords(region_info)
         arr = xr.DataArray(arr.reshape(shape), coords=coords, name=region_info["name"])
 
@@ -448,7 +448,7 @@ def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray 
         ses_config = configparser.ConfigParser(strict=False)
         ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
 
-        with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
+        with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
             ses_config.read_file(f)
 
         nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
