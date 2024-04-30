@@ -641,6 +641,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @QtCore.Slot()
     def restart_workfile_viewer(self):
         self.workfileitool.close()
+        del self.workfileitool
+        gc.collect(generation=2)
         self.workfileitool = WorkFileImageTool()
         self.workfileitool.show()
 
