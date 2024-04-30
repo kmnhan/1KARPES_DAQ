@@ -403,11 +403,12 @@ class WorkFileFetcherSignals(QtCore.QObject):
 
 
 class WorkFileFetcher(QtCore.QRunnable):
-    def __init__(self, region, workdir) -> None:
+    def __init__(self, region, workdir, norm: bool) -> None:
         super().__init__()
         self.signals = WorkFileFetcherSignals()
         self.region = region
         self.workdir = workdir
+        self.norm = norm
 
     def run(self):
         try:
@@ -428,12 +429,23 @@ class WorkFileFetcher(QtCore.QRunnable):
             print("File not found or corrupt, cancel workfile update")
             return
 
+        if not self.norm:
+            self.signals.sigUpdate.emit(arr, None)
+            return
+
         try:
             arr_norm = get_workfile_array(
-                self.region, self.workdir, shape, kwargs, norm=True
+                self.region, self.workdir, shape, kwargs, norm=True, as_array=True
             )
         except Exception as e:
             print("Exception while fetching workfile norm array", e)
+            arr_norm = None
+
+        if arr.shape != arr_norm.shape:
+            print(
+                f"Array has shape {arr.shape} while norm array has shape "
+                f"{arr_norm.shape}, only updating array"
+            )
             arr_norm = None
 
         self.signals.sigUpdate.emit(arr, arr_norm)
@@ -466,7 +478,8 @@ def get_workfile_array(
     shape: int | tuple[int],
     kwargs: dict,
     norm: bool = False,
-) -> tuple[xr.DataArray | None, str | None]:
+    as_array: bool = False,
+) -> tuple[xr.DataArray | np.ndarray | None, str | None]:
     if norm:
         binfile: str = f"Spectrum_{region}_Norm.bin"
     else:
@@ -481,9 +494,14 @@ def get_workfile_array(
         arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
 
     if isinstance(shape, int):
-        return xr.DataArray(arr.reshape(shape, (int(len(arr) / shape))), **kwargs)
+        arr = arr.reshape(shape, (int(len(arr) / shape)))
     else:
-        return xr.DataArray(arr.reshape(shape), **kwargs)
+        arr = arr.reshape(shape)
+
+    if as_array:
+        return arr
+    else:
+        return xr.DataArray(arr, **kwargs)
 
 
 # def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray | None:
@@ -620,16 +638,17 @@ class WorkFileImageTool(BaseImageTool):
 
     @QtCore.Slot()
     def reload(self):
-        fetcher = WorkFileFetcher(self.region_combo.currentText(), self.workdir)
+        fetcher = WorkFileFetcher(
+            self.region_combo.currentText(), self.workdir, self.norm_check.isChecked()
+        )
         fetcher.signals.sigUpdate.connect(self.update_data)
         self.threadpool.start(fetcher)
 
     @QtCore.Slot(object, object)
     def update_data(self, arr, arr_norm):
-        if self.norm_check.isChecked():
-            if arr_norm is not None:
-                arr = arr / arr_norm
-                del arr_norm
+        if arr_norm is not None:
+            arr[:] = arr.values / arr_norm
+            del arr_norm
 
         if check_same_coord_limits(self.array_slicer._obj, arr):
             if self.array_slicer._obj.shape == arr.shape:
