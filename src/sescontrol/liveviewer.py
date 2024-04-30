@@ -645,7 +645,7 @@ class WorkFileImageTool(BaseImageTool):
     @QtCore.Slot(object, object)
     def update_data(self, arr, arr_norm):
         if arr_norm is not None:
-            arr[:] = arr.values / arr_norm
+            arr[:] = arr / arr_norm
             del arr_norm
 
         if check_same_coord_limits(self.array_slicer._obj, arr):
