@@ -10,6 +10,11 @@ from qtpy import QtCore, QtWidgets
 
 from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
 
+try:
+    os.chdir(sys._MEIPASS)
+except:
+    pass
+
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
