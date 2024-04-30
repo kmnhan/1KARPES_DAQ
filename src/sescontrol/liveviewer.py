@@ -413,7 +413,7 @@ class WorkFileFetcher(QtCore.QRunnable):
         try:
             shape, kwargs = get_workfile_shape_kwargs(self.region, self.workdir)
         except Exception as e:
-            print("Exception while fetching workfile shape", e)
+            print("Exception while fetching workfile shape:", e)
             return
 
         try:
@@ -421,7 +421,7 @@ class WorkFileFetcher(QtCore.QRunnable):
                 self.region, self.workdir, shape, kwargs, norm=False
             )
         except Exception as e:
-            print("Exception while fetching workfile array", e)
+            print("Exception while fetching workfile array:", e)
             arr = None
 
         if arr is None:
@@ -444,7 +444,7 @@ def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         if os.path.isfile(ini_file):
-            region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
+            region_info = parse_ini(shutil.copy(ini_file, tmpdir))["spectrum"]
             shape, coords = get_shape_and_coords(region_info)
             kwargs = {"coords": coords, "name": region_info["name"]}
             return shape, kwargs
@@ -452,7 +452,7 @@ def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
             ses_config = configparser.ConfigParser(strict=False)
             ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
 
-            with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
+            with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
                 ses_config.read_file(f)
 
             # Number of points on angle axis
@@ -478,7 +478,7 @@ def get_workfile_array(
         return None
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
+        arr = np.fromfile(shutil.copy(binfile, tmpdir), dtype=np.float32)
 
     if isinstance(shape, int):
         return xr.DataArray(arr.reshape(shape, (int(len(arr) / shape))), **kwargs)
