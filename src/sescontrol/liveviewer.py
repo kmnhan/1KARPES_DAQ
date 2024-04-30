@@ -398,23 +398,22 @@ class LiveImageTool(BaseImageTool):
         super().closeEvent(event)
 
 
-class WorkFileUpdateThread(QtCore.QThread):
+class WorkFileFetcherSignals(QtCore.QObject):
     sigUpdate = QtCore.Signal(object, object)
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.region = None
-        self.workdir = None
 
-    def set_params(self, region, workdir):
-        self.region, self.workdir = region, workdir
+class WorkFileFetcher(QtCore.QRunnable):
+    def __init__(self, region, workdir) -> None:
+        super().__init__()
+        self.signals = WorkFileFetcherSignals()
+        self.region = region
+        self.workdir = workdir
 
     def run(self):
         try:
             shape, kwargs = get_workfile_shape_kwargs(self.region, self.workdir)
         except Exception as e:
             print("Exception while fetching workfile shape", e)
-            self.sigUpdate.emit(None, None)
             return
 
         try:
@@ -425,6 +424,10 @@ class WorkFileUpdateThread(QtCore.QThread):
             print("Exception while fetching workfile array", e)
             arr = None
 
+        if arr is None:
+            print("File not found or corrupt, cancel workfile update")
+            return
+
         try:
             arr_norm = get_workfile_array(
                 self.region, self.workdir, shape, kwargs, norm=True
@@ -433,33 +436,37 @@ class WorkFileUpdateThread(QtCore.QThread):
             print("Exception while fetching workfile norm array", e)
             arr_norm = None
 
-        self.sigUpdate.emit(arr, arr_norm)
+        self.signals.sigUpdate.emit(arr, arr_norm)
 
 
 def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
     ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
 
-    tmpdir = tempfile.TemporaryDirectory()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        if os.path.isfile(ini_file):
+            region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
+            shape, coords = get_shape_and_coords(region_info)
+            kwargs = {"coords": coords, "name": region_info["name"]}
+            return shape, kwargs
+        else:
+            ses_config = configparser.ConfigParser(strict=False)
+            ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
 
-    if os.path.isfile(ini_file):
-        region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
-        shape, coords = get_shape_and_coords(region_info)
-        kwargs = {"coords": coords, "name": region_info["name"]}
-        return shape, kwargs
-    else:
-        ses_config = configparser.ConfigParser(strict=False)
-        ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+            with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
+                ses_config.read_file(f)
 
-        with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
-            ses_config.read_file(f)
-
-        nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
-        return nslices, {}
+            # Number of points on angle axis
+            nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+            return nslices, {}
 
 
 def get_workfile_array(
-    region: str, workdir: str, shape: int | tuple[int], kwargs: dict, norm: bool = False
-) -> xr.DataArray | None:
+    region: str,
+    workdir: str,
+    shape: int | tuple[int],
+    kwargs: dict,
+    norm: bool = False,
+) -> tuple[xr.DataArray | None, str | None]:
     if norm:
         binfile: str = f"Spectrum_{region}_Norm.bin"
     else:
@@ -470,8 +477,8 @@ def get_workfile_array(
     if not os.path.isfile(binfile):
         return None
 
-    tmpdir = tempfile.TemporaryDirectory()
-    arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
 
     if isinstance(shape, int):
         return xr.DataArray(arr.reshape(shape, (int(len(arr) / shape))), **kwargs)
@@ -535,8 +542,12 @@ def get_workfile_array(
 
 
 class WorkFileImageTool(BaseImageTool):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
+
+        if threadpool is None:
+            threadpool = QtCore.QThreadPool()
+        self.threadpool = threadpool
 
         self.workdir = os.path.join(SES_DIR, "work")
 
@@ -588,9 +599,6 @@ class WorkFileImageTool(BaseImageTool):
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
 
-        self.workfilethread = WorkFileUpdateThread()
-        self.workfilethread.sigUpdate.connect(self.update_data)
-
     def toggle_update_timer(self):
         if self.autoupdate_check.isChecked():
             self.update_timer.start()
@@ -612,18 +620,12 @@ class WorkFileImageTool(BaseImageTool):
 
     @QtCore.Slot()
     def reload(self):
-        if self.workfilethread.isRunning():
-            self.workfilethread.wait()
-
-        self.workfilethread.set_params(self.region_combo.currentText(), self.workdir)
-        self.workfilethread.start()
+        fetcher = WorkFileFetcher(self.region_combo.currentText(), self.workdir)
+        fetcher.signals.sigUpdate.connect(self.update_data)
+        self.threadpool.start(fetcher)
 
     @QtCore.Slot(object, object)
     def update_data(self, arr, arr_norm):
-        if arr is None:
-            print("File not found or corrupt, cancel workfile update")
-            return
-
         if self.norm_check.isChecked():
             if arr_norm is not None:
                 arr = arr / arr_norm

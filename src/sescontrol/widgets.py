@@ -359,7 +359,9 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.start_time: float | None = None
         self.step_times: list[float] = []
 
-        self.workfileitool: WorkFileImageTool = WorkFileImageTool()
+        self.workfileitool: WorkFileImageTool = WorkFileImageTool(
+            threadpool=self.threadpool
+        )
 
         self._itools: list[LiveImageTool | None] = []
 
