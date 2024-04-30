@@ -75,7 +75,7 @@ class F70GUI(QtWidgets.QMainWindow):
         values_layout.addWidget(QtWidgets.QLabel("He Discharge"), 0, 0)
         values_layout.addWidget(QtWidgets.QLabel("Water Out"), 1, 0)
         values_layout.addWidget(QtWidgets.QLabel("Water In"), 2, 0)
-        values_layout.addWidget(QtWidgets.QLabel("Pressure"), 3, 0)
+        values_layout.addWidget(QtWidgets.QLabel("Return Pressure"), 3, 0)
         self.labels = [
             QtWidgets.QLabel(),
             QtWidgets.QLabel(),
