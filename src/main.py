@@ -2,12 +2,12 @@ import multiprocessing
 import sys
 import os
 
+os.environ["QT_API"] = "pyqt6"
 from qtpy import QtGui, QtWidgets, uic
 
 from attributeserver.widgets import StatusWidget
 from sescontrol.widgets import ScanType, SESShortcuts
 
-os.environ["QT_API"] = "pyqt6"
 
 try:
     os.chdir(sys._MEIPASS)

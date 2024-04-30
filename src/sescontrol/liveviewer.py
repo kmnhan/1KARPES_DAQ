@@ -7,7 +7,6 @@ import time
 import zipfile
 
 import erlab.io
-import erlab.io.plugins
 import numpy as np
 import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
