@@ -637,7 +637,8 @@ class WorkFileImageTool(BaseImageTool):
                     *self.array_slicer._obj.dims
                 ).values
 
-            self.array_slicer.clear_val_cache(include_vals=True)
+            for prop in ("nanmax", "nanmin", "absnanmax", "absnanmin", "data_vals_T"):
+                self.array_slicer.reset_property_cache(prop)
             self.slicer_area.refresh_all()
 
         else:
