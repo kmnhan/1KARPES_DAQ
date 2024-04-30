@@ -612,7 +612,7 @@ class WorkFileImageTool(BaseImageTool):
         self.regionscan_timer.start()
 
         self.update_timer = QtCore.QTimer(self)
-        self.update_timer.setInterval(250)
+        self.update_timer.setInterval(300)
         self.update_timer.timeout.connect(self.reload)
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
@@ -625,10 +625,12 @@ class WorkFileImageTool(BaseImageTool):
 
     def update_regions(self):
         """Scan for regions in work directory."""
-        regions: list[str] = []
-        for f in os.listdir(self.workdir):
-            if f.startswith("Spectrum_") and f.endswith("_Norm.bin"):
-                regions.append(f[9:-9])
+        regions: list[str] = [
+            f[9:-9]
+            for f in os.listdir(self.workdir)
+            if f.startswith("Spectrum_") and f.endswith("_Norm.bin")
+        ]
+
         if set(regions) == set(self.regions):
             return
         else:
