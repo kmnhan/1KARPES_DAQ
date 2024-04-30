@@ -352,16 +352,14 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.stop_point_btn.clicked.connect(self.handle_stop_point)
 
         self.pos_logger = MotorPosWriter()
-        self.threadpool = QtCore.QThreadPool()
+        self.threadpool = QtCore.QThreadPool.globalInstance()
         self.threadpool.start(self.pos_logger)
 
         self.current_file: str | None = None
         self.start_time: float | None = None
         self.step_times: list[float] = []
 
-        self.workfileitool: WorkFileImageTool = WorkFileImageTool(
-            threadpool=self.threadpool
-        )
+        self.workfileitool: WorkFileImageTool = WorkFileImageTool()
 
         self._itools: list[LiveImageTool | None] = []
 
@@ -503,7 +501,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if only_da:
             self.itool = None
         else:
-            self.itool = LiveImageTool(threadpool=self.threadpool)
+            self.itool = LiveImageTool()
             if motion_edited:
                 iter_coords = {"Iteration": np.arange(self.numpoints)}
                 self.itool.set_params(
@@ -640,6 +638,11 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             header.append(m)
         self.pos_logger.write_header(header)
 
+    @QtCore.Slot()
+    def restart_workfile_viewer(self):
+        self.workfileitool.close()
+        self.workfileitool = WorkFileImageTool(threadpool=self.threadpool)
+
     def closeEvent(self, event: QtGui.QCloseEvent):
         if self.isEnabled() and not self.start_btn.isEnabled():
             # If the widget is enabled but the start button is disabled, there is an
@@ -651,14 +654,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 event.ignore()
                 return
         self.pos_logger.stop()
-
-        flag = self.threadpool.waitForDone(15000)
-        if not flag:
-            QtWidgets.QMessageBox.critical(
-                self,
-                "Threadpool timed out after 15 seconds",
-                f"Remaining threads: {self.threadpool.activeThreadCount()}",
-            )
         super().closeEvent(event)
 
 

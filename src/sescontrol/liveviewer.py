@@ -282,12 +282,10 @@ class DataFetcher(QtCore.QRunnable):
 class LiveImageTool(BaseImageTool):
     sigClosed = QtCore.Signal(object)
 
-    def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
+    def __init__(self, parent=None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
 
-        if threadpool is None:
-            threadpool = QtCore.QThreadPool()
-        self.threadpool = threadpool
+        self.threadpool = QtCore.QThreadPool.globalInstance()
 
         for d in self.docks:
             d.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
@@ -560,12 +558,10 @@ def get_workfile_array(
 
 
 class WorkFileImageTool(BaseImageTool):
-    def __init__(self, parent=None, threadpool: QtCore.QThreadPool | None = None):
+    def __init__(self, parent=None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
 
-        if threadpool is None:
-            threadpool = QtCore.QThreadPool()
-        self.threadpool = threadpool
+        self.threadpool = QtCore.QThreadPool.globalInstance()
 
         self.workdir = os.path.join(SES_DIR, "work")
 

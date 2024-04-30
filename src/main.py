@@ -3,7 +3,7 @@ import sys
 import os
 
 os.environ["QT_API"] = "pyqt6"
-from qtpy import QtGui, QtWidgets, uic
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from attributeserver.widgets import StatusWidget
 from sescontrol.widgets import ScanType, SESShortcuts
@@ -28,6 +28,8 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.setupUi(self)
         self.setWindowTitle("1KARPES Data Acquisition")
 
+        self.threadpool = QtCore.QThreadPool.globalInstance()
+
         self.ses_shortcuts = SESShortcuts()
         self.status = StatusWidget()
         self.scantype = ScanType()
@@ -40,6 +42,21 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
         self.actionreconnect.triggered.connect(self.ses_shortcuts.reconnect)
         self.actionworkfile.triggered.connect(self.scantype.workfileitool.show)
+        self.actionrestartworkfile.triggered.connect(
+            self.scantype.restart_workfile_viewer
+        )
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        flag = self.threadpool.waitForDone(15000)
+        if not flag:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Threadpool timed out after 15 seconds",
+                f"Remaining threads: {self.threadpool.activeThreadCount()}",
+            )
+
+        print("Proper Termination Achieved! Yay!")
+        super().closeEvent(event)
 
 
 class MainWindow(MainWindowGUI):

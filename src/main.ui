@@ -27,7 +27,7 @@
      <x>0</x>
      <y>0</y>
      <width>494</width>
-     <height>20</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -35,6 +35,7 @@
      <string>Edit</string>
     </property>
     <addaction name="actionreconnect"/>
+    <addaction name="actionrestartworkfile"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -54,6 +55,11 @@
   <action name="actionworkfile">
    <property name="text">
     <string>Show Workfile Viewer</string>
+   </property>
+  </action>
+  <action name="actionrestartworkfile">
+   <property name="text">
+    <string>Restart Workfile Viewer</string>
    </property>
   </action>
  </widget>
