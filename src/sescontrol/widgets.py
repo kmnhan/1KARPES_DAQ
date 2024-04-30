@@ -641,7 +641,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @QtCore.Slot()
     def restart_workfile_viewer(self):
         self.workfileitool.close()
-        self.workfileitool = WorkFileImageTool(threadpool=self.threadpool)
+        self.workfileitool = WorkFileImageTool()
+        self.workfileitool.show()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         if self.isEnabled() and not self.start_btn.isEnabled():
