@@ -143,7 +143,7 @@ class MainWindow(F70GUI):
         self.stop_button.clicked.connect(self.stop_button_clicked)
         self.reset_button.clicked.connect(self.reset_button_clicked)
 
-        self.alarm_notified: bool = False
+        self.alarms_notified: set[str] = set()
 
         self.update_thread = UpdateThread(self.instr)
         self.update_thread.sigUpdate.connect(self.update_status)
@@ -161,20 +161,20 @@ class MainWindow(F70GUI):
             self.update_thread.wait()
         self.instr.turn_on()
 
-        send_message(f"{self.current_time_formatted} Compressor ON")
+        send_message(f":large_green_circle: {self.current_time_formatted} Compressor ON")
 
     def stop_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.instr.turn_off()
 
-        send_message(f"{self.current_time_formatted} Compressor OFF")
+        send_message(f":red_circle: {self.current_time_formatted} Compressor OFF")
 
     def reset_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
         self.instr.reset()
-        self.alarm_notified = False
+        self.alarms_notified = []
 
     def refresh(self):
         if self.update_thread.isRunning():
@@ -184,12 +184,16 @@ class MainWindow(F70GUI):
     def notify_alarm(
         self, alarms: list[str], temperature: tuple[int, int, int], pressure: int
     ):
+        if len(alarms) == 0:
+            send_message(f":white_check_mark: {self.current_time_formatted} Alarms cleared")
+            return
         temp_str = ", ".join([f"{t}°C" for t in temperature])
         send_message(
             [
-                ":warning: Alarms raised:",
+                f":warning: {self.current_time_formatted} Alarms raised:",
                 ", ".join(alarms),
-                f"Current status: {temp_str}, Return pressure {pressure} psig",
+                f"Current status: {temp_str}",
+                f"Return pressure {pressure} psig",
             ]
         )
 
@@ -214,10 +218,9 @@ class MainWindow(F70GUI):
             else:
                 label.setText(self.OFF_LABEL)
 
-        if len(alarms) > 0:
-            if not self.alarm_notified:
-                self.notify_alarm(alarms, temperature, pressure)
-            self.alarms_notified = True
+        if set(alarms) != self.alarms_notified:
+            self.notify_alarm(alarms, temperature, pressure)
+            self.alarms_notified = set(alarms)
 
         for label, value in zip(self.labels[:3], temperature):
             label.setText(f"{value} °C")
