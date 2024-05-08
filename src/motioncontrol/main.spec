@@ -2,22 +2,22 @@
 
 
 a = Analysis(
-    ['src\\motioncontrol\\main.py'],
+    ["main.py"],
     pathex=[],
     binaries=[],
     datas=[
-        ("src/motioncontrol/channel.ui", "."),
-        ("src/motioncontrol/controller.ui", "."),
-        ("src/motioncontrol/icon.ico", "."),
-        ("src/motioncontrol/maniserver.py", "."),
-        ("src/motioncontrol/moee.py", "."),
-        ("src/motioncontrol/motionwidgets.py", "."),
+        ("channel.ui", "."),
+        ("controller.ui", "."),
+        ("icon.ico", "."),
+        ("maniserver.py", "."),
+        ("moee.py", "."),
+        ("motionwidgets.py", "."),
     ],
-    hiddenimports=['PyQt6', 'pyqtgraph', 'qtawesome'],
+    hiddenimports=["PyQt6", "pyqtgraph", "qtawesome"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['IPython'],
+    excludes=["IPython"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
@@ -27,7 +27,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Motion Control',
+    name="Motion Control",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -38,7 +38,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['src\\motioncontrol\\icon.ico'],
+    icon=["icon.ico"],
 )
 coll = COLLECT(
     exe,
@@ -47,5 +47,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='motioncontrol',
+    name="motioncontrol",
 )

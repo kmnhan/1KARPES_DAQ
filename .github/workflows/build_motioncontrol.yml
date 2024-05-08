@@ -29,7 +29,7 @@ jobs:
       run: pip install -r src/motioncontrol/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller motioncontrol.spec
+      run: pyinstaller src/motioncontrol/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
