@@ -1,51 +1,20 @@
 # 1KARPES_DAQ
-## Building
-### Log viewer
-```
-pyinstaller ./src/logviewer.py --onedir --windowed `
---icon src/images/logviewer.ico `
---add-data="src/logviewer.ui;." `
---add-data="src/logreader.py;." `
---add-data="src/images/logviewer.ico;./images"` `
---add-data="src/qt_extensions/*;./qt_extensions/" `
---hidden-import PyQt6 `
---hidden-import pandas --hidden-import seaborn --exclude IPython `
---upx-dir C:\upx410w
-```
 
-### Pylon Camera Viewer
-```
-pyinstaller ./src/pyloncam.py --onedir --windowed `
---icon src/images/pyloncam.ico `
---add-data="src/framegrab.ui;." `
---add-data="src/images/pyloncam.ico;./images" `
---add-data="src/qt_extensions/*;./qt_extensions/" `
---hidden-import PyQt6 `
---hidden-import matplotlib `
---exclude IPython `
---upx-dir C:\upx410w
-```
+Data acquisition software for the ultra low temperature ARPES system at the electronic
+structure research laboratory at Korea Advanced Institute of Science and Technology
+(KAIST).
 
+## Build status
 
-### Webcam Viewer
-```
-pyinstaller ./src/webcam.py --onedir --windowed `
---icon src/images/webcam.ico `
---add-data="src/webcam.ui;." `
---add-data="src/images/webcam.ico;./images" `
---add-data="src/qt_extensions/*;./qt_extensions/" `
---hidden-import PyQt6 `
---exclude IPython `
---upx-dir C:\upx410w
-```
+![Temperature Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller)
 
+![Motion Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller)
 
-### Motion Controller
-```
-pyinstaller ./src/motioncontrol/main.py --onedir --windowed `
---icon src/motioncontrol/icon.ico `
---add-data="src/motioncontrol/*;." `
---hidden-import PyQt6 `
---exclude IPython
-```
+![Pylon Camera Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_pyloncam.yml?label=Pylon%20Camera%20Viewer)
+
+![MG15](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15)
+
+![Log Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer)
+
+![Webcam Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer)
 
