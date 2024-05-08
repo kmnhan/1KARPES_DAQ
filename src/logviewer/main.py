@@ -296,9 +296,9 @@ if __name__ == "__main__":
         qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
     if sys.platform == "darwin":
-        qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.icns"))
+        qapp.setWindowIcon(QtGui.QIcon("./icon.icns"))
     else:
-        qapp.setWindowIcon(QtGui.QIcon("./images/logviewer.ico"))
+        qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
     win = MainWindow()
     win.show()
     win.activateWindow()
