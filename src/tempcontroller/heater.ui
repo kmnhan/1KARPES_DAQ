@@ -42,7 +42,7 @@
           <bool>true</bool>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::NoFocus</enum>
+          <enum>Qt::FocusPolicy::NoFocus</enum>
          </property>
          <property name="frame">
           <bool>true</bool>
@@ -51,10 +51,13 @@
           <bool>true</bool>
          </property>
          <property name="buttonSymbols">
-          <enum>QAbstractSpinBox::NoButtons</enum>
+          <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
          </property>
          <property name="decimals">
           <number>3</number>
+         </property>
+         <property name="maximum">
+          <double>400.000000000000000</double>
          </property>
         </widget>
        </item>
@@ -84,7 +87,7 @@
           <number>3</number>
          </property>
          <property name="maximum">
-          <double>310.000000000000000</double>
+          <double>400.000000000000000</double>
          </property>
         </widget>
        </item>
@@ -119,7 +122,7 @@
    <item>
     <widget class="Line" name="line">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -150,7 +153,7 @@
         <double>0.100000000000000</double>
        </property>
        <property name="maximum">
-        <double>100.000000000000000</double>
+        <double>99.000000000000000</double>
        </property>
        <property name="singleStep">
         <double>0.100000000000000</double>
@@ -178,7 +181,7 @@
    <item>
     <widget class="Line" name="line_2">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -214,7 +217,7 @@
           <number>3000</number>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -244,7 +247,7 @@
           </sizepolicy>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::NoFocus</enum>
+          <enum>Qt::FocusPolicy::NoFocus</enum>
          </property>
          <item>
           <property name="text">
@@ -279,6 +282,7 @@
    <class>VISAWidgetBase</class>
    <extends>QWidget</extends>
    <header>connection</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
