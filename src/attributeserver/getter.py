@@ -76,7 +76,13 @@ def get_pressure_list() -> list[str]:
 
 
 def get_pressure_dict() -> dict[str, str]:
-    return dict(zip(("torr_main", "torr_middle", "torr_loadlock"), get_pressure_list()))
+    return dict(
+        zip(
+            ("torr_main", "torr_middle", "torr_loadlock"),
+            get_pressure_list(),
+            strict=True,
+        )
+    )
 
 
 def get_position_list() -> list[str]:
@@ -84,7 +90,7 @@ def get_position_list() -> list[str]:
 
 
 def get_position_dict() -> dict[str, str]:
-    return dict(zip(MANIPULATOR_AXES, get_position_list()))
+    return dict(zip(MANIPULATOR_AXES, get_position_list(), strict=True))
 
 
 def get_temperature_list() -> list[str]:
@@ -94,7 +100,7 @@ def get_temperature_list() -> list[str]:
 
 
 def get_temperature_dict() -> dict[str, str]:
-    return dict(zip(TEMPERATURE_KEYS, get_temperature_list()))
+    return dict(zip(TEMPERATURE_KEYS, get_temperature_list(), strict=True))
 
 
 def get_slit_dict() -> dict[str, str]:

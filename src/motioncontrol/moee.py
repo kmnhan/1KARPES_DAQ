@@ -1,4 +1,4 @@
-"""Python interface for the MMC1 piezomotor controller"""
+"""Python interface for the MMC1 piezomotor controller."""
 
 import enum
 import logging

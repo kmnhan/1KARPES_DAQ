@@ -31,7 +31,7 @@ def parse_cryo_time(v: str | float) -> datetime.datetime:
 
 
 def datetime_to_filename(dt: datetime.datetime) -> str:
-    """Returns the csv file name corresponding to given input time."""
+    """Return the csv file name corresponding to given input time."""
     return str(dt.year)[2:] + str(dt.month).zfill(2) + str(dt.day).zfill(2) + ".csv"
 
 
@@ -62,14 +62,10 @@ def parse_single_cryo(filename):
     """Read data from a cryocooler log file to a `pandas.DataFrame`."""
     header_rows = []
     legacy = False
-    with open(filename, "r") as f:
+    with open(filename) as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
-            if (
-                line.startswith(lines[0][:10])
-                or line.startswith("Time")
-                or line.startswith("Running")
-            ):
+            if line.startswith((lines[0][:10], "Time", "Running")):
                 header_rows.append(i)
         if not lines[header_rows[-1]].startswith("Time"):
             legacy = True

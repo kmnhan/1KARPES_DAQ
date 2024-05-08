@@ -1,4 +1,4 @@
-"""GUI for the 1K ARPES 6-axis manipulator"""
+"""GUI for the 1K ARPES 6-axis manipulator."""
 
 import logging
 import multiprocessing
@@ -7,8 +7,6 @@ import sys
 from multiprocessing import shared_memory
 
 import numpy as np
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from maniserver import ManiServer
 from moee import MMStatus
 from motionwidgets import (
@@ -17,10 +15,11 @@ from motionwidgets import (
     SingleChannelWidget,
     SingleControllerWidget,
 )
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 LOG_DIR = "D:/Logs/Motion"

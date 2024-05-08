@@ -1,10 +1,9 @@
 import time
 
 import zmq
-from qtpy import QtCore
-
 from constants import CRYO_PORT, MG15_PORT, SLIT_PORT, SLIT_TABLE
 from livelogreader import get_pressure, get_temperature
+from qtpy import QtCore
 
 # class ServerTemplate(QtCore.QThread):
 #     PORT = 5555

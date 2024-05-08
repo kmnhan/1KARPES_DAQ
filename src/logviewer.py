@@ -3,14 +3,12 @@ import gc
 import os
 import sys
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 import pyqtgraph as pg
 import qtawesome as qta
 import tomlkit
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from logreader import CRYO_DIR, get_cryocooler_log, get_pressure_log
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import (
@@ -18,10 +16,14 @@ from qt_extensions.plotting import (
     DynamicPlotItemTwiny,
     XDateSnapCurvePlotDataItem,
 )
+from qtpy import QtCore, QtGui, QtWidgets, uic
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 
@@ -65,8 +67,8 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot0 = DynamicPlotItemTwiny(
             legendtableview=self.legendtable,
             plot_cls=XDateSnapCurvePlotDataItem,
-            plot_kw=dict(autoDownsample=True, clipToView=True),
-            pen_kw_twin=dict(width=2, style=QtCore.Qt.DashLine),
+            plot_kw={"autoDownsample": True, "clipToView": True},
+            pen_kw_twin={"width": 2, "style": QtCore.Qt.DashLine},
         )
         self.graphics_layout.addItem(self.plot0, 0, 0)
         self.plot0.setup_twiny()
@@ -77,7 +79,7 @@ class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
         self.plot1 = DynamicPlotItem(
             legendtableview=LegendTableView(),
             plot_cls=PressureSnapCurvePlotDataItem,
-            plot_kw=dict(autoDownsample=True, clipToView=True),
+            plot_kw={"autoDownsample": True, "clipToView": True},
         )
         self.graphics_layout.addItem(self.plot1, 1, 0)
         self.plot1.setAxisItems({"bottom": pg.DateAxisItem()})
@@ -220,7 +222,7 @@ class MainWindow(MainWindowGUI):
             )
             if config_file is None or not os.path.isfile(config_file):
                 config_file = os.path.join(CRYO_DIR, "config.toml")
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 plot_config = tomlkit.load(f)["plotting"]
             self.plot0.set_twiny_labels(plot_config["secondary_axes"])
 

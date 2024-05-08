@@ -11,18 +11,17 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyvisa
 import tomlkit
+from connection import VISAThread
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
-
-from connection import VISAThread
 from widgets import (
     CommandWidget,
     HeaterWidget,
+    HeatSwitchWidget,
+    PlottingWidget,
     QVLine,
     ReadingWidget,
-    PlottingWidget,
-    HeatSwitchWidget,
 )
 
 try:
@@ -44,12 +43,11 @@ log.addHandler(handler)
 
 def header_changed(filename, header: list[str]) -> bool:
     """Check log file and determine whether new header needs to be appended."""
-
     if not os.path.isfile(filename):
         return True
 
     last_header = ""
-    with open(filename, "r") as f:
+    with open(filename) as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             if line.startswith("Time"):
@@ -94,7 +92,6 @@ class LoggingProc(multiprocessing.Process):
         self.queue = multiprocessing.Manager().Queue()
 
     def run(self):
-        """The main method of the process that runs the logging loop."""
         self._stopped.clear()
 
         while not self._stopped.is_set():
@@ -113,7 +110,7 @@ class LoggingProc(multiprocessing.Process):
                     writer = csv.writer(f)
                     if need_header:
                         writer.writerow(self.header)
-                    writer.writerow([dt.isoformat()] + msg)
+                    writer.writerow([dt.isoformat(), *msg])
             except PermissionError:
                 # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
@@ -123,7 +120,7 @@ class LoggingProc(multiprocessing.Process):
                 continue
 
     def stop(self):
-        """Stops the logging process and prints any remaining log entries."""
+        """Stop the logging process and print any remaining log entries."""
         n_left = int(self.queue.qsize())
         if n_left != 0:
             print(
@@ -137,7 +134,7 @@ class LoggingProc(multiprocessing.Process):
         self.join()
 
     def append(self, timestamp: datetime.datetime, content: str | list[str]):
-        """Appends a log entry to the queue."""
+        """Append a log entry to the queue."""
         if isinstance(content, str):
             content = [content]
         self.queue.put((timestamp, content))
@@ -152,7 +149,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         # Read config file
         with open(
-            QtCore.QSettings("erlab", "tempcontroller").value("config_file"), "r"
+            QtCore.QSettings("erlab", "tempcontroller").value("config_file")
         ) as f:
             self.config = tomlkit.load(f)
 
@@ -233,7 +230,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.commands.addTab(self.command331, "331")
 
         self.plotwindow = PlottingWidget(
-            pen_kw=dict(), pen_kw_twin=dict(width=2, style=QtCore.Qt.DashLine)
+            pen_kw={}, pen_kw_twin={"width": 2, "style": QtCore.Qt.DashLine}
         )
 
         self.actionheaters.triggered.connect(self.show_heaters)
@@ -496,7 +493,7 @@ class MainWindow(MainWindowGUI):
 
         self.plot_values[0].append(dt.timestamp())
         log.log(logging.TRACE, "Updating shared memory")
-        for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals)):
+        for i, (dq, kstr) in enumerate(zip(self.plot_values[1:], vals, strict=False)):
             # Update plot value
             kval = float(kstr)
             dq.append(kval)
@@ -667,7 +664,7 @@ def valid_config(filename: str | None = None) -> bool:
     if filename is None:
         filename = QtCore.QSettings("erlab", "tempcontroller").value("config_file", "")
     try:
-        with open(filename, "r") as f:
+        with open(filename) as f:
             tomlkit.load(f)
             return True
     except Exception as e:

@@ -30,7 +30,7 @@ class RequestHandler:
         self._resource_kwargs = kwargs
 
     def open(self):
-        """Opens the pyvisa resource."""
+        """Open the pyvisa resource."""
         self.inst = pyvisa.ResourceManager().open_resource(
             self.resource_name, **self._resource_kwargs
         )
@@ -61,7 +61,7 @@ class RequestHandler:
         return res
 
     def read(self, *args, loglevel: int = logging.DEBUG, **kwargs):
-        """Reads data from the resource.
+        """Read data from the resource.
 
         This is not very likely to be used. It may cause problems due to the wait time.
         Use `query` instead.

@@ -6,7 +6,7 @@ from collections.abc import Sequence
 
 import pyqtgraph as pg
 from connection import VISAThread, VISAWidgetBase
-from qt_extensions.legendtable import LegendTableView  # noqa: F401
+from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -364,15 +364,15 @@ class ReadingWidgetGUI(VISAWidgetBase):
             #     self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 2, 1)
 
     def update_names(self, names: list[str]):
-        for label, name in zip(self.name_labels, names):
+        for label, name in zip(self.name_labels, names, strict=True):
             label.setText(name)
 
     def update_krdg(self, readings: list[float]):
-        for spin, value in zip(self.krdg_spins, readings):
+        for spin, value in zip(self.krdg_spins, readings, strict=True):
             spin.setValue(value)
 
     def update_srdg(self, readings: list[float]):
-        for spin, value in zip(self.srdg_spins, readings):
+        for spin, value in zip(self.srdg_spins, readings, strict=True):
             spin.setValue(value)
 
 

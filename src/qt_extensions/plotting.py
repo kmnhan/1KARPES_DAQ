@@ -3,9 +3,8 @@ from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtCore, QtGui
-
 from qt_extensions.legendtable import LegendTableView
+from qtpy import QtCore, QtGui
 
 
 class SnapCurveItem(pg.PlotCurveItem):
@@ -24,7 +23,7 @@ class SnapCurveItem(pg.PlotCurveItem):
         self.hoverable = hoverable
 
         if target_kw is None:
-            target_kw = dict()
+            target_kw = {}
         target_kw["movable"] = False
         target_kw.setdefault("size", 6)
 
@@ -82,7 +81,7 @@ class SnapCurvePlotDataItem(pg.PlotDataItem):
         self.setData(*args, **kwargs)
 
         self.curve.target.setLabel(
-            self.gen_label, labelOpts=dict(fill=(100, 100, 100, 150))
+            self.gen_label, labelOpts={"fill": (100, 100, 100, 150)}
         )
 
     @staticmethod
@@ -129,14 +128,14 @@ class DynamicPlotItem(pg.PlotItem):
         self.legendtable: LegendTableView = legendtableview
         self.plot_cls: type[pg.PlotDataItem] = plot_cls
         if plot_kw is None:
-            plot_kw = dict()
+            plot_kw = {}
         self.plot_kw: dict = plot_kw
         self.plots: list[pg.PlotDataItem] = []
         if ncurves is not None:
             self.set_ncurves(ncurves)
 
         if pen_kw is None:
-            pen_kw = dict()
+            pen_kw = {}
         self.pen_kw = pen_kw
 
         self.legendtable.model().sigCurveToggled.connect(self.update_visibility)
@@ -147,7 +146,7 @@ class DynamicPlotItem(pg.PlotItem):
             angle=90,
             movable=True,
             label="",
-            labelOpts=dict(position=0.75, movable=True, fill=(200, 200, 200, 75)),
+            labelOpts={"position": 0.75, "movable": True, "fill": (200, 200, 200, 75)},
         )
         self.addItem(self.vline)
         self.vline.sigPositionChanged.connect(self.update_cursor_label)
@@ -156,14 +155,20 @@ class DynamicPlotItem(pg.PlotItem):
             if hasattr(self.plot_cls, "format_x"):
                 xformat = self.plot_cls.format_x
             else:
-                xformat = lambda x: f"{x:.3f}"
+
+                def xformat(x):
+                    return f"{x:.3f}"
+
         self.xformat = xformat
 
         if yformat is None:
             if hasattr(self.plot_cls, "format_y"):
                 yformat = self.plot_cls.format_y
             else:
-                yformat = lambda y: f"{y:.3f}"
+
+                def yformat(y):
+                    return f"{y:.3f}"
+
         self.yformat = yformat
 
         self.toggle_cursor()
@@ -189,6 +194,7 @@ class DynamicPlotItem(pg.PlotItem):
             self.legendtable.enabled,
             self.legendtable.entries,
             self.legendtable.colors,
+            strict=True,
         ):
             if plot.xData is None:
                 continue
@@ -221,7 +227,7 @@ class DynamicPlotItem(pg.PlotItem):
     def set_labels(self, labels: Sequence[str]):
         self.legendtable.set_items(labels)
         self.set_ncurves(len(labels))
-        for plot, label in zip(self.plots, labels):
+        for plot, label in zip(self.plots, labels, strict=True):
             plot.opts["name"] = label
             plot.setProperty("styleWasChanged", True)
 
@@ -249,7 +255,11 @@ class DynamicPlotItem(pg.PlotItem):
         self, x: Sequence[float], ylist: Sequence[Sequence[float]], **kwargs
     ):
         for plot, y, color, enabled in zip(
-            self.plots, ylist, self.legendtable.colors, self.legendtable.enabled
+            self.plots,
+            ylist,
+            self.legendtable.colors,
+            self.legendtable.enabled,
+            strict=True,
         ):
             plot.setVisible(enabled)
             plot.setData(x, y, **kwargs)
@@ -274,7 +284,7 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
         super().__init__(*args, **kwargs)
 
         if pen_kw_twin is None:
-            pen_kw_twin = dict()
+            pen_kw_twin = {}
         self.pen_kw_twin = pen_kw_twin
 
         # Add another viewbox
@@ -327,7 +337,7 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
                 p = self.plots.pop(-1)
                 p.getViewBox().removeItem(p)
 
-        for p, label in zip(self.plots, self.legendtable.entries):
+        for p, label in zip(self.plots, self.legendtable.entries, strict=True):
             if label in self.twiny_labels:
                 vb = self.vbs[1]
             else:
@@ -357,6 +367,7 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
             self.legendtable.colors,
             self.legendtable.enabled,
             self.legendtable.entries,
+            strict=True,
         ):
             plot.setVisible(enabled)
             plot.setData(x, y, **kwargs)

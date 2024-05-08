@@ -1,5 +1,4 @@
 import csv
-import numpy as np
 import datetime
 import multiprocessing
 import os
@@ -7,10 +6,10 @@ import sys
 import threading
 import time
 
+import numpy as np
 import pyqtgraph as pg
 from moee import MMCommand, MMThread
 from qtpy import QtCore, QtGui, QtWidgets
-
 
 LOG_DIR = "D:/Logs/Capacitance"
 # FILENAME = "D:/MotionController/logs_capacitance/240227_capacitance.csv"
@@ -51,7 +50,7 @@ class LoggingProc(multiprocessing.Process):
                     newline="",
                 ) as f:
                     writer = csv.writer(f)
-                    writer.writerow([dt.isoformat()] + msg)
+                    writer.writerow([dt.isoformat(), *msg])
             except PermissionError:
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
@@ -125,7 +124,7 @@ class Widget(QtWidgets.QWidget):
         self.datetimes: list[datetime.datetime] = []
         self.caplist: list[list[float]] = []
 
-        for i in range(len(self.channels)):
+        for _ in range(len(self.channels)):
             self.caplist.append([])
 
     @QtCore.Slot()
@@ -147,7 +146,7 @@ class Widget(QtWidgets.QWidget):
             self.datetimes[-1], [str(cap[-1]) for cap in self.caplist]
         )
 
-        for plot, cap in zip(self.plots, self.caplist):
+        for plot, cap in zip(self.plots, self.caplist, strict=False):
             cap_arr = np.asarray(cap)
             # Discard invalid readings from plot
             cap_arr[cap_arr < 0.0023] = np.nan

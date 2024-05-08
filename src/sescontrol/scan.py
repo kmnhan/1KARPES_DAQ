@@ -18,7 +18,6 @@ import pywinauto
 import pywinauto.win32functions
 import win32.lib.pywintypes
 from qtpy import QtCore
-
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import get_ses_properties
 
@@ -89,13 +88,13 @@ class MotorPosWriter(QtCore.QRunnable):
         self.prefix = prefix
 
     def write_pos(self, content: str | list[str]):
-        """Appends content to log file."""
+        """Append content to log file."""
         if isinstance(content, str):
             content = [content]
         self.messages.append(content)
 
     def write_header(self, header: str | list[str]):
-        """Creates and appends a header to log file.
+        """Create and append a header to log file.
 
         If a file with the same name already exists, it will be removed.
 
@@ -105,7 +104,6 @@ class MotorPosWriter(QtCore.QRunnable):
             Header content to write to file.
 
         """
-
         file_name = os.path.join(self.dirname, self.prefix + str(self.filename))
         if os.path.isfile(file_name):
             os.remove(file_name)
@@ -153,7 +151,7 @@ class ScanWorker(QtCore.QRunnable):
         return f"{self.base_file}{str(self.data_idx).zfill(4)}"
 
     def check_finished(self) -> bool:
-        """Returns whether if sequence is finished."""
+        """Return whether if sequence is finished."""
         path = (
             self._ses_app.window(handle=self._hwnd)
             .menu()
@@ -206,7 +204,6 @@ class ScanWorker(QtCore.QRunnable):
 
     def sequence_run_wait(self) -> int:
         """Run sequence and wait until it finishes."""
-
         # click run button
         log.debug("Clicking sequence run")
         self.click_sequence_button("Run")
@@ -267,7 +264,7 @@ class ScanWorker(QtCore.QRunnable):
             # No motors, single scan
             self.signals.sigStepStarted.emit(1)
             self.sequence_run_wait()
-            self.signals.sigStepFinished.emit(1, tuple())
+            self.signals.sigStepFinished.emit(1, ())
         else:
             for i, ax in enumerate(self.motors):
                 ax.pre_motion()
@@ -295,7 +292,7 @@ class ScanWorker(QtCore.QRunnable):
         self.signals.sigFinished.emit()
 
     def _rename_file(self, index: int):
-        """Renames the data file to include the slice index.
+        """Rename the data file to include the slice index.
 
         This function adjusts file names to maintain a constant file number during
         scans. File names are temporarily modified during scanning by adding a prefix,
@@ -332,7 +329,7 @@ class ScanWorker(QtCore.QRunnable):
 
     def _restore_filenames(self):
         files = []
-        for ext in list(self.valid_ext) + [".csv"]:
+        for ext in [*list(self.valid_ext), ".csv"]:
             files += glob.glob(
                 os.path.join(self.base_dir, f"_scan_{self.base_file}*{ext}")
             )
@@ -348,7 +345,7 @@ class ScanWorker(QtCore.QRunnable):
                     continue
                 except FileExistsError:
                     if f.endswith(".csv"):
-                        with open(f, "r", newline="") as source_csv:
+                        with open(f, newline="") as source_csv:
                             source_reader = csv.reader(source_csv)
                             with open(new, "a", newline="") as dest_csv:
                                 dest_writer = csv.writer(dest_csv)

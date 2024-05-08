@@ -1,4 +1,5 @@
-"""
+"""Motion controller server.
+
 A TCP server with a zmq.PAIR socket that enables interprocess communication with the
 motion controller program. The server listens on port 42625. The commands follow a
 SCPI-like syntax. All available commands are documented below.

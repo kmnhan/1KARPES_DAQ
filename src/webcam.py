@@ -11,7 +11,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 

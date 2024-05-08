@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import sys
-from qtpy import QtCore, QtWidgets, uic
 
 import pyloncam
 import webcam
-
+from qtpy import QtCore, QtWidgets, uic
 
 uiclass, baseclass = uic.loadUiType("camera.ui")
 

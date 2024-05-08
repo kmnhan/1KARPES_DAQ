@@ -1,17 +1,15 @@
 import multiprocessing
-import sys
 import os
+import sys
 
 os.environ["QT_API"] = "pyqt6"
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from attributeserver.widgets import StatusWidget
+from qtpy import QtCore, QtGui, QtWidgets, uic
 from sescontrol.widgets import ScanType, SESShortcuts
-
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 

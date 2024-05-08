@@ -8,6 +8,7 @@ import sys
 import time
 from multiprocessing import shared_memory
 
+import mg15
 import numpy as np
 import pymodbus
 import pyqtgraph as pg
@@ -15,11 +16,9 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-import mg15
-
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 
@@ -50,7 +49,7 @@ class LoggingProc(multiprocessing.Process):
                     newline="",
                 ) as f:
                     writer = csv.writer(f)
-                    writer.writerow([dt.isoformat()] + msg)
+                    writer.writerow([dt.isoformat(), *msg])
             except PermissionError:
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
@@ -129,7 +128,7 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
         else:
             xval: list[float] = [t.timestamp() for t in x]
 
-        for plot, yval in zip(self.plots, ylist):
+        for plot, yval in zip(self.plots, ylist, strict=True):
             plot.setData(xval, yval)
 
     def clear(self):
@@ -243,7 +242,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 main_gauge_pressures.append(np.nan)
         self.pressure_list.append(main_gauge_pressures)
         self.plotting.set_data(
-            self.time_list, [list(i) for i in zip(*self.pressure_list)]
+            self.time_list, [list(i) for i in zip(*self.pressure_list, strict=False)]
         )
 
     @QtCore.Slot(float)

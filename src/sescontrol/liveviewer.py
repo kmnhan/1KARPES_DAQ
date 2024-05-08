@@ -151,8 +151,8 @@ class CustomMenuBar(ItoolMenuBar):
 
     def _open_file(self):
         valid_files = {
-            "xarray HDF5 Files (*.h5)": (xr.load_dataarray, dict(engine="h5netcdf")),
-            "1KARPES Raw Data (*.pxt *.zip)": (erlab.io.load_experiment, dict()),
+            "xarray HDF5 Files (*.h5)": (xr.load_dataarray, {"engine": "h5netcdf"}),
+            "1KARPES Raw Data (*.pxt *.zip)": (erlab.io.load_experiment, {}),
         }
 
         dialog = QtWidgets.QFileDialog(self)
@@ -253,7 +253,7 @@ class DataFetcher(QtCore.QRunnable):
 
         if isinstance(wave, xr.Dataset):
             # select first sequence
-            wave: xr.DataArray = list(wave.data_vars.values())[0]
+            wave: xr.DataArray = next(iter(wave.data_vars.values()))
 
         wave = wave.rename(
             {k: v for k, v in self.COORDS_MAPPING.items() if k in wave.dims}
@@ -355,14 +355,18 @@ class LiveImageTool(BaseImageTool):
             wave = wave.expand_dims(
                 {
                     name: [coord[ind]]
-                    for ind, (name, coord) in zip(indices, self._motor_coords.items())
+                    for ind, (name, coord) in zip(
+                        indices, self._motor_coords.items(), strict=True
+                    )
                 }
             )
 
             # this will slice the target array at the coordinates we wish to insert the received data
             target_slices = {
                 name: self.array_slicer._obj.coords[name] == coord[ind]
-                for ind, (name, coord) in zip(indices, self._motor_coords.items())
+                for ind, (name, coord) in zip(
+                    indices, self._motor_coords.items(), strict=True
+                )
             }
             # we want to know the dims of target array before assigning new values
             target = self.array_slicer._obj.loc[target_slices]
@@ -465,9 +469,9 @@ def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
             return shape, kwargs
         else:
             ses_config = configparser.ConfigParser(strict=False)
-            ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
+            ses_ini_file = os.path.join(SES_DIR, r"ini\Ses.ini")
 
-            with open(shutil.copy(ses_ini_file, tmpdir), "r") as f:
+            with open(shutil.copy(ses_ini_file, tmpdir)) as f:
                 ses_config.read_file(f)
 
             # Number of points on angle axis
@@ -694,7 +698,7 @@ def check_same_coord_limits(arr1, arr2):
 
 def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
     shape: list[int] = []
-    coords = dict()
+    coords = {}
     for d in ("depth", "height", "width"):
         n = int(region_info[d])
         offset = float(region_info[f"{d}offset"])

@@ -1,10 +1,9 @@
 import sys
 
-from qtpy import QtCore, QtWidgets, uic
-
 import pyloncam
 import status
 import webcam
+from qtpy import QtCore, QtWidgets, uic
 
 
 class MainWindow(*uic.loadUiType("main.ui")):

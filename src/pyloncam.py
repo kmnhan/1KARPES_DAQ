@@ -11,13 +11,12 @@ import numpy.typing as npt
 import pyqtgraph as pg
 import xarray as xr
 from pypylon import genicam, pylon
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from qt_extensions.colors import BetterColorBarItem, BetterImageItem
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 EXCLUDED_DEVICES: tuple[str, ...] = (
@@ -70,10 +69,9 @@ class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
             camera.PixelFormat.Value = f"Mono{PIXEL_BITS}"
         except genicam.GenericException as e:
             raise genicam.RuntimeException(
-                "Could not apply configuration. GenICam::GenericException \
-                                            caught in OnOpened method msg=%s"
-                % e.what()
-            )
+                "Could not apply configuration."
+                "GenICam::GenericException caught in OnOpened method"
+            ) from e
 
 
 class RowOrderingWidget(QtWidgets.QWidget):
@@ -89,7 +87,6 @@ class RowOrderingWidget(QtWidgets.QWidget):
         self.up = QtWidgets.QPushButton("▲")
         self.down = QtWidgets.QPushButton("▼")
         self.layout().addWidget(self.up)
-        # ˄ ˅ ⌃ ⌄ ⇧ ⇩ ⬆️ ⬇️ ▲ ▼
         self.layout().addWidget(self.down)
 
         self.up.setStyleSheet("QPushButton { border: none; }")
@@ -655,10 +652,10 @@ class MainWindow(MainWindowGUI):
         return xr.DataArray(
             image,
             dims=("z", "x"),
-            coords=dict(
-                z=np.linspace(-zlim, zlim, shape[0]) + self._off_v,
-                x=np.linspace(-xlim, xlim, shape[1]) + self._off_h,
-            ),
+            coords={
+                "z": np.linspace(-zlim, zlim, shape[0]) + self._off_v,
+                "x": np.linspace(-xlim, xlim, shape[1]) + self._off_h,
+            },
         )
 
     def get_rect(self, shape) -> QtCore.QRectF:
@@ -753,7 +750,8 @@ class MainWindow(MainWindowGUI):
         data.to_netcdf(
             filename,
             encoding={
-                var: dict(compression="gzip", compression_opts=9) for var in data.coords
+                var: {"compression": "gzip", "compression_opts": 9}
+                for var in data.coords
             },
             engine="h5netcdf",
             invalid_netcdf=True,

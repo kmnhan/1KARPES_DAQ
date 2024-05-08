@@ -13,13 +13,12 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from moee import EncoderThread, MMStatus, MMThread
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 CONFIG_FILE = "D:/MotionController/piezomotors.toml"
@@ -61,7 +60,7 @@ class LoggingProc(multiprocessing.Process):
                     newline="",
                 ) as f:
                     writer = csv.writer(f)
-                    writer.writerow([dt.isoformat()] + msg)
+                    writer.writerow([dt.isoformat(), *msg])
             except PermissionError:
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
@@ -146,8 +145,12 @@ class MotorStatus(StautsIconWidget):
 
 
 class SingleChannelWidget(*uic.loadUiType("channel.ui")):
-    """Widget for a single channel. Internally, all positions are `raw` positions before
-    applying calibration factors. This widget handles the necessary conversions."""
+    """Widget for a single channel.
+
+    Internally, all positions are `raw` positions before applying calibration factors.
+    This widget handles the necessary conversions.
+
+    """
 
     sigMoveRequested = QtCore.Signal(int, int, object, object)
 
@@ -385,9 +388,10 @@ class MotionPlot(pg.PlotWidget):
 
 
 class SingleControllerWidget(QtWidgets.QWidget):
-    """
-    Widget for a single controller that consists of three channels. Handles
-    connection and communication with the controller, as well as plotting and queuing.
+    """Widget for a single controller that consists of three channels.
+
+    Handles connection and communication with the controller, as well as plotting and
+    queuing.
 
     On move, the motion parameters are placed in a queue. Each motion in the queue will
     be executed in the order it was placed. Checking for motion execution happens twice:
@@ -519,10 +523,10 @@ class SingleControllerWidget(QtWidgets.QWidget):
         """Connect to motor controller. Raises an exception on failure."""
         try:
             self.mmthread.connect(self.address)
-        except Exception as e:
+        except Exception:
             self.mmthread.sock.close()
             self.disable()
-            raise e
+            raise
         else:
             self.enable()
             # Start with all channels disabled
@@ -534,8 +538,8 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def connect_silent(self):
         try:
             self.connect_raise()
-        except:
-            pass
+        except Exception:
+            log.exception(f"Connection to {self.address} failed, silently ignored")
 
     @QtCore.Slot()
     def disconnect(self):
@@ -584,7 +588,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.stop_encoding()
         valid_ch = self.valid_channels
         res = []
-        for ch, n in zip(valid_ch, self.valid_channel_numbers):
+        for ch, n in zip(valid_ch, self.valid_channel_numbers, strict=True):
             cap = self.mmthread.get_capacitance(n)
             res.append(f"{n}: Nominal {ch.nominal_capacitance}, Measured {cap:.4f} μF")
         # Reconnect due to controller bug
@@ -758,13 +762,13 @@ class SingleControllerWidget(QtWidgets.QWidget):
         if unique_id is None:
             unique_id: str = ""
         self.queue.put(
-            dict(
-                channel=channel,
-                target=target,
-                frequency=frequency,
-                amplitude=amplitude,
-                unique_id=unique_id,
-            )
+            {
+                "channel": channel,
+                "target": target,
+                "frequency": frequency,
+                "amplitude": amplitude,
+                "unique_id": unique_id,
+            }
         )
         # If not busy, go on
         if self.status != MMStatus.Moving:
@@ -834,7 +838,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def stop_current(self):
-        """Stops current motion. Will move on to the next queued motion."""
+        """Stop the current motion and move on to the next queued motion."""
         self.mmthread.stopped = True
         self.mmthread.wait(2000)
 

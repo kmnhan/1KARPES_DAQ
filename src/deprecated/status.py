@@ -1,10 +1,9 @@
 import sys
 
 import zmq
-from qtpy import QtCore, QtWidgets, uic
-
 from constants import CRYO_PORT, MG15_PORT, SLIT_TABLE
 from qt_extensions.servercontrol import ServerControlWidget
+from qtpy import QtCore, QtWidgets, uic
 from servers import PressureServer, SlitServer, TemperatureServer
 
 
@@ -67,7 +66,9 @@ class MainWindow(*uic.loadUiType("status.ui")):
         )
         self.server_controls[1].set_server(TemperatureServer)
         self.server_controls[2].set_server(PressureServer)
-        for sc, name in zip(self.server_controls, ("Slit", "Cryo", "MG15")):
+        for sc, name in zip(
+            self.server_controls, ("Slit", "Cryo", "MG15"), strict=True
+        ):
             sc.setLabel(name)
 
         # connect signals (slit)

@@ -3,12 +3,11 @@
 import glob
 import os
 import sys
-from collections.abc import Iterable, Sequence, Callable
+from collections.abc import Callable, Iterable, Sequence
 
 sys.coinit_flags = 2
 
 import configparser
-import os
 import shutil
 import tempfile
 
@@ -31,9 +30,7 @@ def get_ses_proc() -> psutil.Process:
 def get_matching_window(
     process: psutil.Process | int, match: Callable[[str], bool]
 ) -> int:
-    """
-    Returns the first window handle of given process that matches the given function.
-    """
+    """Get the first window handle of given process that matches the given function."""
     if isinstance(process, int):
         process = psutil.Process(process)
     windows = []
@@ -54,7 +51,7 @@ def get_matching_window(
 
 
 def get_ses_window(process: psutil.Process | int) -> int:
-    """Returns the first window handle of process that has the title `SES`."""
+    """Return the first window handle of process that has the title `SES`."""
 
     def func(x: str) -> bool:
         return x == "SES"
@@ -63,22 +60,21 @@ def get_ses_window(process: psutil.Process | int) -> int:
 
 
 def get_ses_properties() -> tuple[int, int]:
-    """Returns the pid and hwnd of the SES.exe main window."""
+    """Return the pid and hwnd of the SES.exe main window."""
     proc = get_ses_proc()
     return proc.pid, get_ses_window(proc)
 
 
 def get_file_info() -> tuple[str, str, set[str], int, list[dict[str, str]]]:
-    """
-    Reads the `factory.seq` file in the SES folder to determine where the current data
-    is being saved.
+    """Read and parse the `factory.seq` file in the SES folder.
+
+    From the sequence file, we can determine where the current data is being saved.
 
     """
-
     config = configparser.RawConfigParser()
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp = shutil.copy(os.path.join(SES_DIR, "sequences", "factory.seq"), tmpdirname)
-        with open(tmp, "r") as f:
+        with open(tmp) as f:
             config.read_file(f)
 
     spec = config["Spectrum"]
@@ -95,10 +91,9 @@ def get_file_info() -> tuple[str, str, set[str], int, list[dict[str, str]]]:
         spec.get("spectrum file extension", ".pxt").split(",")
     )
 
-    seq_enabled: list[dict[str, str]] = []
-    for v in config.values():
-        if int(v.get("Enabled", 0)):
-            seq_enabled.append(dict(v))
+    seq_enabled: list[dict[str, str]] = [
+        dict(v) for v in config.values() if int(v.get("Enabled", 0))
+    ]
 
     return base_dir, base_file, valid_ext, spec.get("saveafter"), seq_enabled
 

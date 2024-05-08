@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import os
 import sys
+
+import pyloncam
+import webcam
 from qtpy import QtCore, QtWidgets, uic
 
 from SESWrapper.ses_measure import SESMeasure
-import pyloncam
-import webcam
 
 SES_DIR = "D:/SES_1.9.6_Win64"
 WRAPPER_PATH = os.path.join(SES_DIR, "SESWrapper.dll")

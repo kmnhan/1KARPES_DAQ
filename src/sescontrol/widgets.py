@@ -14,7 +14,6 @@ import pyqtgraph as pg
 sys.coinit_flags = 2
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
-
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
 from sescontrol.scan import MotorPosWriter, ScanWorker
@@ -25,7 +24,7 @@ from sescontrol.ses_win import SESController, get_file_info, next_index
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 log = logging.getLogger("scan")
@@ -178,10 +177,10 @@ class ArrayTableModel(QtCore.QAbstractTableModel):
         self._clabels = clabels
         self.endResetModel()
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent=None):
         return self._array.shape[0]
 
-    def columnCount(self, parent=QtCore.QModelIndex()):
+    def columnCount(self, parent=None):
         return self._array.shape[1]
 
     def data(self, index: QtCore.QModelIndex, role=QtCore.Qt.ItemDataRole.DisplayRole):
@@ -270,7 +269,7 @@ class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
 
         out = np.zeros((numpoints, len(motor_coords)), dtype=np.float64)
         if len(motor_coords) == 1:
-            out[:, 0] = tuple(motor_coords.values())[0]
+            out[:, 0] = next(iter(motor_coords.values()))
         elif len(motor_coords) == 2:
             coords = tuple(motor_coords.values())
             shape = tuple(c.size for c in coords)
@@ -311,13 +310,13 @@ class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
         self.reset_btn.setEnabled(self.edited)
         arr = self.table.model()._array
         labels = self.table.model()._clabels
-        plot_kw = dict(
-            symbol="o",
-            pen="#0380fc",
-            symbolSize=6,
-            symbolPen="#0380fc",
-            symbolBrush="#0380fc",
-        )
+        plot_kw = {
+            "symbol": "o",
+            "pen": "#0380fc",
+            "symbolSize": 6,
+            "symbolPen": "#0380fc",
+            "symbolBrush": "#0380fc",
+        }
         self.pw.clear()
         if arr.shape[1] == 0:
             pass
@@ -470,7 +469,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 )
                 return
 
-        motor_coords: dict[str, npt.NDArray] = dict()
+        motor_coords: dict[str, npt.NDArray] = {}
         for ma in motor_args:
             motor_coords[ma[0]] = ma[1]
 
@@ -479,7 +478,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if len(motor_coords) != 0:
             # Open motor edit dialog
             ret = self.motor_dialog.exec()
-            motor_coords
             if not ret:
                 # Cancelled
                 return
@@ -565,7 +563,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         text: str = f"{self.current_file} | "
 
         motor_info: list[str] = []
-        for p, motor in zip(pos, self.motors):
+        for p, motor in zip(pos, self.motors, strict=False):
             motor_info.append(f"{motor.name} = {p:.3f}")
         text += ", ".join(motor_info)
         text += " done"
@@ -576,9 +574,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.progress.setValue(niter)
         if self.has_motor:
             # Enter log entry
-            entry = [niter]
-            for p in pos:
-                entry.append(np.float32(p))
+            entry = [niter] + [float(p) for p in pos]
             self.pos_logger.write_pos([str(x) for x in entry])
 
     @QtCore.Slot(int, object)
@@ -633,9 +629,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         motors: Sequence[str],
     ):
         self.pos_logger.set_file(dirname, filename, prefix)
-        header = [""]
-        for m in motors:
-            header.append(m)
+        header = ["", *list(motors)]
         self.pos_logger.write_header(header)
 
     @QtCore.Slot()

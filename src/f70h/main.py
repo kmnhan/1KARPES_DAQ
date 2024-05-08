@@ -6,13 +6,12 @@ import time
 
 import slack_sdk
 import slack_sdk.errors
-from qtpy import QtCore, QtWidgets
-
 from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
+from qtpy import QtCore, QtWidgets
 
 try:
     os.chdir(sys._MEIPASS)
-except:
+except:  # noqa: E722
     pass
 
 log = logging.getLogger("F70H")
@@ -36,8 +35,8 @@ def send_message(message: str | list[str]):
             text=message,
             mrkdwn=True,
         )
-    except slack_sdk.errors.SlackApiError as e:
-        log.error(f"Error posting message: {e}")
+    except slack_sdk.errors.SlackApiError:
+        log.exception("Error posting message")
 
 
 class QHLine(QtWidgets.QFrame):
@@ -161,7 +160,9 @@ class MainWindow(F70GUI):
             self.update_thread.wait()
         self.instr.turn_on()
 
-        send_message(f":large_green_circle: {self.current_time_formatted} Compressor ON")
+        send_message(
+            f":large_green_circle: {self.current_time_formatted} Compressor ON"
+        )
 
     def stop_button_clicked(self):
         if self.update_thread.isRunning():
@@ -185,7 +186,9 @@ class MainWindow(F70GUI):
         self, alarms: list[str], temperature: tuple[int, int, int], pressure: int
     ):
         if len(alarms) == 0:
-            send_message(f":white_check_mark: {self.current_time_formatted} Alarms cleared")
+            send_message(
+                f":white_check_mark: {self.current_time_formatted} Alarms cleared"
+            )
             return
         temp_str = ", ".join([f"{t}°C" for t in temperature])
         send_message(
@@ -222,7 +225,7 @@ class MainWindow(F70GUI):
             self.notify_alarm(alarms, temperature, pressure)
             self.alarms_notified = set(alarms)
 
-        for label, value in zip(self.labels[:3], temperature):
+        for label, value in zip(self.labels[:3], temperature, strict=True):
             label.setText(f"{value} °C")
 
         self.labels[3].setText(f"{pressure} psig")

@@ -137,8 +137,8 @@ class ColorMapGammaWidget(QtWidgets.QWidget):
         self,
         parent: QtWidgets.QWidget = None,
         value: float = 1.0,
-        slider_cls: type = None,
-        spin_cls: type = None,
+        slider_cls: type | None = None,
+        spin_cls: type | None = None,
     ):
         super().__init__(parent=parent)
         self.setLayout(QtWidgets.QHBoxLayout(self))
@@ -564,7 +564,7 @@ def pg_colormap_names(
 
 
 def pg_colormap_from_name(name: str, skipCache: bool = True) -> pg.ColorMap:
-    """Gets a :class:`pyqtgraph.ColorMap` from its name.
+    """Get a :class:`pyqtgraph.ColorMap` from its name.
 
     Parameters
     ----------
@@ -640,7 +640,7 @@ def pg_colormap_powernorm(
 def pg_colormap_to_QPixmap(
     cmap: str | pg.ColorMap, w: int = 64, h: int = 16, skipCache: bool = True
 ) -> QtGui.QPixmap:
-    """Converts a :class:`pyqtgraph.ColorMap` to a ``w``-by-``h`` QPixmap thumbnail.
+    """Convert a :class:`pyqtgraph.ColorMap` to a ``w``-by-``h`` QPixmap thumbnail.
 
     Parameters
     ----------
@@ -657,7 +657,6 @@ def pg_colormap_to_QPixmap(
     PySide6.QtGui.QPixmap
 
     """
-
     if isinstance(cmap, str):
         cmap = pg_colormap_from_name(cmap, skipCache=skipCache)
     # cmap_arr = np.reshape(cmap.getColors()[:, None], (1, -1, 4), order='C')
