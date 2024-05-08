@@ -3,8 +3,9 @@ import time
 from multiprocessing import shared_memory
 
 import zmq
-from attributeserver.getter import get_header
 from qtpy import QtCore
+
+from attributeserver.getter import get_header
 
 
 class AttributeServer(QtCore.QThread):

@@ -14,6 +14,7 @@ import pyqtgraph as pg
 sys.coinit_flags = 2
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
 from sescontrol.scan import MotorPosWriter, ScanWorker

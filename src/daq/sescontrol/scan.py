@@ -18,6 +18,7 @@ import pywinauto
 import pywinauto.win32functions
 import win32.lib.pywintypes
 from qtpy import QtCore
+
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import get_ses_properties
 

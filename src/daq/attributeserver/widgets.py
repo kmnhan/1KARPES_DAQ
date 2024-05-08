@@ -4,9 +4,10 @@ import threading
 import time
 from multiprocessing import shared_memory
 
+from qtpy import QtCore, QtGui, QtWidgets, uic
+
 from attributeserver.getter import SLIT_TABLE, get_pressure_list, get_temperature_list
 from attributeserver.server import AttributeServer
-from qtpy import QtCore, QtGui, QtWidgets, uic
 
 try:
     os.chdir(sys._MEIPASS)

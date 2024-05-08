@@ -12,6 +12,7 @@ import xarray as xr
 from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
 from erlab.interactive.imagetool.controls import ItoolControlsBase
 from qtpy import QtCore, QtGui, QtWidgets
+
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import SES_DIR
 
