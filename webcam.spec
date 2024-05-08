@@ -2,15 +2,18 @@
 
 
 a = Analysis(
-    ['src\\webcam.py'],
+    ["src/webcam/main.py"],
     pathex=[],
     binaries=[],
-    datas=[('src/webcam.ui', '.'), ('src/images/webcam.ico', './images'), ('src/qt_extensions/*', './qt_extensions/')],
-    hiddenimports=['PyQt6'],
+    datas=[
+        ("src/webcam/webcam.ui", "."),
+        ("src/webcam/icon.ico", "."),
+    ],
+    hiddenimports=["PyQt6"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['IPython'],
+    excludes=["IPython"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
@@ -20,7 +23,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Webcam Viewer',
+    name="Webcam Viewer",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -31,7 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['src\\images\\webcam.ico'],
+    icon=["src/webcam/icon.ico"],
 )
 coll = COLLECT(
     exe,
@@ -40,5 +43,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='webcam',
+    name="webcam",
 )
