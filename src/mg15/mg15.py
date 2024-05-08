@@ -77,7 +77,7 @@ MBAR_TO_PSIA: float = MBAR_TO_PA * (0.0254**2) / (0.45359237 * 9.80665)
 
 def uint16_to_boolean_array(uint16_value) -> list[bool]:
     # Convert uint16 to binary, remove the '0b' prefix, and pad with zeros
-    return [bit == "1" for bit in bin(uint16_value)[2:].zfill(16)]
+    return [bit == "1" for bit in f"{uint16_value:b}".zfill(16)]
 
 
 def uint8_to_ieee754(array) -> float:

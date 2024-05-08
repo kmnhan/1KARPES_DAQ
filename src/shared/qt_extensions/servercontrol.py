@@ -1,4 +1,4 @@
-__all__ = ["ServerStatus", "ServerControlWidget"]
+__all__ = ["ServerControlWidget", "ServerStatus"]
 
 from collections.abc import Sequence
 

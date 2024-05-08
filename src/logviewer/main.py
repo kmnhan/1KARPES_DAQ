@@ -3,6 +3,7 @@ import gc
 import os
 import sys
 import time
+from itertools import starmap
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -226,7 +227,7 @@ class MainWindow(MainWindowGUI):
                 plot_config = tomlkit.load(f)["plotting"]
             self.plot0.set_twiny_labels(plot_config["secondary_axes"])
 
-            colors = [QtGui.QColor.fromRgb(*c) for c in plot_config["colors"]]
+            colors = list(starmap(QtGui.QColor.fromRgb, plot_config["colors"]))
             colors += [
                 QtGui.QColor.fromRgb(*list(c)[:3], 200) for c in plot_config["colors"]
             ]

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 __all__ = [
+    "BetterColorBarItem",
+    "BetterImageItem",
     "ColorMapComboBox",
     "ColorMapGammaWidget",
-    "BetterImageItem",
-    "BetterColorBarItem",
     "color_to_QColor",
-    "pg_colormap_names",
     "pg_colormap_from_name",
+    "pg_colormap_names",
     "pg_colormap_powernorm",
     "pg_colormap_to_QPixmap",
 ]
@@ -77,7 +77,7 @@ class ColorMapComboBox(QtWidgets.QComboBox):
         view = self.view()
         fm = self.fontMetrics()
         maxWidth = max(
-            [fm.boundingRect(self.itemText(i)).width() for i in range(self.count())]
+            fm.boundingRect(self.itemText(i)).width() for i in range(self.count())
         )
         if maxWidth:
             view.setMinimumWidth(maxWidth)
@@ -560,7 +560,7 @@ def pg_colormap_names(
             all_cmaps = local + cet + _mpl  # + _mpl_r
         else:
             all_cmaps = local + _mpl
-    return list({value: None for value in all_cmaps})
+    return list(dict.fromkeys(all_cmaps))
 
 
 def pg_colormap_from_name(name: str, skipCache: bool = True) -> pg.ColorMap:

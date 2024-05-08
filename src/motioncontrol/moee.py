@@ -131,7 +131,7 @@ class MMThread(QtCore.QThread):
 
         """
         raw = self.sock.recv(4)
-        val = sum([raw[i] * 256**i for i in range(4)])
+        val = sum(raw[i] * 256**i for i in range(4))
         log.debug(f"received value {val} {tuple(raw)}")
         return val
 
@@ -215,7 +215,7 @@ class MMThread(QtCore.QThread):
             return vals[0], 0.0
         else:
             avg = float(sum(vals) / len(vals))
-            return avg, (sum([abs(v - avg) ** 2 for v in vals]) / len(vals)) ** (1 / 2)
+            return avg, (sum(abs(v - avg) ** 2 for v in vals) / len(vals)) ** (1 / 2)
 
     def _send_signal_once(self, channel: int) -> None:
         self.mmsend(MMCommand.SENDSIGONCE, int(channel))

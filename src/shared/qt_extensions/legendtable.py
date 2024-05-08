@@ -141,7 +141,7 @@ class LegendTableView(QtWidgets.QTableView):
             self.openPersistentEditor(self.model().createIndex(i, 2))
         self.resizeColumnsToContents()
         self.setFixedWidth(
-            sum([self.columnWidth(i) for i in range(self.model().columnCount())])
+            sum(self.columnWidth(i) for i in range(self.model().columnCount()))
             + self.verticalScrollBar().sizeHint().width()
             + 2
         )

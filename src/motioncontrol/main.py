@@ -346,7 +346,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot()
     def check_capacitance(self):
-        n_valid = sum([len(con.valid_channels) for con in self.controllers])
+        n_valid = sum(len(con.valid_channels) for con in self.controllers)
 
         if n_valid == 0:
             QtWidgets.QMessageBox.warning(

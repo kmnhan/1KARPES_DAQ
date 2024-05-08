@@ -61,7 +61,7 @@ class SlitWidget(QtWidgets.QComboBox):
         self.setView(view)
         view.resizeColumnsToContents()
         view.setMinimumWidth(
-            sum([view.columnWidth(i) for i in range(model.columnCount(0))])
+            sum(view.columnWidth(i) for i in range(model.columnCount(0)))
         )
 
         self.currentIndexChanged.connect(self.update_sharedmem)
