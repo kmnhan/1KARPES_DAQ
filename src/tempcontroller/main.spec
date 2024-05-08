@@ -2,27 +2,27 @@
 
 
 a = Analysis(
-    ['src\\tempcontroller\\main.py'],
+    ["main.py"],
     pathex=[],
     binaries=[],
     datas=[
-        ("src/tempcontroller/connection.py", "."),
-        ("src/tempcontroller/widgets.py", "."),
-        ("src/tempcontroller/command.ui", "."),
-        ("src/tempcontroller/heater.ui", "."),
-        ("src/tempcontroller/heatswitch.ui", "."),
-        ("src/tempcontroller/main.ui", "."),
-        ("src/tempcontroller/plotting.ui", "."),
-        # ("src/tempcontroller/icon.ico", "."),
-        ("src/qt_extensions/__init__.py", "./qt_extensions"),
-        ("src/qt_extensions/legendtable.py", "./qt_extensions"),
-        ("src/qt_extensions/plotting.py", "./qt_extensions"),
+        ("connection.py", "."),
+        ("widgets.py", "."),
+        ("command.ui", "."),
+        ("heater.ui", "."),
+        ("heatswitch.ui", "."),
+        ("main.ui", "."),
+        ("plotting.ui", "."),
+        # ("icon.ico", "."),
+        ("qt_extensions/__init__.py", "./qt_extensions"),
+        ("qt_extensions/legendtable.py", "./qt_extensions"),
+        ("qt_extensions/plotting.py", "./qt_extensions"),
     ],
-    hiddenimports=['PyQt6', 'pyqtgraph'],
+    hiddenimports=["PyQt6", "pyqtgraph"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['IPython'],
+    excludes=["IPython"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
@@ -32,7 +32,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Temperature Contoller',
+    name="Temperature Contoller",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -43,7 +43,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-#     icon=['src\\mg15\\icon.ico'],
+    #     icon=['src\\mg15\\icon.ico'],
 )
 coll = COLLECT(
     exe,
@@ -52,5 +52,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='tempcontrol',
+    name="tempcontrol",
 )
