@@ -7,7 +7,28 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 ## Prerequisites
 
 - Python 3.11 or higher
-- Additional dependencies for each program are listed in the `requirements.txt` file in each subdirectory under `src/`
+- Additional dependencies for each program are listed in the `requirements.txt` file in
+  each subdirectory under `src/`
+
+## Development
+
+1. Clone the repository and navigate to the root directory.
+
+2. Setup a mamba environment:
+   ```bash
+   mamba env create -f environment.yml
+   mamba activate daq
+   ```
+   This will create and activate a new environment called `daq` with all the necessary dependencies.
+
+4. Install pre-commit hooks by running `pre-commit install` in the root directory.
+
+### Notes
+- Builds must be trigerred manually from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
+- If you add or modify any dependencies, make sure to update the `requirements.txt` file
+  in the corresponding subdirectory and the `environment.yml` file in the root
+  directory.
+
 
 ## Build status
 
