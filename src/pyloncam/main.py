@@ -776,7 +776,7 @@ class MainWindow(MainWindowGUI):
 
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
-    qapp.setWindowIcon(QtGui.QIcon("./images/pyloncam.ico"))
+    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
 
     win = MainWindow()
     win.show()
