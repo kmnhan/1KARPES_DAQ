@@ -26,7 +26,7 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r requirements_tempcontroller.txt pyinstaller
+      run: pip install -r src/tempcontroller/requirements.txt pyinstaller
 
     - name: Building...
       run: pyinstaller tempcontroller.spec

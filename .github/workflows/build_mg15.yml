@@ -26,7 +26,7 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r requirements_mg15.txt pyinstaller
+      run: pip install -r src/mg15/requirements.txt pyinstaller
 
     - name: Building...
       run: pyinstaller mg15.spec

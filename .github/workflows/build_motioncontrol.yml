@@ -26,7 +26,7 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r requirements_motioncontrol.txt pyinstaller
+      run: pip install -r src/motioncontrol/requirements.txt pyinstaller
 
     - name: Building...
       run: pyinstaller motioncontrol.spec
