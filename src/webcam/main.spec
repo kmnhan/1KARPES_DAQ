@@ -2,12 +2,12 @@
 
 
 a = Analysis(
-    ["src/webcam/main.py"],
+    ["main.py"],
     pathex=[],
     binaries=[],
     datas=[
-        ("src/webcam/webcam.ui", "."),
-        ("src/webcam/icon.ico", "."),
+        ("webcam.ui", "."),
+        ("icon.ico", "."),
     ],
     hiddenimports=["PyQt6"],
     hookspath=[],
@@ -34,7 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["src/webcam/icon.ico"],
+    icon=["icon.ico"],
 )
 coll = COLLECT(
     exe,

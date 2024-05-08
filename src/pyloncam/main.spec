@@ -10,17 +10,17 @@ pylon_binaries += [(str(f), "./pypylon") for f in pypylon_dir.glob("*.pyd")]
 
 
 datas = [
-    ("src/pyloncam/pyloncam.ui", "."),
-    ("src/pyloncam/cameramonitor_config.ui", "."),
-    ("src/pyloncam/icon.ico", "."),
-    ("src/pyloncam/icon_white.ico", "."),
-    ("src/qt_extensions/*", "./qt_extensions/"),
+    ("pyloncam.ui", "."),
+    ("cameramonitor_config.ui", "."),
+    ("icon.ico", "."),
+    ("icon_white.ico", "."),
+    ("qt_extensions/*", "./qt_extensions/"),
 ]
 datas += copy_metadata("numpy")
 # For some reason, xarray requires numpy metadata on import
 
 a = Analysis(
-    ["src/pyloncam/main.py"],
+    ["main.py"],
     pathex=[],
     binaries=pylon_binaries,
     datas=datas,
@@ -56,7 +56,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["src/pyloncam/icon_white.ico"],
+    icon=["icon_white.ico"],
 )
 coll = COLLECT(
     exe,

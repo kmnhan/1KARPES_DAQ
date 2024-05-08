@@ -29,7 +29,7 @@ jobs:
       run: pip install -r src/pyloncam/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller pyloncam.spec
+      run: pyinstaller src/pyloncam/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4

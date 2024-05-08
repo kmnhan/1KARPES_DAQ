@@ -29,7 +29,7 @@ jobs:
       run: pip install -r src/tempcontroller/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller tempcontroller.spec
+      run: pyinstaller src/tempcontroller/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
