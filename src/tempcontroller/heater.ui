@@ -42,7 +42,7 @@
           <bool>true</bool>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::FocusPolicy::NoFocus</enum>
+          <enum>Qt::NoFocus</enum>
          </property>
          <property name="frame">
           <bool>true</bool>
@@ -51,7 +51,7 @@
           <bool>true</bool>
          </property>
          <property name="buttonSymbols">
-          <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
+          <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
          <property name="decimals">
           <number>3</number>
@@ -122,7 +122,7 @@
    <item>
     <widget class="Line" name="line">
      <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -181,7 +181,7 @@
    <item>
     <widget class="Line" name="line_2">
      <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -217,7 +217,7 @@
           <number>3000</number>
          </property>
          <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -247,7 +247,7 @@
           </sizepolicy>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::FocusPolicy::NoFocus</enum>
+          <enum>Qt::NoFocus</enum>
          </property>
          <item>
           <property name="text">
