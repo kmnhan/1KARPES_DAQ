@@ -40,6 +40,8 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 
 <a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_mg15.yml"><img alt="MG15" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15"></a>
 
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_f70h.yml"><img alt="F70H" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_f70h.yml?label=F70H"></a>
+
 <a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_logviewer.yml"><img alt="Log Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer"></a>
 
 <a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_webcam.yml"><img alt="Webcam Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer"></a>

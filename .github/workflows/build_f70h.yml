@@ -1,0 +1,38 @@
+name: Build F70H Helium Compressor Monitor
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build F70H Helium Compressor Monitor
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    # - name: Install UPX
+    #   uses: crazy-max/ghaction-upx@v2
+    #   with:
+    #     install-only: true
+
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Resolving dependencies...
+      run: pip install -r src/f70h/requirements.txt pyinstaller
+
+    - name: Building...
+      run: pyinstaller src/f70h/main.spec
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: F70H Monitor
+        path: dist/f70h/
