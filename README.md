@@ -32,14 +32,14 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 
 ## Build status
 
-<img alt="Temperature Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_tempcontroller.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_tempcontroller.yml"><img alt="Temperature Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller"></a>
 
-<img alt="Motion Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_motioncontrol.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_motioncontrol.yml"><img alt="Motion Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller"></a>
 
-<img alt="Pylon Camera Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_pyloncam.yml?label=Pylon%20Camera%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_pyloncam.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_pyloncam.yml"><img alt="Pylon Camera Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_pyloncam.yml?label=Pylon%20Camera%20Viewer"></a>
 
-<img alt="MG15" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_mg15.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_mg15.yml"><img alt="MG15" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15"></a>
 
-<img alt="Log Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_logviewer.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_logviewer.yml"><img alt="Log Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer"></a>
 
-<img alt="Webcam Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_webcam.yml">
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_webcam.yml"><img alt="Webcam Viewer" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer"></a>
