@@ -27,19 +27,19 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 - Builds must be trigerred manually from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
 - If you add or modify any dependencies, make sure to update the `requirements.txt` file
   in the corresponding subdirectory and the `environment.yml` file in the root
-  directory.
+  directory
 
 
 ## Build status
 
-![Temperature Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller)
+![Temperature Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_tempcontroller.yml)
 
-![Motion Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller)
+![Motion Controller](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_motioncontrol.yml)
 
-![Pylon Camera Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_pyloncam.yml?label=Pylon%20Camera%20Viewer)
+![Pylon Camera Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_pyloncam.yml?label=Pylon%20Camera%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_pyloncam.yml)
 
-![MG15](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15)
+![MG15](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_mg15.yml?label=MG15&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_mg15.yml)
 
-![Log Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer)
+![Log Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_logviewer.yml?label=Log%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_logviewer.yml)
 
-![Webcam Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer)
+![Webcam Viewer](https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_webcam.yml?label=Webcam%20Viewer&link=https%3A%2F%2Fgithub.com%2Fkmnhan%2F1KARPES_DAQ%2Factions%2Fworkflows%2Fbuild_webcam.yml)
