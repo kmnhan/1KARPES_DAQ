@@ -13,7 +13,7 @@ a = Analysis(
         ("heatswitch.ui", "."),
         ("main.ui", "."),
         ("plotting.ui", "."),
-        # ("icon.ico", "."),
+        ("icon.ico", "."),
         ("qt_extensions/__init__.py", "./qt_extensions"),
         ("qt_extensions/legendtable.py", "./qt_extensions"),
         ("qt_extensions/plotting.py", "./qt_extensions"),
@@ -43,7 +43,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    #     icon=['src\\mg15\\icon.ico'],
+    icon=["icon.ico"],
 )
 coll = COLLECT(
     exe,
