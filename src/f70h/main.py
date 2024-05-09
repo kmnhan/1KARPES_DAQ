@@ -27,6 +27,7 @@ client = slack_sdk.WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 
 def send_message(message: str | list[str]):
+    """Send a message to the slack channel."""
     if isinstance(message, list):
         message = "\n".join(message)
     try:
@@ -61,7 +62,7 @@ class F70GUI(QtWidgets.QMainWindow):
         central_widget.setLayout(layout)
 
         alarms_layout = QtWidgets.QGridLayout()
-        self.alarm_status_labels = []
+        self.alarm_status_labels: list[QtWidgets.QLabel] = []
         for k, v in F70H_ALARM_BITS.items():
             alarm_status_label = QtWidgets.QLabel(self.NEUTRAL_LABEL)
             alarm_status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
@@ -116,7 +117,7 @@ class F70GUI(QtWidgets.QMainWindow):
 class UpdateThread(QtCore.QThread):
     sigUpdate = QtCore.Signal(str, object, int)
 
-    def __init__(self, instrument, timeout=50.0) -> None:
+    def __init__(self, instrument: F70HInstrument, timeout: float = 50.0) -> None:
         super().__init__()
         self.instrument = instrument
         self.timeout = timeout * 1e-3
@@ -158,8 +159,11 @@ class MainWindow(F70GUI):
     def start_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
+
+        # Turn on compressor
         self.instr.turn_on()
 
+        # Notify slack channel
         send_message(
             f":large_green_circle: {self.current_time_formatted} Compressor ON"
         )
@@ -167,14 +171,21 @@ class MainWindow(F70GUI):
     def stop_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
+
+        # Turn off compressor
         self.instr.turn_off()
 
+        # Notify slack channel
         send_message(f":red_circle: {self.current_time_formatted} Compressor OFF")
 
     def reset_button_clicked(self):
         if self.update_thread.isRunning():
             self.update_thread.wait()
+
+        # Reset alarms
         self.instr.reset()
+
+        # Clear alarms so that they can be notified again
         self.alarms_notified = []
 
     def refresh(self):
@@ -183,22 +194,29 @@ class MainWindow(F70GUI):
         self.update_thread.start()
 
     def notify_alarm(
-        self, alarms: list[str], temperature: tuple[int, int, int], pressure: int
+        self,
+        alarms: list[str],
+        status: str,
+        temperature: tuple[int, int, int],
+        pressure: int,
     ):
         if len(alarms) == 0:
+            # Alarms cleared
             send_message(
                 f":white_check_mark: {self.current_time_formatted} Alarms cleared"
             )
             return
-        temp_str = ", ".join([f"{t}°C" for t in temperature])
-        send_message(
-            [
-                f":warning: {self.current_time_formatted} Alarms raised:",
-                ", ".join(alarms),
-                f"Current status: {temp_str}",
-                f"Return pressure {pressure} psig",
-            ]
-        )
+        else:
+            # Alarms raised
+            send_message(
+                [
+                    f":warning: {self.current_time_formatted} Alarms raised:",
+                    ", ".join(alarms),
+                    status,
+                    f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
+                    f"Return pressure {pressure} psig",
+                ]
+            )
 
     @QtCore.Slot(str, object, int)
     def update_status(
@@ -207,27 +225,33 @@ class MainWindow(F70GUI):
         state = F70H_STATE[int(bits[4:7], 2)]
 
         if bits[-1] == "1":
-            self.statusBar().showMessage(f"System ON | {state}")
+            state_str = f"System On ({state})"
         elif bits[-1] == "0":
-            self.statusBar().showMessage(f"System OFF | {state}")
+            state_str = f"System Off ({state})"
+        self.statusBar().showMessage(state_str)
 
         alarms = []
         for k, v in F70H_ALARM_BITS.items():
+            # Get corresponding indicator
             label = self.alarm_status_labels[v - 1]
             if int(bits[-v - 1]) == 1:
+                # Alarm is active
                 label.setText(self.ON_LABEL)
                 log.critical(f"ALARM: {k}")
+                # Add alarm to list
                 alarms.append(k)
             else:
+                # Alarm is inactive
                 label.setText(self.OFF_LABEL)
 
         if set(alarms) != self.alarms_notified:
-            self.notify_alarm(alarms, temperature, pressure)
+            # Notify only if alarms have changed
+            self.notify_alarm(alarms, state_str, temperature, pressure)
             self.alarms_notified = set(alarms)
 
+        # Update temperature and pressure labels
         for label, value in zip(self.labels[:3], temperature, strict=True):
             label.setText(f"{value} °C")
-
         self.labels[3].setText(f"{pressure} psig")
 
     def closeEvent(self, event):

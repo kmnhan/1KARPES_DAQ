@@ -68,7 +68,7 @@ class F70HInstrument:
 
     def reset(self) -> None:
         log.info("RESETTING")
-        self.query("RST")
+        self.query("RS1")
 
     def check_alarms(self) -> None:
         bits = self.status
