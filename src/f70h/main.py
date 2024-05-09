@@ -7,7 +7,7 @@ import time
 import slack_sdk
 import slack_sdk.errors
 from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 try:
     os.chdir(sys._MEIPASS)
@@ -243,6 +243,7 @@ class MainWindow(F70GUI):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon("./icon.ico"))
     app.setStyle("Fusion")
     window = MainWindow()
     window.show()

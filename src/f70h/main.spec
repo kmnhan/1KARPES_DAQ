@@ -7,7 +7,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ("f70h.py", "."),
-        # ("icon.ico", "."),
+        ("icon.ico", "."),
     ],
     hiddenimports=["PyQt6", "pyvisa"],
     hookspath=[],
@@ -34,7 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon=["icon.ico"],
+    icon=["icon.ico"],
 )
 coll = COLLECT(
     exe,
