@@ -13,7 +13,6 @@ datas = [
     ("pyloncam.ui", "."),
     ("cameramonitor_config.ui", "."),
     ("icon.ico", "."),
-    ("icon_white.ico", "."),
     ("qt_extensions/*", "./qt_extensions/"),
 ]
 datas += copy_metadata("numpy")
@@ -56,7 +55,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon_white.ico"],
+    icon=["icon.ico"],
 )
 coll = COLLECT(
     exe,
