@@ -445,10 +445,7 @@ class MainWindow(MainWindowGUI):
             val: float = float(self.kelvins[0])  # TA [K]
 
             if np.isnan(val):
-                log.critical(
-                    "TA is NaN, check controller connection. Regeneration aborted."
-                )
-                self.heatswitch.regen_check.setChecked(False)
+                log.info("TA is NaN, skipping regen check")
                 return
 
             if val > tol:
@@ -456,8 +453,8 @@ class MainWindow(MainWindowGUI):
 
                 self.heatswitch.regen_check.setChecked(False)
 
+                log.info("Requesting heat switch OFF")
                 self.mkpower.request_write("OUT0")  # Heat switch off
-                log.info("Heat switch OFF")
 
                 QtCore.QTimer.singleShot(1000, self.regenerate)
         else:
