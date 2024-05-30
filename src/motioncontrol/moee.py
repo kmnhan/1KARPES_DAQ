@@ -12,9 +12,9 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 log = logging.getLogger("moee")
 log.setLevel(logging.INFO)
-# handler = logging.FileHandler("motion_logs.log", encoding="utf-8")
 # handler = logging.NullHandler()
-handler = logging.StreamHandler(sys.stdout)
+# handler = logging.StreamHandler(sys.stdout)
+handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
 handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )

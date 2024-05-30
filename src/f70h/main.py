@@ -16,7 +16,8 @@ except:  # noqa: E722
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
+# handler = logging.StreamHandler(sys.stdout)
+handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
 handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )
