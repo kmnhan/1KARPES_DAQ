@@ -21,7 +21,7 @@ try:
 except:  # noqa: E722
     pass
 
-CONFIG_FILE = "D:/MotionController/piezomotors.toml"
+CONFIG_FILE = "D:/Logs/Motion/piezomotors.toml"
 
 log = logging.getLogger("moee")
 
