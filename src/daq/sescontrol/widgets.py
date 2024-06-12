@@ -17,7 +17,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
-from sescontrol.scan import MotorPosWriter, ScanWorker
+from sescontrol.scan import MotorPosWriter, ScanWorker, gen_data_name
 from sescontrol.ses_win import SESController, get_file_info, next_index
 
 # pywinauto imports must come after Qt imports
@@ -517,10 +517,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         motors: list[str] = list(motor_coords.keys())
         if self.has_motor:
             self.initialize_logging(
-                dirname=base_dir,
-                filename=f"{base_file}{str(data_idx).zfill(4)}_motors.csv",
-                prefix="_scan_",
-                motors=motors,
+                dirname=base_dir, base_file=base_file, data_idx=data_idx, motors=motors
             )
         scan_worker = ScanWorker(
             motors, motion_array, base_dir, base_file, data_idx, valid_ext, has_da
@@ -573,6 +570,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
         self.line.setText(text)
         self.progress.setValue(niter)
+
         if self.has_motor:
             # Enter log entry
             entry = [niter] + [float(p) for p in pos]
@@ -624,12 +622,12 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     def initialize_logging(
         self,
-        dirname,
-        filename: str,
-        prefix: str,
+        dirname: str | os.PathLike,
+        base_file: str,
+        data_idx: int,
         motors: Sequence[str],
     ):
-        self.pos_logger.set_file(dirname, filename, prefix)
+        self.pos_logger.set_file(dirname, base_file, data_idx)
         header = ["", *list(motors)]
         self.pos_logger.write_header(header)
 

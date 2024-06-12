@@ -14,6 +14,7 @@ from erlab.interactive.imagetool.controls import ItoolControlsBase
 from qtpy import QtCore, QtGui, QtWidgets
 
 from sescontrol.plugins import Motor
+from sescontrol.scan import TEMPFILE_PREFIX, gen_data_name
 from sescontrol.ses_win import SES_DIR
 
 
@@ -204,7 +205,8 @@ class DataFetcher(QtCore.QRunnable):
     def run(self):
         if len(self._motor_coords) == 0:
             filename = os.path.join(
-                self._base_dir, f"{self._base_file}{str(self._data_idx).zfill(4)}.pxt"
+                self._base_dir,
+                gen_data_name(self._base_file, self._data_idx, ext=".pxt"),
             )
             if not os.path.isfile(filename):
                 filename = filename.replace(".pxt", ".zip")
@@ -224,16 +226,30 @@ class DataFetcher(QtCore.QRunnable):
         else:
             filename = os.path.join(
                 self._base_dir,
-                "_scan_"
-                + self._base_file
-                + f"{str(self._data_idx).zfill(4)}_S{str(self._niter).zfill(5)}.pxt",
+                gen_data_name(
+                    self._base_file,
+                    self._data_idx,
+                    slice_idx=self._niter,
+                    prefix=True,
+                    ext=".pxt",
+                ),
             )
             if not os.path.isfile(filename):
-                filename = filename.replace("_scan_", "")
+                filename = os.path.join(
+                    self._base_dir,
+                    gen_data_name(
+                        self._base_file,
+                        self._data_idx,
+                        slice_idx=self._niter,
+                        prefix=False,
+                        ext=".pxt",
+                    ),
+                )
 
         if not os.path.isfile(filename):
             print("File not found... skip display")
             return
+
         while True:
             try:
                 if os.path.splitext(filename)[-1] == ".zip":
@@ -247,7 +263,7 @@ class DataFetcher(QtCore.QRunnable):
                 time.sleep(0.01)
 
             except FileNotFoundError:
-                filename = filename.replace("_scan_", "")
+                filename = filename.replace(TEMPFILE_PREFIX, "")
 
             else:
                 break

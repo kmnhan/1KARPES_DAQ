@@ -22,7 +22,10 @@ from qtpy import QtCore
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import get_ses_properties
 
-SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
+SES_DIR = os.getenv(
+    "SES_BASE_PATH", "D:/SES_1.9.6_Win64"
+)  #: The directory where SES is installed
+TEMPFILE_PREFIX: str = "_tmp_"  #: Prefix to use for working files
 
 log = logging.getLogger("scan")
 log.setLevel(logging.DEBUG)
@@ -43,14 +46,38 @@ Multiple DA maps in a single region not supported
 """
 
 
+def gen_data_name(
+    base_file: str,
+    data_idx: int,
+    slice_idx: int | None = None,
+    prefix: bool = False,
+    motor: bool = False,
+    ext: str | None = None,
+) -> str:
+    fname = f"{base_file}{str(data_idx).zfill(4)}"
+
+    if slice_idx is not None:
+        fname = fname + f"_S{str(slice_idx).zfill(5)}"
+
+    if prefix:
+        fname = TEMPFILE_PREFIX + fname
+
+    if motor:
+        fname = fname + "_motors"
+
+    if ext is not None:
+        fname = fname + ext
+
+    return fname
+
+
 class MotorPosWriter(QtCore.QRunnable):
     def __init__(self):
         super().__init__()
         self._stopped: bool = False
         self.messages: deque[list[str]] = deque()
-        self.dirname: str | os.PathLike | None = None
-        self.filename: str | os.PathLike | None = None
-        self.prefix: str | None = None
+        self.fname: str | None = None
+        self.fname_prefixed: str | None = None
 
     def run(self):
         self._stopped = False
@@ -62,12 +89,15 @@ class MotorPosWriter(QtCore.QRunnable):
             try:
                 # if file without prefix exists, the scan has finished but we have
                 # remaining log entries to enter.
-                fname = os.path.join(self.dirname, self.filename)
-                if not os.path.isfile(fname):
-                    fname = os.path.join(self.dirname, self.prefix + str(self.filename))
+                if os.path.isfile(self.fname):
+                    fname = self.fname
+                else:
+                    fname = self.fname_prefixed
+
                 with open(fname, "a", newline="") as f:
                     writer = csv.writer(f)
                     writer.writerow(msg)
+
             except PermissionError:
                 self.messages.appendleft(msg)
                 continue
@@ -82,12 +112,15 @@ class MotorPosWriter(QtCore.QRunnable):
                 print(",".join(msg))
         self._stopped = True
 
-    def set_file(
-        self, dirname: str | os.PathLike, filename: str | os.PathLike, prefix: str
-    ):
-        self.dirname = dirname
-        self.filename = filename
-        self.prefix = prefix
+    def set_file(self, dirname: str | os.PathLike, base_file: str, data_idx: int):
+        self.fname = os.path.join(
+            dirname,
+            gen_data_name(base_file, data_idx, prefix=False, motor=True, ext=".csv"),
+        )
+        self.fname_prefixed = os.path.join(
+            dirname,
+            gen_data_name(base_file, data_idx, prefix=True, motor=True, ext=".csv"),
+        )
 
     def write_pos(self, content: str | list[str]):
         """Append content to log file."""
@@ -106,9 +139,10 @@ class MotorPosWriter(QtCore.QRunnable):
             Header content to write to file.
 
         """
-        file_name = os.path.join(self.dirname, self.prefix + str(self.filename))
-        if os.path.isfile(file_name):
-            os.remove(file_name)
+        if os.path.isfile(self.fname_prefixed):
+            log.info(f"Log file {self.fname_prefixed} already exists, overwriting")
+            os.remove(self.fname_prefixed)
+
         self.write_pos(header)
 
 
@@ -144,13 +178,14 @@ class ScanWorker(QtCore.QRunnable):
         self._ses_app = pywinauto.Application(backend="win32").connect(
             process=self._pid
         )
+        self.n_complete: int = 0
 
         self._stop: bool = False
         self._stopnow: bool = False
 
     @property
     def data_name(self) -> str:
-        return f"{self.base_file}{str(self.data_idx).zfill(4)}"
+        return gen_data_name(self.base_file, self.data_idx)
 
     def check_finished(self) -> bool:
         """Return whether if sequence is finished."""
@@ -172,8 +207,8 @@ class ScanWorker(QtCore.QRunnable):
                 )
                 path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
                 pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
-            except win32.lib.pywintypes.error as e:
-                print(e)
+            except win32.lib.pywintypes.error:
+                log.exception(f"Error while clicking sequence button {button}")
                 continue
             else:
                 break
@@ -183,7 +218,7 @@ class ScanWorker(QtCore.QRunnable):
         self._stop = True
 
     def cancel_stop_after_point(self):
-        """Stop after acquiring current motor point."""
+        """Cancel the stop after point command."""
         self._stop = False
 
     def force_stop(self):
@@ -199,21 +234,29 @@ class ScanWorker(QtCore.QRunnable):
         try:
             shm = shared_memory.SharedMemory(name="seq_start")
         except FileNotFoundError:
+            # AttributeServer is not running, skip
             pass
         else:
             np.ndarray((1,), "f8", shm.buf)[0] = datetime.datetime.now().timestamp()
             shm.close()
 
-    def sequence_run_wait(self) -> int:
-        """Run sequence and wait until it finishes."""
-        # click run button
+    def sequence_run_wait(self) -> bool:
+        """Run sequence and wait until it finishes.
+
+        Returns
+        -------
+        flag : bool
+            True if the scan was successfully finished, False if it was terminated by an
+            abort command.
+
+        """
         log.debug("Clicking sequence run")
         self.click_sequence_button("Run")
         self.update_seq_start_time()
 
         time.sleep(0.1)
 
-        # keep checking for abort during scan
+        # Keep checking for abort during scan
         aborted: bool = False
         while True:
             if (not aborted) and self._stopnow:
@@ -226,11 +269,12 @@ class ScanWorker(QtCore.QRunnable):
             time.sleep(0.001)
 
         if self.has_da:
+            # DA maps take time to save even after scan ends
+            # Waits and checks frequently until the zip file seems intact
             log.debug("Checking if the DA map is completely saved")
-            # DA maps take time to save even after scan ends, let's try to wait
             timeout_start = time.perf_counter()
             fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
-            time.sleep(1)
+            time.sleep(0.5)
             while True:
                 time.sleep(1)
                 if os.path.isfile(fname) and os.stat(fname).st_size != 0:
@@ -245,21 +289,19 @@ class ScanWorker(QtCore.QRunnable):
                         continue
                     else:
                         log.debug("DA map file appears to be intact")
-                        # zipfile is intact, check work folder to confirm
-                        # <- workfile checking is not reliable, turn off for now
-
-                        # if len(workfiles) == len(
-                        #     os.listdir(os.path.join(SES_DIR, "work"))
-                        # ):
                         break
-                elif self._stop and time.perf_counter() > timeout_start + 10:
-                    # SES 상에서 stop after something 누른 다음 stop after point를 통해
-                    # abort할 시에는 DA map이 영영 저장되지 않을 수도 있으니까 10초
-                    # 기다려서 안 되면 그냥 안 되는갑다 하기
+                elif self._stop and time.perf_counter() > timeout_start + 30:
+                    # Timeout of 30s to wait for save. If you click stop after ~~ in SES
+                    # and then use the stop after point button in our scan GUI to abort
+                    # the measurement, the DA map might never be saved, so we wait 30s
+                    # and assume everything is OK
                     break
+
         if aborted:
-            return 1
-        return 0
+            return False
+        else:
+            self.n_complete += 1
+            return True
 
     def run(self):
         if len(self.motors) == 0:
@@ -271,7 +313,8 @@ class ScanWorker(QtCore.QRunnable):
             for i, ax in enumerate(self.motors):
                 ax.pre_motion()
                 log.debug(f"Pre-motion for axis {i+1} complete, checking bounds")
-                # Last sanity check of bounds before motion
+
+                # Last sanity check of bounds before motion start
                 if (ax.minimum is not None and min(self.array[:, i]) < ax.minimum) or (
                     ax.maximum is not None and max(self.array[:, i]) > ax.maximum
                 ):
@@ -297,7 +340,7 @@ class ScanWorker(QtCore.QRunnable):
         """Rename the data file to include the slice index.
 
         This function adjusts file names to maintain a constant file number during
-        scans. File names are temporarily modified during scanning by adding a prefix,
+        scans. File names are temporarily modified during the scan by adding a prefix,
         which is later restored using `_restore_filenames` when all scans are completed.
 
         This is possible because SES determines the sequence number by parsing the name
@@ -311,13 +354,12 @@ class ScanWorker(QtCore.QRunnable):
         """
         for ext in self.valid_ext:
             f = os.path.join(self.base_dir, f"{self.data_name}{ext}")
+
             new = os.path.join(
                 self.base_dir,
-                "_scan_"
-                + self.base_file
-                + str(self.data_idx).zfill(4)
-                + f"_S{str(index).zfill(5)}"
-                + ext,
+                gen_data_name(
+                    self.base_file, self.data_idx, slice_idx=index, prefix=True, ext=ext
+                ),
             )
             if os.path.isfile(f):
                 while True:
@@ -330,14 +372,25 @@ class ScanWorker(QtCore.QRunnable):
                         break
 
     def _restore_filenames(self):
-        files = []
+        """Restore file names that were modified with `_rename_file`."""
+        if self.n_complete == 0:
+            # Scan aborted before data could be saved
+            motorfile_name = gen_data_name(
+                self.base_file, self.data_idx, prefix=True, motor=True, ext=".csv"
+            )
+            if os.path.isfile(motorfile_name):
+                os.remove(motorfile_name)
+                return
+
+        # Get all mangled files
+        files: list[str] = []
         for ext in [*list(self.valid_ext), ".csv"]:
             files += glob.glob(
-                os.path.join(self.base_dir, f"_scan_{self.base_file}*{ext}")
+                os.path.join(self.base_dir, f"{TEMPFILE_PREFIX}{self.base_file}*{ext}")
             )
         for f in files:
             new = f.replace(
-                os.path.basename(f), os.path.basename(f).replace("_scan_", "")
+                os.path.basename(f), os.path.basename(f).replace(TEMPFILE_PREFIX, "")
             )
             while True:
                 try:
@@ -374,8 +427,8 @@ class ScanWorker(QtCore.QRunnable):
                 self.motors[j].move(self.array[i, j])
 
             # Execute sequence and wait until it finishes
-            ret = self.sequence_run_wait()
-            if ret == 1:
+            flag = self.sequence_run_wait()
+            if not flag:
                 # Aborted during scan, return
                 log.info("Aborted during scan")
                 return
