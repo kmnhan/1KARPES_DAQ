@@ -22,19 +22,13 @@ from qtpy import QtCore
 from sescontrol.plugins import Motor
 from sescontrol.ses_win import get_ses_properties
 
+log = logging.getLogger("scan")
+
 SES_DIR = os.getenv(
     "SES_BASE_PATH", "D:/SES_1.9.6_Win64"
 )  #: The directory where SES is installed
 TEMPFILE_PREFIX: str = "_tmp_"  #: Prefix to use for working files
 
-log = logging.getLogger("scan")
-log.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-# handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
-handler.setFormatter(
-    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
-)
-log.addHandler(handler)
 
 """
 Limitations

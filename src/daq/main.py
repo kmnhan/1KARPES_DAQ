@@ -26,8 +26,6 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.setupUi(self)
         self.setWindowTitle("1KARPES Data Acquisition")
 
-        self.threadpool = QtCore.QThreadPool.globalInstance()
-
         self.ses_shortcuts = SESShortcuts()
         self.status = StatusWidget()
         self.scantype = ScanType()
@@ -45,12 +43,13 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         )
 
     def closeEvent(self, event: QtGui.QCloseEvent):
-        flag = self.threadpool.waitForDone(15000)
+        threadpool = QtCore.QThreadPool.globalInstance()
+        flag = threadpool.waitForDone(15000)
         if not flag:
             QtWidgets.QMessageBox.critical(
                 self,
                 "Threadpool timed out after 15 seconds",
-                f"Remaining threads: {self.threadpool.activeThreadCount()}",
+                f"Remaining threads: {threadpool.activeThreadCount()}",
             )
 
         print("Proper Termination Achieved! Yay!")

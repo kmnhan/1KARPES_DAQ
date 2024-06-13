@@ -1,4 +1,5 @@
 import configparser
+import logging
 import os
 import shutil
 import tempfile
@@ -17,8 +18,13 @@ from sescontrol.plugins import Motor
 from sescontrol.scan import TEMPFILE_PREFIX, gen_data_name
 from sescontrol.ses_win import SES_DIR
 
+log = logging.getLogger("scan")
+
+WORK_DIR = os.path.join(SES_DIR, "work")
+
 
 class CasePreservingConfigParser(configparser.ConfigParser):
+    # https://stackoverflow.com/questions/1611799
     def optionxform(self, optionstr):
         return str(optionstr)
 
@@ -43,7 +49,15 @@ class MotorThread(threading.Thread):
 
 
 class MotorControls(ItoolControlsBase):
-    quick_move_dims = ["X", "Y", "Z", "Polar", "Tilt", "Azi", "Beam"]
+    QUICK_MOVE_DIMS: tuple[str] = (
+        "X",
+        "Y",
+        "Z",
+        "Polar",
+        "Tilt",
+        "Azi",
+        "Beam",
+    )  #: Dimensions that are applied in move to cursor action
 
     def __init__(self, *args, **kwargs):
         self.workers: list[MotorThread] = []
@@ -96,7 +110,7 @@ class MotorControls(ItoolControlsBase):
 
     @property
     def valid_dims(self) -> list[str]:
-        return [d for d in self.data.dims if d in self.quick_move_dims]
+        return [d for d in self.data.dims if d in self.QUICK_MOVE_DIMS]
 
     @property
     def enabled_dims(self) -> list[str]:
@@ -216,7 +230,9 @@ class DataFetcher(QtCore.QRunnable):
                         if os.stat(filename).st_size != 0:
                             try:
                                 with zipfile.ZipFile(filename, "r") as _:
-                                    # do nothing, just trying to open the file
+                                    # Do nothing, just trying to open the file
+                                    # Will this break the file if SES is writing to it?
+                                    # Requires extensive testing
                                     pass
                             except zipfile.BadZipFile:
                                 pass
@@ -247,29 +263,39 @@ class DataFetcher(QtCore.QRunnable):
                 )
 
         if not os.path.isfile(filename):
-            print("File not found... skip display")
+            log.debug("DataFetcher failed to find file, exiting")
             return
 
+        start_t = time.perf_counter()
         while True:
             try:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    file_copied = shutil.copy(filename, tmpdir)
+
                 if os.path.splitext(filename)[-1] == ".zip":
                     from erlab.io.plugins.da30 import load_zip
 
-                    wave = load_zip(filename)
+                    wave = load_zip(file_copied)
+
                 else:
-                    wave = erlab.io.load_experiment(filename)
+                    wave = erlab.io.load_experiment(file_copied)
 
             except PermissionError:
-                time.sleep(0.01)
+                time.sleep(0.1)
 
             except FileNotFoundError:
+                time.sleep(0.05)
                 filename = filename.replace(TEMPFILE_PREFIX, "")
 
             else:
                 break
 
+            if time.perf_counter() - start_t > 10:
+                log.error("DataFetcher timed out after 10 seconds, exiting")
+                return
+
         if isinstance(wave, xr.Dataset):
-            # select first sequence
+            # If the file contains multiple scans, take the first one
             wave: xr.DataArray = next(iter(wave.data_vars.values()))
 
         wave = wave.rename(
@@ -277,10 +303,12 @@ class DataFetcher(QtCore.QRunnable):
         )
 
         # Bin 2D scan to save memory
-        if len(self._motor_coords) > 1:
-            wave = wave.coarsen(
-                {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
-            ).mean()
+        # Since we've installed more RAM, we can skip this step for now
+
+        # if len(self._motor_coords) > 1:
+        #     wave = wave.coarsen(
+        #         {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
+        #     ).mean()
 
         if self._niter == 1:
             # Reserve space for future scans
@@ -363,12 +391,13 @@ class LiveImageTool(BaseImageTool):
                     len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
                 )
 
-            # assign equal coordinates, energy axis might be mismatched in some cases
+            # Assign equal coordinates since the energy axis values might be slightly
+            # different probably due to rounding errors in SES software corrections
             wave = wave.assign_coords(
                 {d: self.array_slicer._obj.coords[d] for d in wave.dims}
             )
 
-            # assign motor coordinates
+            # Assign motor coordinates
             wave = wave.expand_dims(
                 {
                     name: [coord[ind]]
@@ -378,40 +407,36 @@ class LiveImageTool(BaseImageTool):
                 }
             )
 
-            # this will slice the target array at the coordinates we wish to insert the received data
+            # These will slice the target array at the coordinates we wish to insert the
+            # received data
             target_slices = {
                 name: self.array_slicer._obj.coords[name] == coord[ind]
                 for ind, (name, coord) in zip(
                     indices, self._motor_coords.items(), strict=True
                 )
             }
-            # we want to know the dims of target array before assigning new values
-            target = self.array_slicer._obj.loc[target_slices]
 
-            # transpose to target shape on assign
-            self.array_slicer._obj.loc[target_slices] = wave.transpose(
-                *target.dims
-            ).values
-            # We take the values because coordinates on target array are float32,
-            # whereas we have assigned float64. This results in comparison failure.
+            # We want to know the dims of target array before assigning new values since
+            # the user might have transposed it
+            target_dims = set(self.array_slicer._obj.loc[target_slices].dims)
 
-            for prop in (
-                "nanmax",
-                "nanmin",
-                "absnanmax",
-                "absnanmin",
-                # "coords",
-                # "coords_uniform",
-                # "incs",
-                # "incs_uniform",
-                # "lims",
-                # "lims_uniform",
-                "data_vals_T",
-            ):
-                self.array_slicer.reset_property_cache(prop)
-            self.slicer_area.refresh_all()
+            # Transpose to target shape on assignment
+            if set(target_dims) != set(wave.dims):
+                self.array_slicer._obj.loc[target_slices] = wave.transpose(
+                    *target_dims
+                ).values
+            else:
+                self.array_slicer._obj.loc[target_slices] = wave.values
+
+            # We take the values because coordinates on target array are float32 due to
+            # efficiency in imagetool, whereas the assigned array has float64. This
+            # results in comparison failure.
+            self.array_slicer.clear_dim_cache(include_vals=True)
+            self.slicer_area.refresh_all(only_plots=True)
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        # Setting the data to small array before closing might help with garbage
+        # collection, not so sure
         self.slicer_area.set_data(np.ones((2, 2), dtype=np.float32))
         self.sigClosed.emit(self)
         super().closeEvent(event)
@@ -422,30 +447,27 @@ class WorkFileFetcherSignals(QtCore.QObject):
 
 
 class WorkFileFetcher(QtCore.QRunnable):
-    def __init__(self, region, workdir, norm: bool) -> None:
+    def __init__(self, region: str, norm: bool) -> None:
         super().__init__()
         self.signals = WorkFileFetcherSignals()
         self.region = region
-        self.workdir = workdir
         self.norm = norm
 
     def run(self):
         try:
-            shape, kwargs = get_workfile_shape_kwargs(self.region, self.workdir)
-        except Exception as e:
-            print("Exception while fetching workfile shape:", e)
+            shape, kwargs = get_workfile_shape_kwargs(self.region)
+        except Exception:
+            log.exception("Exception while fetching workfile shape")
             return
 
         try:
-            arr = get_workfile_array(
-                self.region, self.workdir, shape, kwargs, norm=False
-            )
-        except Exception as e:
-            print("Exception while fetching workfile array:", e)
+            arr = get_workfile_array(self.region, shape, kwargs, norm=False)
+        except Exception:
+            log.exception("Exception while fetching workfile array")
             arr = None
 
         if arr is None:
-            print("File not found or corrupt, cancel workfile update")
+            log.info("Workfile not found or corrupt, aborting workfile update")
             return
 
         if not self.norm:
@@ -454,16 +476,16 @@ class WorkFileFetcher(QtCore.QRunnable):
 
         try:
             arr_norm = get_workfile_array(
-                self.region, self.workdir, shape, kwargs, norm=True, as_array=True
+                self.region, shape, kwargs, norm=True, as_array=True
             )
-        except Exception as e:
-            print("Exception while fetching workfile norm array", e)
+        except Exception:
+            log.exception("Exception while fetching workfile norm array")
             arr_norm = None
 
         if arr.shape != arr_norm.shape:
-            print(
-                f"Array has shape {arr.shape} while norm array has shape "
-                f"{arr_norm.shape}, only updating array"
+            log.error(
+                f"Array has shape {arr.shape} while norm array has "
+                f"shape {arr_norm.shape}, only updating array"
             )
             arr_norm = None
 
@@ -475,8 +497,18 @@ class WorkFileFetcher(QtCore.QRunnable):
         self.signals.sigUpdate.emit(arr)
 
 
-def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
-    ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
+def get_workfile_shape_kwargs(region: str) -> tuple[int | tuple[int, ...], dict]:
+    """Get the shape and coordinates of a workfile region.
+
+    For DA maps, the region info is saved with the ``.ini`` file present in the workfile
+    folder. For other type of scans, we look for the ``Ses.ini`` file in the SES folder
+    and try to read the detector settings from there. A single integer is returned,
+    which corresponds to the number of x channels used by the detector.
+
+    Since the detector slices will not change often, this is kinda unnecessary but
+    exists for future proofing and to avoid hardcoding the number of slices.
+    """
+    ini_file = os.path.join(WORK_DIR, f"Spectrum_{region}.ini")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         if os.path.isfile(ini_file):
@@ -484,6 +516,7 @@ def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
             shape, coords = get_shape_and_coords(region_info)
             kwargs = {"coords": coords, "name": region_info["name"]}
             return shape, kwargs
+
         else:
             ses_config = configparser.ConfigParser(strict=False)
             ses_ini_file = os.path.join(SES_DIR, r"ini\Ses.ini")
@@ -498,18 +531,23 @@ def get_workfile_shape_kwargs(region, workdir) -> tuple[int | tuple[int], dict]:
 
 def get_workfile_array(
     region: str,
-    workdir: str,
     shape: int | tuple[int],
     kwargs: dict,
     norm: bool = False,
     as_array: bool = False,
-) -> tuple[xr.DataArray | np.ndarray | None, str | None]:
+) -> xr.DataArray | np.ndarray | None:
+    """Get the array from a workfile, given a region name.
+
+    If shape is a single integer, the array is reshaped to that integer and the number
+    of columns is calculated from the length of the array. If shape is a tuple, the
+    array is reshaped to that shape.
+    """
     if norm:
         binfile: str = f"Spectrum_{region}_Norm.bin"
     else:
         binfile: str = f"Spectrum_{region}.bin"
 
-    binfile = os.path.join(workdir, binfile)
+    binfile = os.path.join(WORK_DIR, binfile)
 
     if not os.path.isfile(binfile):
         return None
@@ -589,8 +627,6 @@ class WorkFileImageTool(BaseImageTool):
 
         self.threadpool = QtCore.QThreadPool.globalInstance()
 
-        self.workdir = os.path.join(SES_DIR, "work")
-
         for d in self.docks:
             d.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
 
@@ -634,7 +670,7 @@ class WorkFileImageTool(BaseImageTool):
         self.regionscan_timer.start()
 
         self.update_timer = QtCore.QTimer(self)
-        self.update_timer.setInterval(300)
+        self.update_timer.setInterval(1000)
         self.update_timer.timeout.connect(self.reload)
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
@@ -649,11 +685,12 @@ class WorkFileImageTool(BaseImageTool):
         """Scan for regions in work directory."""
         regions: list[str] = [
             f[9:-9]
-            for f in os.listdir(self.workdir)
+            for f in os.listdir(WORK_DIR)
             if f.startswith("Spectrum_") and f.endswith("_Norm.bin")
         ]
 
         if set(regions) == set(self.regions):
+            # No change in regions, no need to update
             return
         else:
             self.regions = regions
@@ -663,7 +700,7 @@ class WorkFileImageTool(BaseImageTool):
     @QtCore.Slot()
     def reload(self):
         fetcher = WorkFileFetcher(
-            self.region_combo.currentText(), self.workdir, self.norm_check.isChecked()
+            self.region_combo.currentText(), self.norm_check.isChecked()
         )
         fetcher.signals.sigUpdate.connect(self.update_data)
         self.threadpool.start(fetcher)
@@ -678,8 +715,7 @@ class WorkFileImageTool(BaseImageTool):
                     *self.array_slicer._obj.dims
                 ).values
 
-            for prop in ("nanmax", "nanmin", "absnanmax", "absnanmin", "data_vals_T"):
-                self.array_slicer.reset_property_cache(prop)
+            self.array_slicer.clear_val_cache(include_vals=True)
             self.slicer_area.refresh_all(only_plots=True)
 
         else:
@@ -696,26 +732,36 @@ def check_same_coord_limits(arr1, arr2):
 
     Returns True if the shape and dimensions are the same and the bounds of the
     coordinates for each dimension are the same.
-
     """
     if arr1.ndim != arr2.ndim:
         return False
+
     if set(arr1.shape) != set(arr2.shape):
         return False
+
     if set(arr1.dims) != set(arr2.dims):
         return False
 
+    # Loose comparison for performance
     for d in arr1.dims:
         if not np.isclose(arr1.coords[d][0], arr2.coords[d][0]):
             return False
+
         if not np.isclose(arr1.coords[d][-1], arr2.coords[d][-1]):
             return False
+
     return True
 
 
-def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
+def get_shape_and_coords(
+    region_info: dict[str, str],
+) -> tuple[tuple[int, ...], dict[str, np.ndarray]]:
+    """Get the shape and coordinates of a workfile region.
+
+    The input is a dictionary parsed from an .ini file in the work folder.
+    """
     shape: list[int] = []
-    coords = {}
+    coords: dict[str, np.ndarray] = {}
     for d in ("depth", "height", "width"):
         n = int(region_info[d])
         offset = float(region_info[f"{d}offset"])
@@ -728,6 +774,10 @@ def get_shape_and_coords(region_info: dict) -> tuple[tuple[int, ...], dict]:
 
 
 def parse_ini(filename: str | os.PathLike) -> dict:
+    """Parse an .ini file and return a dictionary of sections.
+
+    The case of the keys is preserved.
+    """
     parser = CasePreservingConfigParser(strict=False)
     out = {}
     with open(filename) as f:
