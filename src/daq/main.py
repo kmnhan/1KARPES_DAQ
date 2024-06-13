@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import os
 import sys
@@ -11,6 +12,15 @@ try:
     os.chdir(sys._MEIPASS)
 except:  # noqa: E722
     pass
+
+log = logging.getLogger("main")
+log.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+# handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+handler.setFormatter(
+    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+)
+log.addHandler(handler)
 
 
 class QHLine(QtWidgets.QFrame):
@@ -52,7 +62,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
                 f"Remaining threads: {threadpool.activeThreadCount()}",
             )
 
-        print("Proper Termination Achieved! Yay!")
+        log.info("All threads properly terminated! Yay!")
         super().closeEvent(event)
 
 
@@ -69,6 +79,8 @@ class MainWindow(MainWindowGUI):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+
+    log.info("Starting application")
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
     win = MainWindow()

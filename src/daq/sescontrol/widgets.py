@@ -296,6 +296,7 @@ class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
 
     @property
     def edited(self) -> bool:
+        """Get whether the table entry has been edited by the user."""
         return not np.allclose(self.array, self.modified_array)
 
     @property
@@ -370,6 +371,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     @property
     def itool(self):
+        """Get the last created LiveImageTool."""
         try:
             return self._itools[-1]
         except IndexError:
@@ -385,6 +387,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @QtCore.Slot(object)
     def itool_closed(self, imagetool: LiveImageTool):
         self._itools.remove(imagetool)
+        del imagetool
         gc.collect(generation=2)
 
     @property
@@ -424,6 +427,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     def motor_changed(self, index):
         # apply motion limits
+        #!TODO: this is stupid
         self.update_motor_limits(index)
 
     def update_motor_limits(self, index: int):
@@ -490,7 +494,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         motion_edited: bool = self.motor_dialog.edited
         motion_raster: bool = self.motor_dialog.rasterized
 
-        # get file information
+        # Get file information
         base_dir, base_file, valid_ext, _, sequences = get_file_info()
         data_idx = next_index(base_dir, base_file, valid_ext)
 
@@ -505,6 +509,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         else:
             self.itool = LiveImageTool()
             if motion_edited:
+                # If the motion array was edited, coords may not be uniform
                 iter_coords = {"Iteration": np.arange(self.numpoints)}
                 self.itool.set_params(
                     iter_coords, motion_raster, base_dir, base_file, data_idx
@@ -514,7 +519,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                     motor_coords, motion_raster, base_dir, base_file, data_idx
                 )
 
-        # prepare before start
+        # Prepare before start
         self.pre_process()
 
         motors: list[str] = list(motor_coords.keys())
@@ -702,7 +707,6 @@ class SESShortcuts(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setMinimumWidth(250)
-        self.setWindowTitle("SES Shortcuts")
         self.setLayout(QtWidgets.QHBoxLayout(self))
         self.layout().setContentsMargins(0, 0, 0, 0)
 
@@ -713,7 +717,7 @@ class SESShortcuts(QtWidgets.QWidget):
         self.ses: SESController = SESController()
 
         self.alive_check_timer = QtCore.QTimer(self)
-        self.alive_check_timer.setInterval(500)
+        self.alive_check_timer.setInterval(1000)
         self.alive_check_timer.timeout.connect(self.check_alive)
         self.check_alive()
         self.alive_check_timer.start()
@@ -741,11 +745,7 @@ class SESShortcuts(QtWidgets.QWidget):
         try:
             self.ses.click_menu(path, match)
         except Exception as e:
-            QtWidgets.QMessageBox.critical(
-                self,
-                str(e),
-                "SES control failed",
-            )
+            QtWidgets.QMessageBox.critical(self, str(e), "SES control failed")
             self.check_alive()
 
     @QtCore.Slot(bool)

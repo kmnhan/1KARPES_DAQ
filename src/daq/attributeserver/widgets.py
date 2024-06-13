@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import threading
@@ -13,6 +14,8 @@ try:
     os.chdir(sys._MEIPASS)
 except:  # noqa: E722
     pass
+
+log = logging.getLogger("attrs")
 
 
 class SlitTableModel(QtCore.QAbstractTableModel):
@@ -88,27 +91,37 @@ class StatusThread(QtCore.QThread):
     def run(self):
         self.stopped.clear()
 
+        log.info("Status thread started")
+
         while not self.stopped.is_set():
             try:
                 temp = [str(float(v)) for v in get_temperature_list()]
             except FileNotFoundError:
-                # Shared memory not present, temperature controller may be off
+                log.exception(
+                    "Shared memory not found, check temperature control software"
+                )
                 temp = [""] * 3
-            except ValueError as e:
-                # Something went wrong while reading shared memory, try again
-                print(f"Error while reading shared temperature: {e}")
+            except ValueError:
+                log.exception("Error while reading temperature from shared memory")
+                time.sleep(0.5)
                 continue
+
             self.sigTUpdate.emit(temp)
 
             try:
                 pressure: list[str] = get_pressure_list()
             except FileNotFoundError:
+                log.exception("Shared memory not found, check mg15 software")
                 pressure: list[str] = [""]
-            except ValueError as e:
-                print(f"Error while reading shared pressure: {e}")
+            except ValueError:
+                log.exception("Error while reading pressure from shared memory")
+                time.sleep(0.5)
                 continue
+
             self.sigPUpdate.emit(pressure)
             time.sleep(0.1)
+
+        log.info("Status thread stopped")
 
 
 class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
@@ -121,7 +134,6 @@ class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
         self.attr_server.start()
 
         self.update_thread = StatusThread()
-
         self.update_thread.sigTUpdate.connect(self.update_temperature)
         self.update_thread.sigPUpdate.connect(self.update_pressure)
         self.update_thread.start()

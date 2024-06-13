@@ -1,10 +1,13 @@
 """Loads and parses attributes from shared memory."""
 
 import datetime
+import logging
 from multiprocessing import shared_memory
 from typing import Any
 
 import numpy as np
+
+log = logging.getLogger("attrs")
 
 SLIT_TABLE: tuple[tuple[int, float, bool], ...] = (
     (100, 0.05, False),
@@ -75,6 +78,20 @@ def get_pressure_list() -> list[str]:
     ]
 
 
+def get_position_list() -> list[str]:
+    return [str(np.round(v, 4)) for v in get_shared_array("MotorPositions", 6, "f8")]
+
+
+def get_temperature_list() -> list[str]:
+    return [
+        str(v) for v in get_shared_array("Temperatures", len(TEMPERATURE_KEYS), "f8")
+    ]
+
+
+def get_seqstart() -> datetime.datetime:
+    return datetime.datetime.fromtimestamp(get_shared_float("seq_start"))
+
+
 def get_pressure_dict() -> dict[str, str]:
     return dict(
         zip(
@@ -85,22 +102,16 @@ def get_pressure_dict() -> dict[str, str]:
     )
 
 
-def get_position_list() -> list[str]:
-    return [str(np.round(v, 4)) for v in get_shared_array("MotorPositions", 6, "f8")]
-
-
 def get_position_dict() -> dict[str, str]:
     return dict(zip(MANIPULATOR_AXES, get_position_list(), strict=True))
 
 
-def get_temperature_list() -> list[str]:
-    return [
-        str(v) for v in get_shared_array("Temperatures", len(TEMPERATURE_KEYS), "f8")
-    ]
-
-
 def get_temperature_dict() -> dict[str, str]:
     return dict(zip(TEMPERATURE_KEYS, get_temperature_list(), strict=True))
+
+
+def get_seqstart_dict() -> dict[str, str]:
+    return {"seq_start": get_seqstart().isoformat()}
 
 
 def get_slit_dict() -> dict[str, str]:
@@ -110,14 +121,6 @@ def get_slit_dict() -> dict[str, str]:
         "slit_width": str(SLIT_TABLE[idx][1]),
         "slit_aperture": str(SLIT_TABLE[idx][2]),
     }
-
-
-def get_seqstart() -> datetime.datetime:
-    return datetime.datetime.fromtimestamp(get_shared_float("seq_start"))
-
-
-def get_seqstart_dict() -> dict[str, str]:
-    return {"seq_start": get_seqstart().isoformat()}
 
 
 def get_attribute_dict() -> dict[str, str]:
@@ -131,9 +134,8 @@ def get_attribute_dict() -> dict[str, str]:
     ):
         try:
             d = fn()
-        except FileNotFoundError:
-            pass
-            # print(f"Getting attribute from shared memory failed with error {e}")
+        except Exception:
+            log.exception("Getting attribute from shared memory failed")
         else:
             attrs |= d
     return attrs

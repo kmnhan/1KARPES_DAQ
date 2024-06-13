@@ -1,9 +1,10 @@
 """Functions that use the Windows API to control SES.exe windows and menus."""
 
 import glob
+import logging
 import os
 import sys
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable
 
 sys.coinit_flags = 2
 
@@ -18,6 +19,7 @@ import win32con
 import win32gui
 
 SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
+log = logging.getLogger("scan")
 
 
 def get_ses_proc() -> psutil.Process:
