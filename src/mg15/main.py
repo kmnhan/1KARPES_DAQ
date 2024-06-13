@@ -155,7 +155,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.config.get("Python", "Main Gauges", fallback="[1, 2, 4]")
         )[:3]
         self.channel_names: list[str] = [
-            self.config.get("Section 2", f"MG15 CH{i+1} Name")[1:-1] for i in range(7)
+            self.config.get("Section 2", f"MG15 CH{i + 1} Name")[1:-1] for i in range(7)
         ]
         self.disp_units: str = (
             self.config.get("Python", "Display Units", fallback="torr").strip().lower()

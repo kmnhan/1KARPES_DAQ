@@ -444,7 +444,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.ch3 = SingleChannelWidget(self)
         for i, ch in enumerate(self.channels):
             self.layout().addWidget(ch)
-            ch.checkbox.setText(f"Ch{i+1}")
+            ch.checkbox.setText(f"Ch{i + 1}")
             ch.sigEnabledChanged.connect(lambda *, idx=i: self.refresh_shm(idx))
         self.ch1.sigMoveRequested.connect(self.move_ch1)
         self.ch2.sigMoveRequested.connect(self.move_ch2)

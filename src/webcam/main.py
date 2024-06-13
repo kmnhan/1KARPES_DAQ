@@ -48,7 +48,7 @@ class CameraHandler(QtCore.QThread):
                     if self.save_requested:
                         filename = os.path.join(
                             SAVE_DIR,
-                            f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S',time.localtime())}.jpg",
+                            f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S', time.localtime())}.jpg",
                         )
                         cv2.imwrite(filename, image)
                         self.save_requested = False

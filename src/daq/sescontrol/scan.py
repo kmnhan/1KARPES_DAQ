@@ -306,7 +306,7 @@ class ScanWorker(QtCore.QRunnable):
         else:
             for i, ax in enumerate(self.motors):
                 ax.pre_motion()
-                log.debug(f"Pre-motion for axis {i+1} complete, checking bounds")
+                log.debug(f"Pre-motion for axis {i + 1} complete, checking bounds")
 
                 # Last sanity check of bounds before motion start
                 if (ax.minimum is not None and min(self.array[:, i]) < ax.minimum) or (
@@ -322,7 +322,7 @@ class ScanWorker(QtCore.QRunnable):
 
             for i, ax in enumerate(self.motors):
                 ax.post_motion()
-                log.debug(f"Post-motion for axis {i+1} complete")
+                log.debug(f"Post-motion for axis {i + 1} complete")
 
             # Restore mangled filenames
             self._restore_filenames()

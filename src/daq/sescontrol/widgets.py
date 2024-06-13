@@ -162,7 +162,10 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
         )
         if len(self.motor_coord) == 1:
             self.motor_coord = np.array(
-                [self.start.value(), self.start.value() + self.delta.value()]
+                [
+                    self.start.value(),
+                    self.start.value() + self.delta.value(),
+                ]
             )
         self._refresh_values()
 
