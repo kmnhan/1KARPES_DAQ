@@ -272,26 +272,26 @@ class DataFetcher(QtCore.QRunnable):
                 with tempfile.TemporaryDirectory() as tmpdir:
                     file_copied = shutil.copy(filename, tmpdir)
 
-                if os.path.splitext(filename)[-1] == ".zip":
-                    from erlab.io.plugins.da30 import load_zip
+                    if os.path.splitext(filename)[-1] == ".zip":
+                        from erlab.io.plugins.da30 import load_zip
 
-                    wave = load_zip(file_copied)
+                        wave = load_zip(file_copied)
 
-                else:
-                    wave = erlab.io.load_experiment(file_copied)
+                    else:
+                        wave = erlab.io.load_experiment(file_copied)
 
             except PermissionError:
-                time.sleep(0.1)
+                time.sleep(0.05)
 
             except FileNotFoundError:
-                time.sleep(0.05)
                 filename = filename.replace(TEMPFILE_PREFIX, "")
+                time.sleep(0.01)
 
             else:
                 break
 
-            if time.perf_counter() - start_t > 10:
-                log.error("DataFetcher timed out after 10 seconds, exiting")
+            if time.perf_counter() - start_t > 20:
+                log.error("DataFetcher timed out after 20 seconds, exiting")
                 return
 
         if isinstance(wave, xr.Dataset):
@@ -418,10 +418,10 @@ class LiveImageTool(BaseImageTool):
 
             # We want to know the dims of target array before assigning new values since
             # the user might have transposed it
-            target_dims = set(self.array_slicer._obj.loc[target_slices].dims)
+            target_dims = self.array_slicer._obj.loc[target_slices].dims
 
             # Transpose to target shape on assignment
-            if set(target_dims) != set(wave.dims):
+            if target_dims != wave.dims:
                 self.array_slicer._obj.loc[target_slices] = wave.transpose(
                     *target_dims
                 ).values
@@ -670,7 +670,7 @@ class WorkFileImageTool(BaseImageTool):
         self.regionscan_timer.start()
 
         self.update_timer = QtCore.QTimer(self)
-        self.update_timer.setInterval(1000)
+        self.update_timer.setInterval(500)
         self.update_timer.timeout.connect(self.reload)
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
@@ -720,7 +720,7 @@ class WorkFileImageTool(BaseImageTool):
 
         else:
             if set(self.array_slicer._obj.dims) == set(arr.dims):
-                self.array_slicer.set_data(arr.transpose(*self.array_slicer._obj.dims))
+                self.slicer_area.set_data(arr.transpose(*self.array_slicer._obj.dims))
             else:
                 self.slicer_area.set_data(arr)
 
