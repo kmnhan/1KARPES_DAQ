@@ -10,7 +10,13 @@ import zipfile
 import erlab.io
 import numpy as np
 import xarray as xr
-from erlab.interactive.imagetool import BaseImageTool, ItoolMenuBar
+from erlab.interactive.imagetool import (
+    BaseImageTool,
+    ImageTool,
+    ItoolMenuBar,
+    itool,
+    manager,
+)
 from erlab.interactive.imagetool.controls import ItoolControlsBase
 from qtpy import QtCore, QtGui, QtWidgets
 
@@ -162,30 +168,6 @@ class MotorControls(ItoolControlsBase):
             spin.setValue(1)
 
 
-class CustomMenuBar(ItoolMenuBar):
-    """Menubar with the data load menu customized."""
-
-    def _open_file(self):
-        valid_files = {
-            "xarray HDF5 Files (*.h5)": (xr.load_dataarray, {"engine": "h5netcdf"}),
-            "1KARPES Raw Data (*.pxt *.zip)": (erlab.io.load_experiment, {}),
-        }
-
-        dialog = QtWidgets.QFileDialog(self)
-        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptOpen)
-        dialog.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFile)
-        dialog.setNameFilters(valid_files.keys())
-
-        if dialog.exec():
-            files = dialog.selectedFiles()
-            fn, kargs = valid_files[dialog.selectedNameFilter()]
-
-            dat = fn(files[0], **kargs)
-
-            self.slicer_area.set_data(dat)
-            self.slicer_area.view_all()
-
-
 class DataFetcherSignals(QtCore.QObject):
     sigDataFetched = QtCore.Signal(int, object)
 
@@ -324,7 +306,7 @@ class DataFetcher(QtCore.QRunnable):
         self.signals.sigDataFetched.emit(self._niter, wave)
 
 
-class LiveImageTool(BaseImageTool):
+class LiveImageTool(ImageTool):
     sigClosed = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -343,8 +325,6 @@ class LiveImageTool(BaseImageTool):
         )
         motor_dock.setWidget(self.widget_box(self.motor_controls))
         self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, motor_dock)
-
-        self.mnb = CustomMenuBar(self.slicer_area, self)
 
     def set_busy(self, busy: bool):
         self.motor_controls.busy = busy
@@ -433,6 +413,15 @@ class LiveImageTool(BaseImageTool):
             # results in comparison failure.
             self.array_slicer.clear_dim_cache(include_vals=True)
             self.slicer_area.refresh_all(only_plots=True)
+
+    @QtCore.Slot()
+    def to_manager(self):
+        if manager.is_running():
+            itool(
+                self.slicer_area.data.rename(self.windowTitle()),
+                state=self.slicer_area.state,
+            )
+            self.close()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         # Setting the data to small array before closing might help with garbage

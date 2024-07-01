@@ -622,6 +622,9 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if self.itool is not None:
             self.itool.set_busy(False)
 
+            if len(self.itool.motor_controls.valid_dims) == 0:
+                self.itool.to_manager()
+
         self.current_file = None
         self.progress.reset()
         self.progress.setTextVisible(False)
