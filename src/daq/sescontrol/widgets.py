@@ -13,6 +13,7 @@ import pyqtgraph as pg
 
 sys.coinit_flags = 2
 
+from erlab.interactive.imagetool import manager
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
@@ -606,6 +607,11 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if self.itool is None:
             return
         self.itool.trigger_fetch(niter)
+
+        if self.numpoints == 1 and manager.is_running():
+            # Do not show window here, it will be shown after the scan
+            return
+
         if not self.itool.isVisible():
             self.itool.show()
 
