@@ -342,14 +342,22 @@ class RenameDialog(*uic.loadUiType("sescontrol/renamedialog.ui")):
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle("Rename Files")
+        self.accepted.connect(self.restore)
 
     def populate(self):
         base_dir, base_file, valid_ext, _, _ = get_file_info()
-        data_idx = next_index(base_dir, base_file, valid_ext)
 
         self.line_dir.setText(base_dir)
         self.line_name.setText(base_file)
-        self.spin_idx.setValue(data_idx)
+        self.line_ext.setText(", ".join(valid_ext))
+
+    @QtCore.Slot()
+    def restore(self):
+        return restore_names(
+            extensions=list(self.line_ext.text().split(", ")),
+            directory=self.line_dir.text(),
+            basename=self.line_name.text(),
+        )
 
 
 class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
@@ -676,12 +684,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @QtCore.Slot()
     def fix_files(self):
         self.rename_dialog.populate()
-        ret = self.rename_dialog.exec()
-        if ret:
-            base_dir = self.rename_dialog.line_dir.text()
-            base_file = self.rename_dialog.line_name.text()
-            data_idx = self.rename_dialog.spin_idx.value()
-            restore_names(base_dir, base_file, data_idx)
+        self.rename_dialog.exec()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         if self.isEnabled() and not self.start_btn.isEnabled():
