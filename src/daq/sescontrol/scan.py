@@ -62,6 +62,37 @@ def gen_data_name(
     return fname
 
 
+def restore_names(extensions: list[str], directory: str, basename: str):
+    # Get all mangled files
+    files: list[str] = []
+    for ext in [*extensions, ".csv"]:
+        files += glob.glob(
+            os.path.join(directory, f"{TEMPFILE_PREFIX}{basename}*{ext}")
+        )
+    for f in files:
+        new = f.replace(
+            os.path.basename(f), os.path.basename(f).replace(TEMPFILE_PREFIX, "")
+        )
+        while True:
+            try:
+                os.rename(f, new)
+            except PermissionError:
+                time.sleep(0.001)
+                continue
+            except FileExistsError:
+                if f.endswith(".csv"):
+                    with open(f, newline="") as source_csv:
+                        source_reader = csv.reader(source_csv)
+                        with open(new, "a", newline="") as dest_csv:
+                            dest_writer = csv.writer(dest_csv)
+                            for row in source_reader:
+                                dest_writer.writerow(row)
+                    os.remove(f)
+                break
+            else:
+                break
+
+
 class MotorPosWriter(QtCore.QRunnable):
     def __init__(self):
         super().__init__()
@@ -373,34 +404,11 @@ class ScanWorker(QtCore.QRunnable):
                 os.remove(motorfile_name)
                 return
 
-        # Get all mangled files
-        files: list[str] = []
-        for ext in [*list(self.valid_ext), ".csv"]:
-            files += glob.glob(
-                os.path.join(self.base_dir, f"{TEMPFILE_PREFIX}{self.base_file}*{ext}")
-            )
-        for f in files:
-            new = f.replace(
-                os.path.basename(f), os.path.basename(f).replace(TEMPFILE_PREFIX, "")
-            )
-            while True:
-                try:
-                    os.rename(f, new)
-                except PermissionError:
-                    time.sleep(0.001)
-                    continue
-                except FileExistsError:
-                    if f.endswith(".csv"):
-                        with open(f, newline="") as source_csv:
-                            source_reader = csv.reader(source_csv)
-                            with open(new, "a", newline="") as dest_csv:
-                                dest_writer = csv.writer(dest_csv)
-                                for row in source_reader:
-                                    dest_writer.writerow(row)
-                        os.remove(f)
-                    break
-                else:
-                    break
+        restore_names(
+            extensions=list(self.valid_ext),
+            directory=self.base_dir,
+            basename=self.base_file,
+        )
 
     def _motion_loop(self):
         for i in range(self.array.shape[0]):

@@ -17,7 +17,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
-from sescontrol.scan import MotorPosWriter, ScanWorker, gen_data_name
+from sescontrol.scan import MotorPosWriter, ScanWorker, gen_data_name, restore_names
 from sescontrol.ses_win import SESController, get_file_info, next_index
 
 # pywinauto imports must come after Qt imports
@@ -336,6 +336,21 @@ class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
         self.pw.showGrid(x=True, y=True, alpha=0.5)
 
 
+class RenameDialog(*uic.loadUiType("sescontrol/renamedialog.ui")):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowTitle("Rename Files")
+
+    def populate(self):
+        base_dir, base_file, valid_ext, _, _ = get_file_info()
+        data_idx = next_index(base_dir, base_file, valid_ext)
+
+        self.line_dir.setText(base_dir)
+        self.line_name.setText(base_file)
+        self.spin_idx.setValue(data_idx)
+
+
 class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     sigStopPoint = QtCore.Signal()
     sigCancelStopPoint = QtCore.Signal()
@@ -649,6 +664,10 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         gc.collect(generation=2)
         self.workfileitool = WorkFileImageTool()
         self.workfileitool.show()
+
+    @QtCore.Slot()
+    def fix_files(self):
+        pass
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         if self.isEnabled() and not self.start_btn.isEnabled():

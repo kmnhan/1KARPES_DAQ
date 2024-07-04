@@ -27,7 +27,7 @@
      <x>0</x>
      <y>0</y>
      <width>494</width>
-     <height>24</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -36,6 +36,8 @@
     </property>
     <addaction name="actionreconnect"/>
     <addaction name="actionrestartworkfile"/>
+    <addaction name="separator"/>
+    <addaction name="actionfixfiles"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -60,6 +62,11 @@
   <action name="actionrestartworkfile">
    <property name="text">
     <string>Restart Workfile Viewer</string>
+   </property>
+  </action>
+  <action name="actionfixfiles">
+   <property name="text">
+    <string>Fix File Names</string>
    </property>
   </action>
  </widget>
