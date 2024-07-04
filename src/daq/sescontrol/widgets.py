@@ -384,6 +384,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
         self.motor_dialog: MotorDialog = MotorDialog()
 
+        self.rename_dialog: RenameDialog = RenameDialog()
+
     @property
     def itool(self):
         """Get the last created LiveImageTool."""
@@ -667,7 +669,13 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     @QtCore.Slot()
     def fix_files(self):
-        pass
+        self.rename_dialog.populate()
+        ret = self.rename_dialog.exec()
+        if ret:
+            base_dir = self.rename_dialog.line_dir.text()
+            base_file = self.rename_dialog.line_name.text()
+            data_idx = self.rename_dialog.spin_idx.value()
+            restore_names(base_dir, base_file, data_idx)
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         if self.isEnabled() and not self.start_btn.isEnabled():

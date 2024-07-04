@@ -51,7 +51,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.actionrestartworkfile.triggered.connect(
             self.scantype.restart_workfile_viewer
         )
-        # self.actionfixfiles.triggered.connect
+        self.actionfixfiles.triggered.connect(self.scantype.fix_files)
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         threadpool = QtCore.QThreadPool.globalInstance()
