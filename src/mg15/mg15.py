@@ -105,7 +105,7 @@ class MG15Connection(QtCore.QThread):
         self.mutex = QtCore.QMutex()
         self.stopped.clear()
 
-        client = ModbusTcpClient(self.address, 502)  # Create client object
+        client = ModbusTcpClient(self.address, port=502)  # Create client object
         client.connect()  # connect to device, reconnect automatically
 
         while not self.stopped.is_set():
