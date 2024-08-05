@@ -97,7 +97,7 @@ class ManiServer(QtCore.QThread):
             try:
                 message: str = socket.recv_string(flags=zmq.NOBLOCK)
             except zmq.error.Again:
-                time.sleep(0.001)
+                time.sleep(0.01)
                 continue
             else:
                 if "?" in message:  # Query
@@ -106,7 +106,7 @@ class ManiServer(QtCore.QThread):
                     self.sigRequest.emit(command, args)
                     # Wait until we get an answer
                     while self._ret_val is None:
-                        time.sleep(0.001)
+                        time.sleep(0.01)
                     socket.send_string(str(self._ret_val))
                     self.set_value(None)
                 else:  # Command
