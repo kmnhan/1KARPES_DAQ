@@ -8,7 +8,7 @@ dependencies:
   - matplotlib-base
   - numbagg
   - numpy
-  - opencv-python
+  - py-opencv
   - pandas
   - pip
   - pre-commit
