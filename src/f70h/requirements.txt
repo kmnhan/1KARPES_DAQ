@@ -1,4 +1,5 @@
 pyqt6
 pyvisa
+pyvisa-py
 qtpy
 slack_sdk

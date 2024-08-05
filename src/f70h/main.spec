@@ -9,7 +9,7 @@ a = Analysis(
         ("f70h.py", "."),
         ("icon.ico", "."),
     ],
-    hiddenimports=["PyQt6", "pyvisa"],
+    hiddenimports=["PyQt6", "pyvisa", "pyvisa-py"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
