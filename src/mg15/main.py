@@ -356,6 +356,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
 
     qapp = QtWidgets.QApplication(sys.argv)
+    qapp.setStyle("Fusion")
     qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
 
     while not valid_config():
