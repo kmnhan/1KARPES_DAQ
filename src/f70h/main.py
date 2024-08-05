@@ -21,11 +21,7 @@ log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
 # handler = logging.StreamHandler(sys.stdout)
 
-DAQ_LOG_DIR = "D:/daq_logs" if os.path.isdir("D:/daq_logs") else "Z:/daq_logs"
-
-handler = logging.FileHandler(
-    os.path.join(DAQ_LOG_DIR, f"{log.name}.log"), mode="a", encoding="utf-8"
-)
+handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
 handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )
