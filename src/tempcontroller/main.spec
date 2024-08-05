@@ -18,7 +18,7 @@ a = Analysis(
         ("qt_extensions/legendtable.py", "./qt_extensions"),
         ("qt_extensions/plotting.py", "./qt_extensions"),
     ],
-    hiddenimports=["PyQt6", "pyqtgraph", "pyvisa-py"],
+    hiddenimports=["PyQt6", "pyqtgraph", "pyvisa_py"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
