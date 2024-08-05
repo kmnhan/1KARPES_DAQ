@@ -135,7 +135,9 @@ def get_attribute_dict() -> dict[str, str]:
         try:
             d = fn()
         except Exception:
-            log.exception(f"Getting attribute with function {fn.__name__} from shared memory failed")
+            log.exception(
+                f"Getting attribute with function {fn.__name__} from shared memory failed"
+            )
         else:
             attrs |= d
     return attrs
