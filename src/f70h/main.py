@@ -14,10 +14,18 @@ try:
 except:  # noqa: E722
     pass
 
+
+F70_INST_NAME: str = "ASRL3::INSTR"
+
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
 # handler = logging.StreamHandler(sys.stdout)
-handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+
+DAQ_LOG_DIR = "D:/daq_logs" if os.path.isdir("D:/daq_logs") else "Z:/daq_logs"
+
+handler = logging.FileHandler(
+    os.path.join(DAQ_LOG_DIR, f"{log.name}.log"), mode="a", encoding="utf-8"
+)
 handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )
@@ -138,7 +146,7 @@ class UpdateThread(QtCore.QThread):
 class MainWindow(F70GUI):
     def __init__(self):
         super().__init__()
-        self.instr = F70HInstrument("ASRL1::INSTR")
+        self.instr = F70HInstrument(F70_INST_NAME)
 
         self.start_button.clicked.connect(self.start_button_clicked)
         self.stop_button.clicked.connect(self.stop_button_clicked)
