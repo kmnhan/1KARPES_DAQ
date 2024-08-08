@@ -4,6 +4,7 @@ import os
 import sys
 import time
 
+import pyvisa
 import slack_sdk
 import slack_sdk.errors
 from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
@@ -270,10 +271,38 @@ class MainWindow(F70GUI):
         super().closeEvent(event)
 
 
+class PortDialog(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Select Instrument")
+
+        layout = QtWidgets.QVBoxLayout(self)
+        self.setLayout(layout)
+
+        self.port_combobox = QtWidgets.QComboBox()
+        self.port_combobox.addItems(pyvisa.ResourceManager().list_resources())
+        layout.addWidget(self.port_combobox)
+
+        self.ok_button = QtWidgets.QPushButton("OK")
+        self.ok_button.clicked.connect(self.accept)
+        layout.addWidget(self.ok_button)
+
+    def accept(self):
+        global F70_INST_NAME
+        F70_INST_NAME = self.port_combobox.currentText()
+        super().accept()
+
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon("./icon.ico"))
     app.setStyle("Fusion")
+
+    dialog = PortDialog()
+
+    if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+        sys.exit()
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
