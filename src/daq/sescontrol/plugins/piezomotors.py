@@ -3,10 +3,20 @@ import enum
 import math
 import time
 import uuid
+from multiprocessing import shared_memory
 
 import zmq
 
 from . import Motor
+
+
+def _controller_on_local() -> bool:
+    try:
+        shared_memory.SharedMemory(name="MotorPositions")
+    except FileNotFoundError:
+        return False
+    else:
+        return True
 
 
 class MMStatus(enum.IntEnum):
@@ -26,7 +36,10 @@ class ManiClient:
         if not context:
             context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
-        self.socket.connect(f"tcp://localhost:{self.port}")
+        if _controller_on_local():
+            self.socket.connect(f"tcp://localhost:{self.port}")
+        else:
+            self.socket.connect(f"tcp://192.168.0.193:{self.port}")
         self.connected = True
 
     def disconnect(self):
