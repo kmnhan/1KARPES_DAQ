@@ -38,38 +38,44 @@ class ServerWidget(QtWidgets.QWidget):
         self.label = QtWidgets.QLabel(self._name, self)
         layout.addWidget(self.label)
 
-        self.start_button = QtWidgets.QPushButton("Start Server", self)
-        self.start_button.clicked.connect(self.start_server)
-        layout.addWidget(self.start_button)
-
-        self.stop_button = QtWidgets.QPushButton("Stop Server", self)
-        self.stop_button.clicked.connect(self.stop_server)
-        self.stop_button.setEnabled(False)
-        layout.addWidget(self.stop_button)
+        self.button = QtWidgets.QPushButton("Start Server", self)
+        self.button.clicked.connect(self.toggle_server)
+        layout.addWidget(self.button)
 
         self.setLayout(layout)
 
+    def toggle_server(self):
+        if self.server.running:
+            self.stop_server()
+        else:
+            self.start_server()
+
     def start_server(self):
         self.server_thread = self.server.run()
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
+        self.button.setText("Stop Server")
 
     def stop_server(self):
         self.server.stop()
         if self.server_thread:
             self.server_thread.join()
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
+        self.button.setText("Start Server")
 
 
 class ServerGUI(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Servers")
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(ServerWidget("Position", PositionServer()))
         layout.addWidget(ServerWidget("Pressure", PressureServer()))
         layout.addWidget(ServerWidget("Temperature", TemperatureServer()))
         self.setLayout(layout)
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        for child in self.children():
+            if isinstance(child, ServerWidget):
+                child.stop_server()
+        event.accept()
 
 
 if __name__ == "__main__":
