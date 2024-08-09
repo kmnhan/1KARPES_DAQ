@@ -53,7 +53,7 @@ class ServerBase:
         if self.server_socket:
             self.server_socket.close()
             self.server_socket = None
-        print("Server stopped")
+            print("Server stopped")
 
     def post(self, socket: socket.socket) -> None:
         raise NotImplementedError
