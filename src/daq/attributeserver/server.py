@@ -1,3 +1,11 @@
+"""
+Attribute server for the DAQ computer.
+
+The SES user extension plugin will connect to this server after every scan to get the
+scan attributes.
+
+"""
+
 import logging
 import threading
 import time

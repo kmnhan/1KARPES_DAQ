@@ -7,7 +7,11 @@ from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from attributeserver.getter import SLIT_TABLE, get_pressure_list, get_temperature_list
+from attributeserver.getter import (
+    SLIT_TABLE,
+    get_pressure_strings,
+    get_temperature_strings,
+)
 from attributeserver.server import AttributeServer
 
 try:
@@ -95,7 +99,7 @@ class StatusThread(QtCore.QThread):
 
         while not self.stopped.is_set():
             try:
-                temp = [str(float(v)) for v in get_temperature_list()]
+                temp = [str(float(v)) for v in get_temperature_strings()]
             except FileNotFoundError:
                 log.exception(
                     "Shared memory not found, check temperature control software"
@@ -109,7 +113,7 @@ class StatusThread(QtCore.QThread):
             self.sigTUpdate.emit(temp)
 
             try:
-                pressure: list[str] = get_pressure_list()
+                pressure: list[str] = get_pressure_strings()
             except FileNotFoundError:
                 log.exception("Shared memory not found, check mg15 software")
                 pressure: list[str] = [""]
