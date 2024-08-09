@@ -210,6 +210,11 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             return round(abs(tol * 1e-3 / self.cal_A))
 
     @property
+    def reverse_required(self) -> bool:
+        """In case of misconnected encoder, the actuating direction should be reversed."""
+        return self.current_config.get("reverse", False)
+
+    @property
     def abs_tolerance(self) -> float:
         return abs(self.cal_A * self.tolerance)
 
@@ -808,6 +813,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.stop_encoding()
 
         # Set motion parameters
+        kwargs["reverse"] = ch.reverse_required
         kwargs["threshold"] = ch.tolerance
         if ch.abs_tolerance < 1e-3:
             kwargs["high_precision"] = True

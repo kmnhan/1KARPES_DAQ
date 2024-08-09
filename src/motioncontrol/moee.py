@@ -311,6 +311,7 @@ class MMThread(QtCore.QThread):
         amplitude: tuple[int, int],
         threshold: int,
         high_precision: bool,
+        reverse: bool,
         unique_id: str,
     ):
         log.info(
@@ -323,6 +324,8 @@ class MMThread(QtCore.QThread):
         self._threshold: int = int(abs(threshold))
         self._high_precision: bool = high_precision
         self._unique_id: str = unique_id
+        self._reverse: bool = reverse
+
         self.initialized: bool = True
 
     def run(self):
@@ -371,6 +374,9 @@ class MMThread(QtCore.QThread):
                     direction = 0  # backwards
                 else:
                     direction = 1  # forwards
+
+                if self._reverse:
+                    direction = 1 - direction
 
                 if len(delta_list) >= 50:
                     # check for alternating sign in delta
