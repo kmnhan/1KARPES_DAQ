@@ -123,7 +123,7 @@ class StatusThread(QtCore.QThread):
                 continue
 
             self.sigPUpdate.emit(pressure)
-            time.sleep(0.1)
+            time.sleep(0.5)
 
         log.info("Status thread stopped")
 
