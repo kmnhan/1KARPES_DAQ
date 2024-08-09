@@ -3,6 +3,9 @@ name: Build MG15 Vacuum Gauge Logger
 on:
   workflow_dispatch:
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   build:

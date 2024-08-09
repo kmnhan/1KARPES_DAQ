@@ -3,6 +3,9 @@ name: Build Log Viewer
 on:
   workflow_dispatch:
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   build:

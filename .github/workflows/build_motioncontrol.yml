@@ -3,6 +3,9 @@ name: Build Motion Controller
 on:
   workflow_dispatch:
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   build:

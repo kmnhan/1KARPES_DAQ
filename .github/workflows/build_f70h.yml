@@ -3,6 +3,9 @@ name: Build F70H Helium Compressor Monitor
 on:
   workflow_dispatch:
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   build:
