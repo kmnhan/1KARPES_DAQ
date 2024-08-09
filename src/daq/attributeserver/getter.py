@@ -49,7 +49,7 @@ SERVER_IP: str = "192.168.0.193"
 
 
 def get_from_server(
-    port: int, size: int, double: bool = True, timeout: float = 0.5
+    port: int, size: int, double: bool = True, timeout: float = 1.0
 ) -> list[np.float32 | np.float64]:
     if double:
         fmt = f"{size}d"

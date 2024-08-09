@@ -46,8 +46,6 @@ class ServerBase:
             except OSError:
                 break
 
-            time.sleep(0.01)
-
     def stop(self) -> None:
         self.running = False
         if self.server_socket:
