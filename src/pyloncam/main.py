@@ -333,7 +333,7 @@ class MainWindowGUI(uiclass, baseclass):
         self.target_moved()
         self.update_rect()
         self.autosave_timer.setInterval(
-            int(float(self.settings.value("autosave_interval")) * 1e3)
+            int(float(self.settings.value("autosave_interval", 300)) * 1e3)
         )
 
     def load_pos_from_settings(self):
@@ -777,6 +777,7 @@ class MainWindow(MainWindowGUI):
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
+    qapp.setStyle("Fusion")
 
     win = MainWindow()
     win.show()
