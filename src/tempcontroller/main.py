@@ -287,12 +287,22 @@ class MainWindow(MainWindowGUI):
         self.shm: shared_memory.SharedMemory | None = None
 
         # Initialize temperature controller threads
-        self.lake218 = VISAThread("GPIB0::12::INSTR")
-        self.lake331 = VISAThread("GPIB0::15::INSTR")
-        self.lake336 = VISAThread("GPIB0::18::INSTR")
+        self.lake218 = VISAThread(
+            f"GPIB0::{self.config['instrument']['gpib_218']}::INSTR"
+        )
+        self.lake331 = VISAThread(
+            f"GPIB0::{self.config['instrument']['gpib_331']}::INSTR"
+        )
+        self.lake336 = VISAThread(
+            f"GPIB0::{self.config['instrument']['gpib_336']}::INSTR"
+        )
 
         # Initialize power supply thread
-        self.mkpower = VISAThread("ASRL5::INSTR", baud_rate=9600, data_bits=8)
+        self.mkpower = VISAThread(
+            f"ASRL{self.config['instrument']['com_mkpower']}::INSTR",
+            baud_rate=9600,
+            data_bits=8,
+        )
 
         # Link reading, command, and heater widgets to corresponding thread
         self.readings_331.instrument = self.lake331
