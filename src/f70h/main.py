@@ -1,5 +1,7 @@
+import csv
 import datetime
 import logging
+import multiprocessing
 import os
 import sys
 import time
@@ -44,6 +46,79 @@ def send_message(message: str | list[str]):
         )
     except slack_sdk.errors.SlackApiError:
         log.exception("Error posting message")
+
+
+class LoggingProc(multiprocessing.Process):
+    def __init__(self):
+        super().__init__()
+        self.log_dir = "D:/Logs/Compressor"
+        self._stopped = multiprocessing.Event()
+        self.queue = multiprocessing.Manager().Queue()
+        self._content_old: tuple[int, int, int] = (0, 0, 0)
+
+    def run(self):
+        self._stopped.clear()
+
+        while not self._stopped.is_set():
+            time.sleep(0.02)
+
+            if self.queue.empty():
+                continue
+
+            # Retrieve message from queue
+            dt, msg = self.queue.get()
+            try:
+                with open(
+                    os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
+                    "a",
+                    newline="",
+                ) as f:
+                    writer = csv.writer(f)
+                    writer.writerow([dt.isoformat(), *msg])
+            except PermissionError:
+                # put back the retrieved message in the queue
+                n_left = int(self.queue.qsize())
+                self.queue.put((dt, msg))
+                for _ in range(n_left):
+                    self.queue.put(self.queue.get())
+                continue
+
+    def stop(self):
+        n_left = int(self.queue.qsize())
+        if n_left != 0:
+            print(
+                f"Failed to write {n_left} data "
+                + ("entries:" if n_left > 1 else "entry:")
+            )
+            for _ in range(n_left):
+                dt, msg = self.queue.get()
+                print(f"{dt} | {msg}")
+        self._stopped.set()
+        self.join()
+
+    def append(self, timestamp: datetime.datetime, values: tuple[int, int, int]):
+        if values != self._content_old:
+            self.queue.put((timestamp, [str(v) for v in values]))
+
+
+class UpdateThread(QtCore.QThread):
+    sigUpdate = QtCore.Signal(str, object, int)
+
+    def __init__(self, instrument: F70HInstrument, timeout: float = 50.0) -> None:
+        super().__init__()
+        self.instrument = instrument
+        self.timeout = timeout * 1e-3
+
+    def run(self):
+        bits = self.instrument.status
+
+        time.sleep(self.timeout)
+        temps = self.instrument.temperature
+
+        time.sleep(self.timeout)
+        pressure = self.instrument.pressure
+
+        self.sigUpdate.emit(bits, temps, pressure)
 
 
 class QHLine(QtWidgets.QFrame):
@@ -120,26 +195,6 @@ class F70GUI(QtWidgets.QMainWindow):
         layout.addWidget(self.reset_button)
 
 
-class UpdateThread(QtCore.QThread):
-    sigUpdate = QtCore.Signal(str, object, int)
-
-    def __init__(self, instrument: F70HInstrument, timeout: float = 50.0) -> None:
-        super().__init__()
-        self.instrument = instrument
-        self.timeout = timeout * 1e-3
-
-    def run(self):
-        bits = self.instrument.status
-
-        time.sleep(self.timeout)
-        temps = self.instrument.temperature
-
-        time.sleep(self.timeout)
-        pressure = self.instrument.pressure
-
-        self.sigUpdate.emit(bits, temps, pressure)
-
-
 class MainWindow(F70GUI):
     def __init__(self):
         super().__init__()
@@ -153,6 +208,10 @@ class MainWindow(F70GUI):
 
         self.update_thread = UpdateThread(self.instr)
         self.update_thread.sigUpdate.connect(self.update_status)
+
+        # Setup log writing process
+        self.log_writer = LoggingProc()
+        self.log_writer.start()
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.refresh)
@@ -228,6 +287,8 @@ class MainWindow(F70GUI):
     def update_status(
         self, bits: str, temperature: tuple[int, int, int], pressure: int
     ):
+        self.log_writer.append(datetime.datetime.now(), temperature)
+
         state = F70H_STATE[int(bits[4:7], 2)]
 
         if bits[-1] == "1":
@@ -268,6 +329,9 @@ class MainWindow(F70GUI):
 
         self.instr.instrument.close()
 
+        # Stop logging process
+        self.log_writer.stop()
+
         super().closeEvent(event)
 
 
@@ -294,6 +358,8 @@ class PortDialog(QtWidgets.QDialog):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon("./icon.ico"))
     app.setStyle("Fusion")
