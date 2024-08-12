@@ -66,7 +66,9 @@ class LoggingProc(multiprocessing.Process):
                 continue
 
             # Retrieve message from queue
-            dt, msg = self.queue.get()
+            dt, values = self.queue.get()
+            if values == self._content_old:
+                continue
             try:
                 with open(
                     os.path.join(self.log_dir, dt.strftime("%y%m%d") + ".csv"),
@@ -74,14 +76,16 @@ class LoggingProc(multiprocessing.Process):
                     newline="",
                 ) as f:
                     writer = csv.writer(f)
-                    writer.writerow([dt.isoformat(), *msg])
+                    writer.writerow([dt.isoformat(), *[str(v) for v in values]])
             except PermissionError:
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
-                self.queue.put((dt, msg))
+                self.queue.put((dt, values))
                 for _ in range(n_left):
                     self.queue.put(self.queue.get())
                 continue
+            else:
+                self._content_old = values
 
     def stop(self):
         n_left = int(self.queue.qsize())
@@ -97,8 +101,7 @@ class LoggingProc(multiprocessing.Process):
         self.join()
 
     def append(self, timestamp: datetime.datetime, values: tuple[int, int, int]):
-        if values != self._content_old:
-            self.queue.put((timestamp, [str(v) for v in values]))
+        self.queue.put((timestamp, values))
 
 
 class UpdateThread(QtCore.QThread):
