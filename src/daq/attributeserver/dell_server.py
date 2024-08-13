@@ -32,7 +32,7 @@ class ServerBase:
     def start(self) -> None:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.HOST, self.PORT))
-        self.server_socket.listen(1)
+        self.server_socket.listen()
         self.running = True
         print(f"Server listening on {self.HOST}:{self.PORT}")
 
