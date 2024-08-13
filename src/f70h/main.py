@@ -19,6 +19,7 @@ except:  # noqa: E722
 
 
 F70_INST_NAME: str = "ASRL3::INSTR"
+REFRESH_INTERVAL_MS: int = 1000
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
@@ -54,6 +55,7 @@ class LoggingProc(multiprocessing.Process):
         self.log_dir = "D:/Logs/Compressor"
         self._stopped = multiprocessing.Event()
         self.queue = multiprocessing.Manager().Queue()
+        self._last_logged: datetime.datetime = datetime.datetime.now()
         self._content_old: tuple[int, int, int] = (0, 0, 0)
 
     def run(self):
@@ -76,16 +78,27 @@ class LoggingProc(multiprocessing.Process):
                     newline="",
                 ) as f:
                     writer = csv.writer(f)
+                    dt_prev = dt - datetime.timedelta(milliseconds=REFRESH_INTERVAL_MS)
+
+                    # If there is a gap in logging, log the last value
+                    if self._last_logged < dt_prev - datetime.timedelta(
+                        milliseconds=REFRESH_INTERVAL_MS * 0.5
+                    ):
+                        writer.writerow([dt_prev, *[str(v) for v in self._content_old]])
+
                     writer.writerow([dt.isoformat(), *[str(v) for v in values]])
+
             except PermissionError:
-                # put back the retrieved message in the queue
+                # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, values))
                 for _ in range(n_left):
                     self.queue.put(self.queue.get())
                 continue
+
             else:
                 self._content_old = values
+                self._last_logged = dt
 
     def stop(self):
         n_left = int(self.queue.qsize())
@@ -218,7 +231,7 @@ class MainWindow(F70GUI):
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(1000)
+        self.timer.start(REFRESH_INTERVAL_MS)
 
     @property
     def current_time_formatted(self) -> str:
