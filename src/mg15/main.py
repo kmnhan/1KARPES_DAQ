@@ -26,6 +26,27 @@ MBAR_TO_TORR: float = 76000 / 101325
 
 
 class LoggingProc(multiprocessing.Process):
+    """A process for logging data to CSV files.
+
+    Queues log entries and writes them to CSV files in the background. When the file is
+    unaccessible, the process will wait until the file is unlocked and then write the
+    log entry. If the process is stopped before all entries are written to the file, any
+    remaining log entries will be printed to stdout.
+
+    Parameters
+    ----------
+    log_dir
+        The directory where the log files will be stored.
+
+    Attributes
+    ----------
+    log_dir : str or os.PathLike
+        The directory where the log files will be stored.
+    queue : multiprocessing.Queue
+        A queue to store the log messages.
+
+    """
+
     def __init__(self, log_dir: str | os.PathLike):
         super().__init__()
         self.log_dir = log_dir
@@ -34,13 +55,14 @@ class LoggingProc(multiprocessing.Process):
 
     def run(self):
         self._stopped.clear()
+
         while not self._stopped.is_set():
             time.sleep(0.02)
 
             if self.queue.empty():
                 continue
 
-            # retrieve message from queue
+            # Retrieve message from queue
             dt, msg = self.queue.get()
             try:
                 with open(
@@ -51,7 +73,7 @@ class LoggingProc(multiprocessing.Process):
                     writer = csv.writer(f)
                     writer.writerow([dt.isoformat(), *msg])
             except PermissionError:
-                # put back the retrieved message in the queue
+                # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, msg))
                 for _ in range(n_left):
@@ -59,6 +81,7 @@ class LoggingProc(multiprocessing.Process):
                 continue
 
     def stop(self):
+        """Stop the logging process and print any remaining log entries."""
         n_left = int(self.queue.qsize())
         if n_left != 0:
             print(
@@ -71,7 +94,8 @@ class LoggingProc(multiprocessing.Process):
         self._stopped.set()
         self.join()
 
-    def append(self, timestamp: datetime.datetime, content):
+    def append(self, timestamp: datetime.datetime, content: str | list[str]):
+        """Append a log entry to the queue."""
         if isinstance(content, str):
             content = [content]
         self.queue.put((timestamp, content))
