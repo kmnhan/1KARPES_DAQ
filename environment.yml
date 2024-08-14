@@ -14,7 +14,7 @@ dependencies:
   - pre-commit
   - pymodbus
   - pyqtgraph>=0.13.4
-  - python=3.11
+  - python=3.12
   - pyvisa
   - pywin32
   - pywinauto
@@ -25,5 +25,5 @@ dependencies:
   - tomlkit
   - xarray
   - pip:
-    - pypylon
+    - pypylon>=4.0.0
     - pyqt6
