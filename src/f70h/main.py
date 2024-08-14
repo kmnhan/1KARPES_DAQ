@@ -17,19 +17,21 @@ try:
 except:  # noqa: E722
     pass
 
-
-F70_INST_NAME: str = "ASRL3::INSTR"
+F70_INST_NAME: str = ""
 REFRESH_INTERVAL_MS: int = 1000
+WATER_WARNING_TEMP: int = 28
+WATER_TEMP_ENVELOPE: tuple[int, int] = (5, 10)
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
-# handler = logging.StreamHandler(sys.stdout)
 
-handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
-handler.setFormatter(
-    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
-)
-log.addHandler(handler)
+_fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+_fh = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+_sh = logging.StreamHandler(sys.stdout)
+_fh.setFormatter(_fmt)
+_sh.setFormatter(_fmt)
+log.addHandler(_fh)
+log.addHandler(_sh)
 
 
 client = slack_sdk.WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
@@ -233,15 +235,32 @@ class MainWindow(F70GUI):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(REFRESH_INTERVAL_MS)
 
+        self._water_in_temp: int = 0  # Store most recent water inlet temperature
+
+        log.debug("MainWindow initialized")
+
     @property
     def current_time_formatted(self) -> str:
         return datetime.datetime.now().isoformat(sep=" ", timespec="seconds")
 
-    def start_button_clicked(self):
+    def wait_thread(self):
+        # Wait for the update thread to finish before sending a new command
         if self.update_thread.isRunning():
             self.update_thread.wait()
 
+    def start_button_clicked(self):
+        if self._water_in_temp not in range(*WATER_TEMP_ENVELOPE):
+            log.info("Start rejected due to water temperature")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Temperature Warning",
+                "Water In temperature is outside the working range!\n"
+                "Check water chiller status and wait for the temperature to stabilize.",
+            )
+            return
+
         # Turn on compressor
+        self.wait_thread()
         self.instr.turn_on()
 
         # Notify slack channel
@@ -250,18 +269,36 @@ class MainWindow(F70GUI):
         )
 
     def stop_button_clicked(self):
-        if self.update_thread.isRunning():
-            self.update_thread.wait()
-
         # Turn off compressor
+        self.wait_thread()
         self.instr.turn_off()
 
         # Notify slack channel
         send_message(f":red_circle: {self.current_time_formatted} Compressor OFF")
 
+    def stop_if_hot(self, bits: str, temperature: tuple[int, int, int], pressure: int):
+        if (bits[-1] == "1") and temperature[-1] > WATER_WARNING_TEMP:
+            log.warning(
+                f"Water In temperature exceeded {WATER_WARNING_TEMP}°C while compressor is on"
+            )
+        else:
+            return
+
+        # Turn off compressor
+        self.wait_thread()
+        self.instr.turn_off()
+
+        # Notify slack channel
+        send_message(
+            [
+                f":large_orange_circle: {self.current_time_formatted} Compressor OFF, high water temperature",
+                f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
+                f"Return pressure {pressure} psig",
+            ]
+        )
+
     def reset_button_clicked(self):
-        if self.update_thread.isRunning():
-            self.update_thread.wait()
+        self.wait_thread()
 
         # Reset alarms
         self.instr.reset()
@@ -270,8 +307,7 @@ class MainWindow(F70GUI):
         self.alarms_notified = []
 
     def refresh(self):
-        if self.update_thread.isRunning():
-            self.update_thread.wait()
+        self.wait_thread()
         self.update_thread.start()
 
     def notify_alarm(
@@ -303,6 +339,7 @@ class MainWindow(F70GUI):
     def update_status(
         self, bits: str, temperature: tuple[int, int, int], pressure: int
     ):
+        self._water_in_temp = temperature[-1]
         self.log_writer.append(datetime.datetime.now(), temperature)
 
         state = F70H_STATE[int(bits[4:7], 2)]
@@ -337,11 +374,12 @@ class MainWindow(F70GUI):
             label.setText(f"{value} °C")
         self.labels[3].setText(f"{pressure} psig")
 
+        self.stop_if_hot(bits, temperature, pressure)
+
     def closeEvent(self, event):
         self.timer.stop()
 
-        if self.update_thread.isRunning():
-            self.update_thread.wait()
+        self.wait_thread()
 
         self.instr.instrument.close()
 
