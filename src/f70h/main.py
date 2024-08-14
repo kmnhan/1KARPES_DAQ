@@ -20,7 +20,7 @@ except:  # noqa: E722
 F70_INST_NAME: str = ""
 REFRESH_INTERVAL_MS: int = 1000
 WATER_WARNING_TEMP: int = 28
-WATER_TEMP_ENVELOPE: tuple[int, int] = (5, 10)
+WATER_TEMP_ENVELOPE: tuple[int, int] = (5, 26)
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
