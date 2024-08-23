@@ -227,8 +227,6 @@ class MMThread(QtCore.QThread):
                 break
 
     def _set_reading_params(self, channel: int) -> None:
-        if not self.compat:
-            return
         # Set controller parameters for position reading: 0 volts and max frequency.
         self.set_pulse_train(channel, 1)
         self.set_amplitude(channel, 0)
@@ -240,8 +238,7 @@ class MMThread(QtCore.QThread):
     ) -> tuple[int | float, float]:
         vals: list[int] = []
         for _ in range(navg):
-            if self.compat:
-                self._send_signal_once(channel)
+            self._send_signal_once(channel)
             vals.append(self.get_position(channel, emit=False))
 
         if navg == 1:
@@ -505,9 +502,8 @@ class EncoderThread(QtCore.QThread):
         sl = shared_memory.ShareableList(name=self.sharedmem)
 
         try:
-            if self.compat:
-                for ch in range(1, 4):
-                    self.mmthread._set_reading_params(ch)
+            for ch in range(1, 4):
+                self.mmthread._set_reading_params(ch)
 
             self.stopped.clear()
 
@@ -523,8 +519,7 @@ class EncoderThread(QtCore.QThread):
                             )
                             self.stopped.set()
                             break
-                        if self.compat:
-                            self.mmthread._send_signal_once(ch)
+                        self.mmthread._send_signal_once(ch)
                         vals[i].append(self.mmthread.get_position(ch, emit=False))
                         if len(vals[i]) == navg:
                             self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
