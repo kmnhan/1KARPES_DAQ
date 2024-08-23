@@ -40,6 +40,7 @@ class MMCommand(enum.IntEnum):
     SENDSIGONCE = 8
     CHKSIGBUSY = 9
     READPOS = 10
+    SETRELAY = 11
     READSIGNUM = 12
     READSIGAMP = 13
     READSIGDIR = 14
@@ -138,12 +139,19 @@ class MMThread(QtCore.QThread):
 
     def get_capacitance(self, channel: int) -> float:
         """Return capacitance in uF."""
+        self.set_relay(channel, 0)
+        time.sleep(0.5)
+
         self.mmsend(MMCommand.MESCAP, channel)
-        time.sleep(0.7)
         self.mmrecv()
+        time.sleep(0.2)
+
         self.mmsend(MMCommand.READCAP, channel)
         val = self.mmrecv() / 0.89 * 1e-3
+
         self.sigCapRead.emit(channel, val)
+
+        self.set_relay(channel, 1)
         return val
 
     def get_frequency(self, channel: int) -> float:
@@ -194,6 +202,16 @@ class MMThread(QtCore.QThread):
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
+    def set_relay(self, channel: int, state: int):
+        if self.compat:
+            return
+
+        if state not in (0, 1):
+            raise ValueError("State must be 0 or 1.")
+        log.info(f"setting relay {state}")
+        self.mmsend(MMCommand.SETRELAY, int(channel), int(state))
+        return self.mmrecv()
+
     def reset(self, channel: int | None = None):
         log.info(f"resetting channel {channel}")
         if channel is None:
@@ -209,6 +227,8 @@ class MMThread(QtCore.QThread):
                 break
 
     def _set_reading_params(self, channel: int) -> None:
+        if not self.compat:
+            return
         # Set controller parameters for position reading: 0 volts and max frequency.
         self.set_pulse_train(channel, 1)
         self.set_amplitude(channel, 0)
@@ -220,7 +240,8 @@ class MMThread(QtCore.QThread):
     ) -> tuple[int | float, float]:
         vals: list[int] = []
         for _ in range(navg):
-            self._send_signal_once(channel)
+            if self.compat:
+                self._send_signal_once(channel)
             vals.append(self.get_position(channel, emit=False))
 
         if navg == 1:
@@ -344,7 +365,6 @@ class MMThread(QtCore.QThread):
         if not self.initialized:
             log.warning("MMThread was not initialized prior to execution.")
             return
-
         self.sigMoveStarted.emit(self._channel, self._unique_id)
         self.stopped = False
         try:
@@ -373,6 +393,9 @@ class MMThread(QtCore.QThread):
 
             # initialize direction
             direction: int | None = None
+
+            # set relay
+            self.set_relay(self._channel, 1)
 
             while True:
                 self.sigDeltaChanged.emit(self._channel, time_list, delta_list)
@@ -440,8 +463,7 @@ class MMThread(QtCore.QThread):
                         self.set_amplitude(self._channel, self._amplitudes[direction])
 
                 # send signal
-                self.mmsend(MMCommand.SENDSIGONCE, int(self._channel))
-                self.mmrecv()
+                self._send_signal_once(self._channel)
 
                 # read position
                 if self._high_precision and pulse_reduced == 3:
@@ -483,8 +505,9 @@ class EncoderThread(QtCore.QThread):
         sl = shared_memory.ShareableList(name=self.sharedmem)
 
         try:
-            for ch in range(1, 4):
-                self.mmthread._set_reading_params(ch)
+            if self.compat:
+                for ch in range(1, 4):
+                    self.mmthread._set_reading_params(ch)
 
             self.stopped.clear()
 
@@ -500,7 +523,8 @@ class EncoderThread(QtCore.QThread):
                             )
                             self.stopped.set()
                             break
-                        self.mmthread._send_signal_once(ch)
+                        if self.compat:
+                            self.mmthread._send_signal_once(ch)
                         vals[i].append(self.mmthread.get_position(ch, emit=False))
                         if len(vals[i]) == navg:
                             self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
