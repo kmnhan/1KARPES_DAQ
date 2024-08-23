@@ -414,15 +414,14 @@ class PortDialog(QtWidgets.QDialog):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
 
-    app = QtWidgets.QApplication(sys.argv)
-    app.setWindowIcon(QtGui.QIcon("./icon.ico"))
-    app.setStyle("Fusion")
+    qapp = QtWidgets.QApplication(sys.argv)
+    qapp.setStyle("Fusion")
+    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
 
     dialog = PortDialog()
 
-    if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
-        sys.exit()
-
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+        win = MainWindow()
+        win.show()
+        win.activateWindow()
+        qapp.exec()
