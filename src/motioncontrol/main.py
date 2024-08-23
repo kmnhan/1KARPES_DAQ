@@ -24,7 +24,7 @@ except:  # noqa: E722
 
 LOG_DIR = "D:/Logs/Motion"
 
-CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.211")
+CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.2")
 
 log = logging.getLogger("moee")
 
