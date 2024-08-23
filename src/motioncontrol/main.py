@@ -75,6 +75,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             )
             for idx, address in enumerate(CONTROLLERS)
         )
+        # Set compatibility mode for first controller
+        self.controllers[0].compat = True
+
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
 

@@ -72,10 +72,11 @@ class MMThread(QtCore.QThread):
     sigAvgPosRead = QtCore.Signal(int, float)
     sigDeltaChanged = QtCore.Signal(int, object, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, compat: bool = False):
         super().__init__(parent)
         self.stopped: bool = False
         self.initialized: bool = False
+        self.compat = compat
 
     def connect(self, host: str, port: int = 5000):
         log.info(f"connecting to host {host} on port {port}")
@@ -149,14 +150,25 @@ class MMThread(QtCore.QThread):
         """Return current frequency in Hz."""
         self.mmsend(MMCommand.READSIGTIME, channel)
         sigtime = self.mmrecv()
-        return 50000000 / sigtime
+
+        if self.compat:
+            return 50000000 / sigtime
+        else:
+            usec = sigtime / 50
+            freq = 1e6 / usec
+            return freq
 
     def set_frequency(self, channel: int, frequency: int | float):
-        if (frequency >= 50) and (frequency <= 500):
-            sigtime = round(50000000 / frequency)
+        if self.compat:
+            if (frequency >= 50) and (frequency <= 500):
+                sigtime = round(50000000 / frequency)
+            else:
+                sigtime = int(50000000 / 200)
+            log.info(f"setting frequency to {50000000 / sigtime}")
         else:
-            sigtime = int(50000000 / 200)
-        log.info(f"setting frequency to {50000000 / sigtime}")
+            period_usec = 1e6 / frequency
+            sigtime = round(period_usec * 50)
+            log.info(f"setting frequency to {1e6/(sigtime/50)}")
         self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
         return self.mmrecv()
 
