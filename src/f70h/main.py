@@ -9,8 +9,9 @@ import time
 import pyvisa
 import slack_sdk
 import slack_sdk.errors
-from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
 from qtpy import QtCore, QtGui, QtWidgets
+
+from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
 
 try:
     os.chdir(sys._MEIPASS)
