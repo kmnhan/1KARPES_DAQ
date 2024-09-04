@@ -141,8 +141,7 @@ class MMThread(QtCore.QThread):
     def get_capacitance(self, channel: int) -> float:
         """Return capacitance in uF."""
         self.set_relay(channel, 0)
-        if self.compat:
-            time.sleep(0.5)
+        time.sleep(0.5)
 
         self.mmsend(MMCommand.MESCAP, channel)
         self.mmrecv()
