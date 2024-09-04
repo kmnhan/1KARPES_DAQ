@@ -53,13 +53,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
         self.stop_btn.setDefaultAction(self.actionstop)
         self.stopcurrent_btn.setDefaultAction(self.actionstopcurrent)
-        # self.readpos_btn.setDefaultAction(self.actionreadpos)
-        # self.readavgpos_btn.setDefaultAction(self.actionreadavgpos)
-        self.readpos_btn.setVisible(False)
-        self.readavgpos_btn.setVisible(False)
-        self.actionreadpos.setVisible(False)
-        self.actionreadavgpos.setVisible(False)
-        self.actionreadavgpos100.setVisible(False)
 
         self.actionplotpos.triggered.connect(self.refresh_plot_visibility)
         self.actionreadcap.triggered.connect(self.check_capacitance)
@@ -85,11 +78,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             self.actionstop.triggered.connect(con.stop)
             self.actionstopcurrent.triggered.connect(con.stop_current)
             self.actiontargetcurr.triggered.connect(con.target_current_all)
-            # self.actionreadpos.triggered.connect(con.refresh_positions)
-            # self.actionreadavgpos.triggered.connect(con.refresh_positions_averaged)
-            # self.actionreadavgpos100.triggered.connect(
-            # lambda *, ctrl=con: ctrl.refresh_positions(navg=100)
-            # )
 
             con.sigPositionUpdated.connect(self.position_updated)
 
@@ -291,10 +279,6 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         chx.move()
         chy.move()
 
-    # def refresh_positions(self, navg: int = 10):
-    #     for con in self.controllers:
-    #         con.refresh_positions(navg=navg)
-
     @QtCore.Slot(int, float)
     def position_updated(self, channel_index: int, pos: float):
         # Update shared memory with new position
@@ -335,16 +319,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
 
     @QtCore.Slot()
     def move_started(self):
-        # self.actionreadpos.setDisabled(True)
-        # self.actionreadavgpos.setDisabled(True)
-        # self.actionreadavgpos100.setDisabled(True)
         self.actionreadcap.setDisabled(True)
 
     @QtCore.Slot()
     def move_finished(self):
-        # self.actionreadpos.setDisabled(False)
-        # self.actionreadavgpos.setDisabled(False)
-        # self.actionreadavgpos100.setDisabled(False)
         self.actionreadcap.setDisabled(False)
 
     @QtCore.Slot()

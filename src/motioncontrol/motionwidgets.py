@@ -605,24 +605,6 @@ class SingleControllerWidget(QtWidgets.QWidget):
             ch.checkbox.setChecked(True)
         return res
 
-    # @QtCore.Slot()
-    # @QtCore.Slot(int)
-    # def refresh_positions(self, navg: int = 1):
-    #     for ch_num in (1, 2, 3):
-    #         self.refresh_position(ch_num, navg=navg)
-
-    # @QtCore.Slot()
-    # def refresh_positions_averaged(self):
-    #     self.refresh_positions(navg=10)
-
-    # @QtCore.Slot(int)
-    # @QtCore.Slot(int, int)
-    # def refresh_position(self, channel: int, navg: int = 1):
-    #     if self.is_channel_enabled(channel):
-    #         if self.status != MMStatus.Moving:
-    #             self.mmthread.reset(channel)
-    #             self.mmthread.get_refreshed_position(channel, navg)
-
     @QtCore.Slot()
     def target_current_all(self):
         for ch in self.valid_channels:

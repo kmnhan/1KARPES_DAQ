@@ -31,20 +31,6 @@
        </spacer>
       </item>
       <item>
-       <widget class="QToolButton" name="readpos_btn">
-        <property name="text">
-         <string>read pos once</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="readavgpos_btn">
-        <property name="text">
-         <string>read averaged pos</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QToolButton" name="stopcurrent_btn">
         <property name="toolTip">
          <string>Stop current motion and move on to the next one in the queue if exists.</string>
@@ -92,9 +78,6 @@
     <addaction name="actionstopcurrent"/>
     <addaction name="actionreconnect"/>
     <addaction name="separator"/>
-    <addaction name="actionreadpos"/>
-    <addaction name="actionreadavgpos"/>
-    <addaction name="actionreadavgpos100"/>
     <addaction name="actionreadcap"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -126,11 +109,6 @@
   <action name="actionreconnect">
    <property name="text">
     <string>Stop and Reconnect</string>
-   </property>
-  </action>
-  <action name="actionreadpos">
-   <property name="text">
-    <string>Read Positions</string>
    </property>
   </action>
   <action name="actionreadcap">
@@ -167,22 +145,9 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionreadavgpos">
-   <property name="text">
-    <string>Read Averaged Positions (× 10)</string>
-   </property>
-  </action>
   <action name="actionstopcurrent">
    <property name="text">
     <string>Abort Current Motion</string>
-   </property>
-  </action>
-  <action name="actionreadavgpos100">
-   <property name="text">
-    <string>Read Averaged Positions (× 100)</string>
-   </property>
-   <property name="toolTip">
-    <string>Read Averaged Positions (× 100)</string>
    </property>
   </action>
  </widget>
