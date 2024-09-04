@@ -538,7 +538,6 @@ class FrameGrabber(QtCore.QThread):
             grab_result.Release()
             if genicam.IsWritable(self.camera.ExposureTimeRaw):
                 if self.camera.ExposureTimeRaw.Value != self.exposure:
-                    print(self.exposure)
                     self.camera.ExposureTimeRaw.Value = self.exposure
 
             if genicam.IsWritable(self.camera.GammaEnable):
