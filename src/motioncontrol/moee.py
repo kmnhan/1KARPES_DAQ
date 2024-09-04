@@ -74,28 +74,29 @@ class MMThread(QtCore.QThread):
     sigAvgPosRead = QtCore.Signal(int, float)
     sigDeltaChanged = QtCore.Signal(int, object, object)
 
-    def __init__(self, parent=None, compat: bool = False):
+    def __init__(self, index: int, parent=None, compat: bool = False):
         super().__init__(parent)
+        self.index: int = index
         self.stopped: bool = False
         self.initialized: bool = False
         self.compat = compat
 
     def connect(self, host: str, port: int = 5000):
-        log.info(f"connecting to host {host} on port {port}")
+        log.info(f"ctrl{self.index} connecting to host {host} on port {port}")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(5)
         self.sock.connect((host, port))
 
-        log.info("connected")
+        log.info(f"ctrl{self.index} connected")
         self.reset()
 
     def disconnect(self):
         self.mmsend(MMCommand.DISCONNECT)
         self.mmrecv()
-        log.info("disconnected, closing socket...")
+        log.info(f"ctrl{self.index} disconnected, closing socket...")
         self.sock.close()
-        log.info("socket closed")
+        log.info(f"ctrl{self.index} socket closed")
 
     def mmsend(self, command: int, channel: int = 0, value: int = 0):
         """Send a command over the socket to the controller.
@@ -122,7 +123,9 @@ class MMThread(QtCore.QThread):
             if sent == 0:
                 log.critical("Socket connection broken.")
             totalsent = totalsent + sent
-        log.debug(f"sent cmd {command} to ch {channel} with val {value}")
+        log.debug(
+            f"ctrl{self.index} sent cmd {command} to ch {channel} with val {value}"
+        )
 
     def mmrecv(self) -> int:
         """Receives a message over the socket from the controller.
@@ -135,7 +138,7 @@ class MMThread(QtCore.QThread):
         """
         raw = self.sock.recv(4)
         val = sum(raw[i] * 256**i for i in range(4))
-        log.debug(f"received value {val} {tuple(raw)}")
+        log.debug(f"ctrl{self.index} received value {val} {tuple(raw)}")
         return val
 
     def get_capacitance(self, channel: int) -> float:
@@ -174,11 +177,11 @@ class MMThread(QtCore.QThread):
                 sigtime = round(50000000 / frequency)
             else:
                 sigtime = int(50000000 / 200)
-            log.info(f"setting frequency to {50000000 / sigtime}")
+            log.info(f"ctrl{self.index} setting frequency to {50000000 / sigtime}")
         else:
             period_usec = 1e6 / frequency
             sigtime = round(period_usec * 50)
-            log.info(f"setting frequency to {1e6/(sigtime/50)}")
+            log.info(f"ctrl{self.index} setting frequency to {1e6/(sigtime/50)}")
         self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
         return self.mmrecv()
 
@@ -190,17 +193,17 @@ class MMThread(QtCore.QThread):
 
     def set_amplitude(self, channel: int, amplitude: int | float):
         sigamp = min((65535, round(amplitude * 65535 / 60)))
-        log.info(f"setting amplitude to {sigamp / 65535 * 60.0:.2f}")
+        log.info(f"ctrl{self.index} setting amplitude to {sigamp / 65535 * 60.0:.2f}")
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
-        log.info(f"setting direction to {direction}")
+        log.info(f"ctrl{self.index} setting direction to {direction}")
         self.mmsend(MMCommand.SETSIGDIR, int(channel), int(direction))
         return self.mmrecv()
 
     def set_pulse_train(self, channel: int, train: int):
-        log.info(f"setting pulse train {train}")
+        log.info(f"ctrl{self.index} setting pulse train {train}")
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
@@ -210,12 +213,12 @@ class MMThread(QtCore.QThread):
 
         if state not in (0, 1):
             raise ValueError("State must be 0 or 1.")
-        log.info(f"setting relay {state}")
+        log.info(f"ctrl{self.index} setting relay {state}")
         self.mmsend(MMCommand.SETRELAY, int(channel), int(state))
         return self.mmrecv()
 
     def reset(self, channel: int | None = None):
-        log.info(f"resetting channel {channel}")
+        log.info(f"ctrl{self.index} resetting channel {channel}")
         if channel is None:
             self.mmsend(MMCommand.RESET)
         else:
@@ -265,10 +268,10 @@ class MMThread(QtCore.QThread):
         avg, std = self._read_averaged_position(channel, navg)
 
         if navg == 1:
-            log.info(f"Read pos {avg}")
+            log.info(f"ctrl{self.index} Read pos {avg}")
             self.sigPosRead.emit(channel, avg)
         else:
-            log.info(f"Read pos {avg:.2f} ± {std:.2f}")
+            log.info(f"ctrl{self.index} Read pos {avg:.2f} ± {std:.2f}")
             self.sigAvgPosRead.emit(channel, avg)
 
         return avg
@@ -347,7 +350,8 @@ class MMThread(QtCore.QThread):
         unique_id: str,
     ):
         log.info(
-            f"Initializing parameters {channel} {target} {frequency} {amplitude} {threshold}"
+            f"ctrl{self.index} Initializing parameters "
+            f"{channel} {target} {frequency} {amplitude} {threshold}"
         )
         self._channel: int = int(channel)
         self._target: int = int(target)
@@ -478,7 +482,7 @@ class MMThread(QtCore.QThread):
                     break
 
         except Exception as e:
-            log.critical(f"Exception while moving: {e}")
+            log.critical(f"ctrl{self.index} Exception while moving: {e}")
         self.initialized: bool = False
         self.sigMoveFinished.emit(self._channel, self._unique_id)
 

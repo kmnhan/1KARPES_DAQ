@@ -461,7 +461,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.finished_uid: list[str] = []
 
         # Initialize thread object and connect appropriate signals
-        self.mmthread = MMThread(compat=compat)
+        self.mmthread = MMThread(self.index, compat=compat)
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)

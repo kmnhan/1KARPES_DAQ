@@ -118,7 +118,7 @@ class Widget(QtWidgets.QWidget):
 
         self.channels: tuple[int, ...] = (1, 2, 3)
 
-        self.soc = MMThread()
+        self.soc = MMThread(0)
         self.soc.connect("192.168.0.210")
 
         self.datetimes: list[datetime.datetime] = []
