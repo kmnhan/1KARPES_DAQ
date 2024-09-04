@@ -146,7 +146,7 @@ class MMThread(QtCore.QThread):
 
         self.mmsend(MMCommand.MESCAP, channel)
         self.mmrecv()
-        if self.compat():
+        if self.compat:
             time.sleep(0.2)
 
         self.mmsend(MMCommand.READCAP, channel)
