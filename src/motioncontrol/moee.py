@@ -509,8 +509,9 @@ class EncoderThread(QtCore.QThread):
         sl = shared_memory.ShareableList(name=self.sharedmem)
 
         try:
-            for ch in range(1, 4):
-                self.mmthread._set_reading_params(ch)
+            for i, ch in enumerate(range(1, 4)):
+                if sl[i]:
+                    self.mmthread._set_reading_params(ch)
 
             self.stopped.clear()
 
