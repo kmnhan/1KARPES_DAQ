@@ -435,6 +435,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         address: str,
         index: int,
         logwriter: LoggingProc | None = None,
+        compat: bool = False,
     ):
         self.address: str = address
         self.index: int = index
@@ -460,7 +461,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.finished_uid: list[str] = []
 
         # Initialize thread object and connect appropriate signals
-        self.mmthread = MMThread()
+        self.mmthread = MMThread(compat=compat)
         self.mmthread.sigMoveStarted.connect(self.move_started)
         self.mmthread.sigMoveFinished.connect(self.move_finished)
         self.mmthread.sigPosRead.connect(self.set_position)
@@ -533,10 +534,10 @@ class SingleControllerWidget(QtWidgets.QWidget):
             self.disable()
             raise
         else:
-            self.enable()
             # Start with all channels disabled
             for ch in self.channels:
                 ch.checkbox.setChecked(False)
+            self.enable()
             self.start_encoding()
 
     @QtCore.Slot()

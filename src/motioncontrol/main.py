@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 import sys
+import tomllib
 from multiprocessing import shared_memory
 
 import numpy as np
@@ -23,8 +24,7 @@ except:  # noqa: E722
     pass
 
 LOG_DIR = "D:/Logs/Motion"
-
-CONTROLLERS: tuple[str, ...] = ("192.168.0.210", "192.168.0.2")
+CONNECTION_CONFIG = "D:/Logs/Motion/connection.toml"
 
 log = logging.getLogger("moee")
 
@@ -44,9 +44,12 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.setupUi(self)
         self.setWindowTitle("Motion Control")
 
+        with open(CONNECTION_CONFIG, "rb") as f:
+            controller_config: dict = tomllib.load(f)
+
         # Shared memory for motor positions
         self.shm = shared_memory.SharedMemory(
-            name="MotorPositions", create=True, size=8 * 3 * len(CONTROLLERS)
+            name="MotorPositions", create=True, size=8 * 3 * len(controller_config)
         )
         arr = np.ndarray((6,), dtype="f8", buffer=self.shm.buf)
         arr[:] = np.nan
@@ -62,14 +65,16 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.logwriter.start()
 
         # Initialize controllers
-        self.controllers: tuple[SingleControllerWidget, SingleControllerWidget] = tuple(
+        self.controllers: tuple[SingleControllerWidget, ...] = tuple(
             SingleControllerWidget(
-                self, address=address, index=idx, logwriter=self.logwriter
+                self,
+                address=config["address"],
+                index=idx,
+                logwriter=self.logwriter,
+                compat=config.get("compat", False),
             )
-            for idx, address in enumerate(CONTROLLERS)
+            for idx, config in enumerate(controller_config.values())
         )
-        # Set compatibility mode for first controller
-        self.controllers[0].compat = True
 
         for con in self.controllers:
             self.verticalLayout.addWidget(con)
@@ -282,7 +287,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     @QtCore.Slot(int, float)
     def position_updated(self, channel_index: int, pos: float):
         # Update shared memory with new position
-        np.ndarray((3 * len(CONTROLLERS),), dtype="f8", buffer=self.shm.buf)[
+        np.ndarray((3 * len(self.controllers),), dtype="f8", buffer=self.shm.buf)[
             channel_index
         ] = float(pos)
 
@@ -290,7 +295,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
     def current_positions(self) -> tuple[float, ...]:
         # return sum((con.current_positions for con in self.controllers), tuple())
         return tuple(
-            np.ndarray((3 * len(CONTROLLERS),), dtype="f8", buffer=self.shm.buf)
+            np.ndarray((3 * len(self.controllers),), dtype="f8", buffer=self.shm.buf)
         )
 
     def get_current_position(self, con_idx: int, channel: int) -> float:
@@ -371,10 +376,10 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         self.shm.close()
         self.shm.unlink()
 
-        # stop log writer
+        # Stop log writer
         self.logwriter.stop()
 
-        # stop server
+        # Stop server
         self.server.stopped.set()
         self.server.wait(2000)
 
