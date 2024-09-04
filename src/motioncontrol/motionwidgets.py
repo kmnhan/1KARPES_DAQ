@@ -387,7 +387,7 @@ class MotionPlot(pg.PlotWidget):
             self.setWindowTitle(f"[{index+1}] Relative position")
 
         self.curve: pg.PlotDataItem = self.plot(pen="w")
-        self.resize(600, 450)
+        self.resize(420, 315)
         # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
         # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
 
