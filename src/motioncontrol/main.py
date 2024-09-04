@@ -24,7 +24,7 @@ except:  # noqa: E722
     pass
 
 LOG_DIR = "D:/Logs/Motion"
-CONNECTION_CONFIG = "D:/Logs/Motion/connection.toml"
+CONNECTION_CONFIG = "D:/Logs/Motion/controllers.toml"
 
 log = logging.getLogger("moee")
 
