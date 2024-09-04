@@ -379,11 +379,15 @@ class DeltaWidget(QtWidgets.QWidget):
 class MotionPlot(pg.PlotWidget):
     sigClosed = QtCore.Signal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setWindowTitle("Relative position")
+    def __init__(self, parent=None, index: int | None = None):
+        super().__init__(parent=parent)
+        if index is None:
+            self.setWindowTitle("Relative position")
+        else:
+            self.setWindowTitle(f"[{index+1}] Relative position")
+
         self.curve: pg.PlotDataItem = self.plot(pen="w")
-        self.resize(300, 175)
+        self.resize(600, 450)
         # self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
         # self.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
 
@@ -472,7 +476,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         self.queue = queue.Queue()
 
         # Setup plotting
-        self.plot = MotionPlot()
+        self.plot = MotionPlot(index=self.index)
         self.plot.setLabel("bottom", text="Time", units="s")
         self.plot.setLabel("left", text="Remaining", units="m")
 
