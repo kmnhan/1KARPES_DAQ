@@ -12,13 +12,14 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 log = logging.getLogger("moee")
 log.setLevel(logging.INFO)
-# handler = logging.NullHandler()
-# handler = logging.StreamHandler(sys.stdout)
-handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
-handler.setFormatter(
-    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
-)
-log.addHandler(handler)
+
+_fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+_fh = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+_sh = logging.StreamHandler(sys.stdout)
+_fh.setFormatter(_fmt)
+_sh.setFormatter(_fmt)
+log.addHandler(_fh)
+log.addHandler(_sh)
 
 
 class MMStatus(enum.IntEnum):
