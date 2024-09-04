@@ -500,6 +500,7 @@ class EncoderThread(QtCore.QThread):
             log.warning("EncoderThread started while mmthread is active.")
             return
 
+        # Shared list of bools that indicate enabled channels
         sl = shared_memory.ShareableList(name=self.sharedmem)
 
         try:
@@ -525,6 +526,7 @@ class EncoderThread(QtCore.QThread):
                         if len(vals[i]) == navg:
                             self.mmthread.sigAvgPosRead.emit(ch, sum(vals[i]) / navg)
                             vals[i] = []
+                time.sleep(10e-3)
 
         except Exception as e:
             log.critical(f"Exception while reading position: {e}")
