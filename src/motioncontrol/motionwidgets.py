@@ -183,7 +183,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         for k in self.config.keys():
             self.combobox.addItem(self.config[k].get("alias", k))
         self.combobox.currentTextChanged.connect(self.update_motor)
-        self.update_motor()
+        self.combobox.setCurrentText("raw")
 
     @property
     def enabled(self) -> bool:
