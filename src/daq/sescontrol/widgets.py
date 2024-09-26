@@ -132,10 +132,13 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             return
         else:
             delta = self.delta.value()
-            self.motor_coord = delta * np.arange(
-                self.start.value() / delta,
-                self.start.value() / delta + self.nstep.value(),
+
+            self.motor_coord = np.linspace(
+                self.start.value(),
+                self.start.value() + delta * (self.nstep.value() - 1),
+                self.nstep.value(),
             )
+
             self._refresh_values()
 
     @QtCore.Slot()
@@ -158,15 +161,18 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             self.delta.setValue(1e-3)
             return
         delta = self.delta.value()
-        self.motor_coord = delta * np.arange(
-            self.start.value() / delta, self.end.value() / delta + 1
-        )
-        if len(self.motor_coord) == 1:
+
+        nstep = round(abs((self.end.value() - self.start.value()) / delta))
+        if nstep <= 1:
             self.motor_coord = np.array(
                 [
                     self.start.value(),
                     self.start.value() + self.delta.value(),
                 ]
+            )
+        else:
+            self.motor_coord = np.linspace(
+                self.start.value(), self.start.value() + delta * (nstep - 1), nstep
             )
         self._refresh_values()
 
