@@ -270,6 +270,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         self.freq_spin.setDisabled(value)
         self.amp_bwd_spin.setDisabled(value)
         self.amp_fwd_spin.setDisabled(value)
+        self.refresh_enabled()
 
     @QtCore.Slot()
     def update_motor(self):
