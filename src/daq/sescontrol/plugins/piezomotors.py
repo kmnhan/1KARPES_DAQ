@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import contextlib
 import enum
 import math
 import time
 import uuid
 from multiprocessing import shared_memory
+from typing import Self
 
 import zmq
 
@@ -26,25 +29,47 @@ class MMStatus(enum.IntEnum):
     Error = 4
 
 
-class ManiClient:
+class _SingletonBase:
+    """Base class for the loader registry.
+
+    This class implements the singleton pattern, ensuring that only one instance of the
+    registry is created and used throughout the application.
+    """
+
+    __instance: _SingletonBase | None = None
+
+    def __new__(cls):
+        if not isinstance(cls.__instance, cls):
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    @classmethod
+    def instance(cls) -> Self:
+        """Return the registry instance."""
+        return cls()
+
+
+class ManiClient(_SingletonBase):
     def __init__(self, port: int):
         self.port: int = port
         self.connected: bool = False
 
     def connect(self):
-        context = zmq.Context.instance()
-        if not context:
-            context = zmq.Context()
-        self.socket = context.socket(zmq.PAIR)
-        if _controller_on_local():
-            self.socket.connect(f"tcp://localhost:{self.port}")
-        else:
-            self.socket.connect(f"tcp://192.168.0.193:{self.port}")
-        self.connected = True
+        if not self.connected:
+            context = zmq.Context.instance()
+            if not context:
+                context = zmq.Context()
+            self.socket = context.socket(zmq.PAIR)
+            if _controller_on_local():
+                self.socket.connect(f"tcp://localhost:{self.port}")
+            else:
+                self.socket.connect(f"tcp://192.168.0.193:{self.port}")
+            self.connected = True
 
     def disconnect(self):
-        self.socket.close()
-        self.connected = False
+        if self.connected:
+            self.socket.close()
+            self.connected = False
 
     @contextlib.contextmanager
     def connection(self):
