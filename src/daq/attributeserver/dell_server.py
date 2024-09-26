@@ -7,7 +7,6 @@ available. If the shared memory is not available, no data is sent.
 import socket
 import struct
 import threading
-import time
 
 from attributeserver.getter import (
     MANIPULATOR_AXES,
@@ -26,32 +25,34 @@ class ServerBase:
     PORT: int = 12345
 
     def __init__(self) -> None:
-        self.server_socket = None
-        self.running: bool = False
+        self.server_socket: socket.socket | None = None
+        self.running: threading.Event = threading.Event()
 
     def start(self) -> None:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.HOST, self.PORT))
         self.server_socket.listen()
-        self.running = True
-        print(f"Server listening on {self.HOST}:{self.PORT}")
+        self.running.set()
+        print(f"{self.__class__.__name__} listening on {self.HOST}:{self.PORT}")
 
-        while self.running:
+        while self.running.is_set():
             try:
                 client_socket, client_address = self.server_socket.accept()
-                print(f"Connection from {client_address}")
+                # print(f"Connection from {client_address}")
 
                 self.post(client_socket)
                 client_socket.close()
             except OSError:
+                self.running.clear()
+                print(f"{self.__class__.__name__} stopped unexpectedly")
                 break
 
     def stop(self) -> None:
-        self.running = False
+        self.running.clear()
         if self.server_socket:
             self.server_socket.close()
             self.server_socket = None
-            print("Server stopped")
+            print(f"{self.__class__.__name__} properly stopped")
 
     def post(self, socket: socket.socket) -> None:
         raise NotImplementedError

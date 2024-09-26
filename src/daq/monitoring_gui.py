@@ -31,6 +31,18 @@ class ServerWidget(QtWidgets.QWidget):
 
         self.initUI()
 
+        self.refresh_timer = QtCore.QTimer()
+        self.refresh_timer.setInterval(50)
+        self.refresh_timer.timeout.connect(self.check_server_status)
+        self.check_server_status()
+        self.refresh_timer.start()
+
+    def check_server_status(self):
+        if self.server.running.is_set():
+            self.button.setText("Stop Server")
+        else:
+            self.button.setText("Start Server")
+
     def initUI(self):
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -52,13 +64,11 @@ class ServerWidget(QtWidgets.QWidget):
 
     def start_server(self):
         self.server_thread = self.server.run()
-        self.button.setText("Stop Server")
 
     def stop_server(self):
         self.server.stop()
         if self.server_thread:
             self.server_thread.join()
-        self.button.setText("Start Server")
 
 
 class ServerGUI(QtWidgets.QWidget):
