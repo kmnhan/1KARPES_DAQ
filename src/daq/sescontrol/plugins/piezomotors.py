@@ -12,6 +12,8 @@ import zmq
 
 from . import Motor
 
+PIEZOSERVER_PORT: int = 42625
+
 
 def _controller_on_local() -> bool:
     try:
@@ -50,8 +52,7 @@ class _SingletonBase:
 
 
 class ManiClient(_SingletonBase):
-    def __init__(self, port: int):
-        self.port: int = port
+    def __init__(self):
         self.connected: bool = False
 
     def connect(self):
@@ -61,9 +62,9 @@ class ManiClient(_SingletonBase):
                 context = zmq.Context()
             self.socket = context.socket(zmq.PAIR)
             if _controller_on_local():
-                self.socket.connect(f"tcp://localhost:{self.port}")
+                self.socket.connect(f"tcp://localhost:{PIEZOSERVER_PORT}")
             else:
-                self.socket.connect(f"tcp://192.168.0.193:{self.port}")
+                self.socket.connect(f"tcp://192.168.0.193:{PIEZOSERVER_PORT}")
             self.connected = True
 
     def disconnect(self):
@@ -168,12 +169,11 @@ class _PiezoMotor(Motor):
     enabled: bool = True
     fix_delta: bool = False
     delta: float = 0.1
-    PORT: int = 42625
     AXIS: str | int | None = None  # motor name
 
     def __init__(self) -> None:
         super().__init__()
-        self.client = ManiClient(port=self.PORT)
+        self.client = ManiClient()
 
     def refresh_state(self):
         self.enabled: bool = self.client.enabled(self.AXIS)
