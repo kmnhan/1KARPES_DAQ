@@ -151,7 +151,7 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
             return
         delta = self.delta.value()
 
-        nstep = round(abs((self.end.value() - self.start.value()) / delta))
+        nstep = round(abs((self.end.value() - self.start.value()) / delta) + 1)
         if nstep <= 1:
             self.motor_coord = np.array(
                 [
