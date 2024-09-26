@@ -163,6 +163,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             mn, mx = getattr(ch, "minimum", np.nan), getattr(ch, "maximum", np.nan)
             rep = f"{mn},{mx}"
 
+        log.debug(f"Replying to request {command} {args} with {rep}")
         self.sigReply.emit(rep)
 
     @QtCore.Slot(str, str)
@@ -170,6 +171,8 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         if command == "CLR":
             unique_id = args
             self.forget_uid(unique_id)
+        else:
+            log.exception(f"Command {command} not recognized")
 
     @QtCore.Slot(str, float, object)
     def parse_move(self, axis: int | str, value: float, unique_id: str | None):
@@ -178,7 +181,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             ch.move_to(float(value), unique_id=unique_id)
         else:
             log.warning(
-                f"Move sent to axis {axis} which is disabled or nonexistent ignored"
+                f"Ignoring move command for axis {axis} which is disabled or nonexistent"
             )
 
     def is_finished(self, unique_id: str) -> bool:

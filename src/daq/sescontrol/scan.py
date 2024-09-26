@@ -423,6 +423,7 @@ class ScanWorker(QtCore.QRunnable):
                     # Not first iteration and same position as previous, skip move
                     continue
                 # Execute move
+                log.debug(f"Moving ({i}, {j}) to target {self.array[i, j]}")
                 self.motors[j].move(self.array[i, j])
 
             # Execute sequence and wait until it finishes

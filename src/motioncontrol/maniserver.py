@@ -51,11 +51,14 @@ MOVE <axis>,<position>[,<uid>]
 
 """
 
+import logging
 import threading
 import time
 
 import zmq
 from qtpy import QtCore
+
+log = logging.getLogger("moee")
 
 
 class ManiServer(QtCore.QThread):
@@ -92,6 +95,7 @@ class ManiServer(QtCore.QThread):
         socket: zmq.Socket = context.socket(zmq.PAIR)
         socket.bind(f"tcp://*:{self.PORT}")
         self.sigSocketBound.emit()
+        log.debug(f"SERVER Bound to port {self.PORT}")
 
         while not self.stopped.is_set():
             try:
@@ -104,11 +108,18 @@ class ManiServer(QtCore.QThread):
                     message: list[str] = [s.strip() for s in message.split("?")]
                     command, args = message[0].upper(), "".join(message[1:])
                     self.sigRequest.emit(command, args)
-                    # Wait until we get an answer
+                    log.debug(
+                        f"SERVER Received query: {command} {args}, waiting for response"
+                    )
+
                     while self._ret_val is None:
                         time.sleep(0.01)
-                    socket.send_string(str(self._ret_val))
+                    return_str = str(self._ret_val)
                     self.set_value(None)
+
+                    log.debug(f"SERVER Sending response: {return_str}")
+                    socket.send_string(return_str)
+
                 else:  # Command
                     message: list[str] = [s.strip() for s in message.split()]
                     command, args = message[0].upper(), "".join(message[1:])
