@@ -176,9 +176,10 @@ class DataFetcher(QtCore.QRunnable):
     COORDS_MAPPING = {
         "Kinetic Energy [eV]": "eV",
         "Energy [eV]": "eV",
-        "Y-Scale [deg]": "phi",
-        "Thetax [deg]": "phi",
-        "Thetay [deg]": "theta DA",
+        "Y-Scale [deg]": "alpha",
+        "Thetax [deg]": "alpha",
+        "Thetay [deg]": "beta",
+        "ThetaY": "beta",
     }
 
     def __init__(
@@ -260,7 +261,9 @@ class DataFetcher(QtCore.QRunnable):
                         wave = load_zip(file_copied)
 
                     else:
-                        wave = erlab.io.load_experiment(file_copied)
+                        from erlab.io.igor import load_experiment
+
+                        wave = load_experiment(file_copied)
 
             except PermissionError:
                 time.sleep(0.05)
@@ -281,7 +284,7 @@ class DataFetcher(QtCore.QRunnable):
             wave: xr.DataArray = next(iter(wave.data_vars.values()))
 
         wave = wave.rename(
-            {k: v for k, v in self.COORDS_MAPPING.items() if k in wave.dims}
+            {k: v for k, v in self.COORDS_MAPPING.items() if k in wave.coords}
         )
 
         # Bin 2D scan to save memory
@@ -627,23 +630,36 @@ class WorkFileImageTool(BaseImageTool):
         lowerwidget.setLayout(QtWidgets.QHBoxLayout())
         lowerwidget.layout().setContentsMargins(0, 0, 0, 0)
 
+        updatewidget = QtWidgets.QWidget()
+        updatewidget.setLayout(QtWidgets.QHBoxLayout())
+        updatewidget.layout().setContentsMargins(0, 0, 0, 0)
+
         self.region_combo = QtWidgets.QComboBox()
         self.region_combo.currentTextChanged.connect(self.reload)
 
         self.norm_check = QtWidgets.QCheckBox("Norm")
         self.norm_check.toggled.connect(self.reload)
 
-        self.autoupdate_check = QtWidgets.QCheckBox("Auto update")
-        self.autoupdate_check.toggled.connect(self.toggle_update_timer)
+        self.autoupdate_check = QtWidgets.QCheckBox("Auto update every")
+        self.autoupdate_check.toggled.connect(self.refresh_update_timer)
+        self.autoupdate_spin = QtWidgets.QDoubleSpinBox()
+        self.autoupdate_spin.setMinimum(0.5)
+        self.autoupdate_spin.setMaximum(60.0)
+        self.autoupdate_spin.setValue(5.0)
+        self.autoupdate_spin.setKeyboardTracking(False)
+        self.autoupdate_spin.valueChanged.connect(self.refresh_update_timer)
 
         self.reload_btn = QtWidgets.QPushButton("Load")
         self.reload_btn.clicked.connect(self.reload)
 
         lowerwidget.layout().addWidget(self.norm_check)
         lowerwidget.layout().addWidget(self.reload_btn)
+        updatewidget.layout().addWidget(self.autoupdate_check)
+        updatewidget.layout().addWidget(self.autoupdate_spin)
+        updatewidget.layout().addWidget(QtWidgets.QLabel("s"))
         widget.layout().addWidget(self.region_combo)
         widget.layout().addWidget(lowerwidget)
-        widget.layout().addWidget(self.autoupdate_check)
+        widget.layout().addWidget(updatewidget)
 
         load_dock = QtWidgets.QDockWidget("Work file", self)
         load_dock.setFeatures(
@@ -659,12 +675,13 @@ class WorkFileImageTool(BaseImageTool):
         self.regionscan_timer.start()
 
         self.update_timer = QtCore.QTimer(self)
-        self.update_timer.setInterval(500)
         self.update_timer.timeout.connect(self.reload)
 
         self.mnb = ItoolMenuBar(self.slicer_area, self)
 
-    def toggle_update_timer(self):
+    @QtCore.Slot()
+    def refresh_update_timer(self):
+        self.update_timer.setInterval(round(self.autoupdate_spin.value() * 1000))
         if self.autoupdate_check.isChecked():
             self.update_timer.start()
         else:
