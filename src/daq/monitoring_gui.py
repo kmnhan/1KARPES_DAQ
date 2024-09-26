@@ -57,7 +57,7 @@ class ServerWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def toggle_server(self):
-        if self.server.running:
+        if self.server.running.is_set():
             self.stop_server()
         else:
             self.start_server()
