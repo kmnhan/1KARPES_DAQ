@@ -127,19 +127,19 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
 
     @QtCore.Slot()
     def countchanged(self):
-        if self.delta.isEnabled():
-            self.boundschanged()
-            return
-        else:
-            delta = self.delta.value()
+        # if self.delta.isEnabled():
+        #     self.boundschanged()
+        #     return
+        # else:
+        delta = self.delta.value()
 
-            self.motor_coord = np.linspace(
-                self.start.value(),
-                self.start.value() + delta * (self.nstep.value() - 1),
-                self.nstep.value(),
-            )
+        self.motor_coord = np.linspace(
+            self.start.value(),
+            self.start.value() + delta * (self.nstep.value() - 1),
+            self.nstep.value(),
+        )
 
-            self._refresh_values()
+        self._refresh_values()
 
     @QtCore.Slot()
     def boundschanged(self):
