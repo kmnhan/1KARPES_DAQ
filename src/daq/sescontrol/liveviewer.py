@@ -212,11 +212,13 @@ class DataFetcher(QtCore.QRunnable):
                     if os.path.isfile(filename):
                         if os.stat(filename).st_size != 0:
                             try:
-                                with zipfile.ZipFile(filename, "r") as _:
-                                    # Do nothing, just trying to open the file
-                                    # Will this break the file if SES is writing to it?
-                                    # Requires extensive testing
-                                    pass
+                                with tempfile.TemporaryDirectory() as tmpdir:
+                                    file_copied = shutil.copy(filename, tmpdir)
+                                    with zipfile.ZipFile(file_copied, "r") as _:
+                                        # Do nothing, just trying to open the file
+                                        # Will this break the file if SES is writing to it?
+                                        # Requires extensive testing
+                                        pass
                             except zipfile.BadZipFile:
                                 pass
                             else:
