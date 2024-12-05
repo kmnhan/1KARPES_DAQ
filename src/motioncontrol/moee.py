@@ -22,6 +22,18 @@ log.addHandler(_fh)
 log.addHandler(_sh)
 
 
+# Log all uncaught exceptions
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    log.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
+
+
 class MMStatus(enum.IntEnum):
     Moving = 1
     Done = 2
