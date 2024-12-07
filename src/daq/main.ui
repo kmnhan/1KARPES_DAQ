@@ -35,7 +35,6 @@
      <string>Edit</string>
     </property>
     <addaction name="actionreconnect"/>
-    <addaction name="actionrestartworkfile"/>
     <addaction name="separator"/>
     <addaction name="actionfixfiles"/>
    </widget>
@@ -57,11 +56,6 @@
   <action name="actionworkfile">
    <property name="text">
     <string>Show Workfile Viewer</string>
-   </property>
-  </action>
-  <action name="actionrestartworkfile">
-   <property name="text">
-    <string>Restart Workfile Viewer</string>
    </property>
   </action>
   <action name="actionfixfiles">

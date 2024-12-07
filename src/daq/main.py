@@ -59,10 +59,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.ses_shortcuts.sigAliveChanged.connect(self.scantype.setEnabled)
         self.actionreconnect.triggered.connect(self.ses_shortcuts.reconnect)
-        self.actionworkfile.triggered.connect(self.scantype.workfileitool.show)
-        self.actionrestartworkfile.triggered.connect(
-            self.scantype.restart_workfile_viewer
-        )
+        self.actionworkfile.triggered.connect(self.scantype.show_workfile_viewer)
         self.actionfixfiles.triggered.connect(self.scantype.fix_files)
 
     def closeEvent(self, event: QtGui.QCloseEvent):

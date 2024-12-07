@@ -201,12 +201,15 @@ class DataFetcher(QtCore.QRunnable):
 
     def run(self):
         if len(self._motor_coords) == 0:
+            # Single scan, no motor coordinates
             filename = os.path.join(
                 self._base_dir,
                 gen_data_name(self._base_file, self._data_idx, ext=".pxt"),
             )
             if not os.path.isfile(filename):
+                # Not .pxt file, try .zip
                 filename = filename.replace(".pxt", ".zip")
+                # .zip files take time to be written to disk, so we wait for it
                 timeout = time.perf_counter() + 20
                 while time.perf_counter() < timeout:
                     if os.path.isfile(filename):
@@ -225,6 +228,7 @@ class DataFetcher(QtCore.QRunnable):
                                 break
                     time.sleep(0.2)
         else:
+            # Scan with motor coordinates
             filename = os.path.join(
                 self._base_dir,
                 gen_data_name(
@@ -251,6 +255,7 @@ class DataFetcher(QtCore.QRunnable):
             log.debug("DataFetcher failed to find file, exiting")
             return
 
+        # At this point, we have the file name corresponding to the latest scan
         start_t = time.perf_counter()
         while True:
             try:
@@ -268,9 +273,11 @@ class DataFetcher(QtCore.QRunnable):
                         wave = load_experiment(file_copied)
 
             except PermissionError:
+                # File is still being written to
                 time.sleep(0.05)
 
             except FileNotFoundError:
+                # Scan may have finished; try again with new filename
                 filename = filename.replace(TEMPFILE_PREFIX, "")
                 time.sleep(0.01)
 
@@ -297,7 +304,7 @@ class DataFetcher(QtCore.QRunnable):
         #         {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
         #     ).mean()
 
-        if self._niter == 1:
+        if self._niter == 1 and len(self._motor_coords) > 0:
             # Reserve space for future scans
             wave = wave.expand_dims(
                 self._motor_coords,
@@ -312,8 +319,6 @@ class DataFetcher(QtCore.QRunnable):
 
 
 class LiveImageTool(ImageTool):
-    sigClosed = QtCore.Signal(object)
-
     def __init__(self, parent=None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
 
@@ -354,6 +359,7 @@ class LiveImageTool(ImageTool):
             self.motor_controls.setDisabled(True)
 
     def trigger_fetch(self, niter: int):
+        # Search and load file for `niter`th iteration of the scan
         data_fetcher = DataFetcher(
             self._motor_coords, self._base_dir, self._base_file, self._data_idx, niter
         )
@@ -414,7 +420,7 @@ class LiveImageTool(ImageTool):
                 self.array_slicer._obj.loc[target_slices] = wave.values
 
             # Reset _data to include new slice
-            # This allows filter actions such as normalization work properly
+            # This allows filter actions such as normalization to work properly
             self.slicer_area._data = self.array_slicer._obj
 
             self.array_slicer.clear_dim_cache(include_vals=True)
@@ -428,13 +434,6 @@ class LiveImageTool(ImageTool):
                 state=self.slicer_area.state,
             )
             self.close()
-
-    def closeEvent(self, event: QtGui.QCloseEvent):
-        # Setting the data to small array before closing might help with garbage
-        # collection, not so sure
-        self.slicer_area.set_data(np.ones((2, 2), dtype=np.float32))
-        self.sigClosed.emit(self)
-        super().closeEvent(event)
 
 
 class WorkFileFetcherSignals(QtCore.QObject):

@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 from collections.abc import Callable, Sequence
 
 import humanize
@@ -387,34 +388,40 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.start_time: float | None = None
         self.step_times: list[float] = []
 
-        self.workfileitool: WorkFileImageTool = WorkFileImageTool()
-
-        self._itools: list[LiveImageTool | None] = []
+        self._workfileitool: WorkFileImageTool | None = None
+        self._itools: dict[str, LiveImageTool] = {}
+        self._active_itool: str | None = None
 
         self.motor_dialog: MotorDialog = MotorDialog()
 
         self.rename_dialog: RenameDialog = RenameDialog()
 
+    @QtCore.Slot()
+    def _workfile_viewer_closed(self):
+        self._workfileitool = None
+
+    @QtCore.Slot()
+    def show_workfile_viewer(self):
+        if self._workfileitool is None:
+            self._workfileitool = WorkFileImageTool()
+            self._workfileitool.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+            self._workfileitool.destroyed.connect(self._workfile_viewer_closed)
+        self._workfileitool.show()
+
+    def new_itool(self):
+        uid: str = str(uuid.uuid4())
+        tool = LiveImageTool()
+        tool.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        self._itools[uid] = tool
+        self._active_itool = uid
+        tool.destroyed.connect(lambda: self._itools.pop(uid))
+
     @property
-    def itool(self):
+    def itool(self) -> LiveImageTool | None:
         """Get the last created LiveImageTool."""
-        try:
-            return self._itools[-1]
-        except IndexError:
-            return None
-
-    @itool.setter
-    def itool(self, imagetool: LiveImageTool):
-        if imagetool is None:
-            return
-        self._itools.append(imagetool)
-        imagetool.sigClosed.connect(self.itool_closed)
-
-    @QtCore.Slot(object)
-    def itool_closed(self, imagetool: LiveImageTool):
-        self._itools.remove(imagetool)
-        del imagetool
-        gc.collect(generation=2)
+        if self._active_itool:
+            return self._itools[self._active_itool]
+        return None
 
     @property
     def valid_axes(self) -> list[str]:
@@ -531,9 +538,9 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         only_da = all(seq_is_da)
 
         if only_da:
-            self.itool = None
+            self._active_itool = None
         else:
-            self.itool = LiveImageTool()
+            self.new_itool()
             if motion_edited:
                 # If the motion array was edited, coords may not be uniform
                 iter_coords = {"Iteration": np.arange(self.numpoints)}
@@ -672,14 +679,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.pos_logger.set_file(dirname, base_file, data_idx)
         header = ["", *list(motors)]
         self.pos_logger.write_header(header)
-
-    @QtCore.Slot()
-    def restart_workfile_viewer(self):
-        self.workfileitool.close()
-        del self.workfileitool
-        gc.collect(generation=2)
-        self.workfileitool = WorkFileImageTool()
-        self.workfileitool.show()
 
     @QtCore.Slot()
     def fix_files(self):
