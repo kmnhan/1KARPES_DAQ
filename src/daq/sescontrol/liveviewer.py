@@ -413,9 +413,10 @@ class LiveImageTool(ImageTool):
             else:
                 self.array_slicer._obj.loc[target_slices] = wave.values
 
-            # We take the values because coordinates on target array are float32 due to
-            # efficiency in imagetool, whereas the assigned array has float64. This
-            # results in comparison failure.
+            # Reset _data to include new slice
+            # This allows filter actions such as normalization work properly
+            self.slicer_area._data = self.array_slicer._obj
+
             self.array_slicer.clear_dim_cache(include_vals=True)
             self.slicer_area.refresh_all(only_plots=True)
 
