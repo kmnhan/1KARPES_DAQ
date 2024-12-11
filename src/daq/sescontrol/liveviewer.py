@@ -679,7 +679,7 @@ class WorkFileImageTool(BaseImageTool):
         self.update_timer = QtCore.QTimer(self)
         self.update_timer.timeout.connect(self.reload)
 
-        self.mnb = ItoolMenuBar(self.slicer_area, self)
+        self.mnb = ItoolMenuBar(self)
 
     @QtCore.Slot()
     def refresh_update_timer(self):
