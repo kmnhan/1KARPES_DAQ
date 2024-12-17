@@ -407,6 +407,10 @@ class LiveImageTool(ImageTool):
                 )
             }
 
+            # Before setting data, reset any filters
+            old_func = self.slicer_area._applied_func
+            self.slicer_area.apply_func(None)
+
             # We want to know the dims of target array before assigning new values since
             # the user might have transposed it
             target_dims = self.array_slicer._obj.loc[target_slices].dims
@@ -422,6 +426,10 @@ class LiveImageTool(ImageTool):
             # Reset _data to include new slice
             # This allows filter actions such as normalization to work properly
             self.slicer_area._data = self.array_slicer._obj
+
+            # Reapply old filter
+            if old_func:
+                self.slicer_area.apply_func(old_func)
 
             self.array_slicer.clear_dim_cache(include_vals=True)
             self.slicer_area.refresh_all(only_plots=True)
