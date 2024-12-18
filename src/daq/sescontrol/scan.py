@@ -296,9 +296,9 @@ class ScanWorker(QtCore.QRunnable):
             log.debug("Checking if the DA map is completely saved")
             timeout_start = time.perf_counter()
             fname = os.path.join(self.base_dir, f"{self.data_name}.zip")
-            time.sleep(0.5)
+            time.sleep(0.2)
             while True:
-                time.sleep(1)
+                time.sleep(0.2)
                 if os.path.isfile(fname) and os.stat(fname).st_size != 0:
                     try:
                         # Copy the zipfile and try opening
