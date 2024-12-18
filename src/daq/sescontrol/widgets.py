@@ -804,11 +804,13 @@ class SESShortcuts(QtWidgets.QWidget):
     @QtCore.Slot(str, object)
     def try_click(self, path: str, match: Callable[[str], bool] | None = None):
         if path == self.SES_ACTIONS["Calibrate Voltages"][0]:
-            QtWidgets.QMessageBox.warning(
+            ret = QtWidgets.QMessageBox.warning(
                 self,
                 "Reminder for MCP protection",
                 "Check the slit number and photon flux!",
             )
+            if ret == QtWidgets.QMessageBox.StandardButton.Cancel:
+                return
         try:
             self.ses.click_menu(path, match)
         except Exception as e:
