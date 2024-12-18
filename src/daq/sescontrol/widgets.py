@@ -396,6 +396,15 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
         self.rename_dialog: RenameDialog = RenameDialog()
 
+        # Timer to update remaining time for current scan
+        self.timeleft_update_timer = QtCore.QTimer(self)
+        self.timeleft_update_timer.setInterval(1000)
+        self.timeleft_update_timer.timeout.connect(self.update_remaining_time)
+
+        # Base progress text to be displayed, remaining time for scan will be appended
+        # to this string. The base string is set in step_started.
+        self._base_progress_text: str = ""
+
     @QtCore.Slot()
     def _workfile_viewer_closed(self):
         self._workfileitool = None
@@ -578,6 +587,22 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.step_times.append(0.0)
         self.threadpool.start(scan_worker)
 
+    @QtCore.Slot()
+    def update_remaining_time(self):
+        if self.start_time is None:
+            return
+
+        text = str(self._base_progress_text)
+        if np.isfinite(self.time_per_step):
+            last_step_finished = self.start_time + self.step_times[-1]
+            this_step_remaining = self.time_per_step - (
+                time.perf_counter() - last_step_finished
+            )
+
+            text = f"{text} | {humanize.naturaldelta(datetime.timedelta(seconds=this_step_remaining))} left for this point"
+
+        self.line.setText(text)
+
     @QtCore.Slot(int)
     def step_started(self, niter: int):
         text: str = f"{self.current_file}"
@@ -592,10 +617,13 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
             text += " | "
             text += f"{timeleft} left ({steptime} per point)"
-        self.line.setText(text)
+        self._base_progress_text = text
+        self.update_remaining_time()
+        self.timeleft_update_timer.start()
 
     @QtCore.Slot(int, object)
     def step_finished(self, niter: int, pos: tuple[float, ...]):
+        self.timeleft_update_timer.stop()
         self.step_times.append(time.perf_counter() - self.start_time)
 
         # Display status
@@ -646,6 +674,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
     @QtCore.Slot()
     def post_process(self):
+        self.timeleft_update_timer.stop()
         total_time = humanize.precisedelta(
             datetime.timedelta(seconds=time.perf_counter() - self.start_time)
         )
