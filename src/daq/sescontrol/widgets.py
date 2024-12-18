@@ -401,9 +401,8 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         self.timeleft_update_timer.setInterval(1000)
         self.timeleft_update_timer.timeout.connect(self.update_remaining_time)
 
-        # Base progress text to be displayed, remaining time for scan will be appended
-        # to this string. The base string is set in step_started.
-        self._base_progress_text: str = ""
+        # Current iteration, used for progress bar
+        self._niter: int = 0
 
     @QtCore.Slot()
     def _workfile_viewer_closed(self):
@@ -609,19 +608,40 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if self.start_time is None:
             return
 
-        text = str(self._base_progress_text)
-        if np.isfinite(self.time_per_step):
-            last_step_finished = self.start_time + self.step_times[-1]
-            this_step_remaining = self.time_per_step - (
+        text: str = f"{self.current_file}"
+        if self._niter == 1:
+            text += " started"
+        else:
+            after_point = (
+                self.numpoints - self._niter
+            ) * self.time_per_step  # Time left excluding current point
+            last_step_finished = (
+                self.start_time + self.step_times[-1]
+            )  # When the last step finished
+            point_remaining = self.time_per_step - (
                 time.perf_counter() - last_step_finished
+            )  # Time left for current point
+
+            total_remaining_str: str = humanize.naturaldelta(
+                datetime.timedelta(seconds=after_point + point_remaining)
+            )
+            point_remaining_str: str = humanize.naturaldelta(
+                datetime.timedelta(seconds=point_remaining)
+            )
+            step_str: str = humanize.precisedelta(
+                datetime.timedelta(seconds=self.time_per_step)
             )
 
-            text = f"{text} | {humanize.naturaldelta(datetime.timedelta(seconds=this_step_remaining))} left for this point"
+            text += " | "
+            text += f"{total_remaining_str} left ({step_str} per point)"
+            text += " |"
+            text += f"{point_remaining_str} left for this point"
 
         self.line.setText(text)
 
     @QtCore.Slot(int)
     def step_started(self, niter: int):
+        self._niter = niter
         text: str = f"{self.current_file}"
         if niter == 1:
             text += " started"
@@ -710,6 +730,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 self.itool.to_manager()
 
         self.current_file = None
+        self._niter = 0
         self.progress.reset()
         self.progress.setTextVisible(False)
         self.start_time = None
