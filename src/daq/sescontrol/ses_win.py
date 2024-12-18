@@ -21,6 +21,39 @@ import win32gui
 SES_DIR = os.getenv("SES_BASE_PATH", "D:/SES_1.9.6_Win64")
 log = logging.getLogger("scan")
 
+SES_ACTIONS: dict[str, tuple[str, Callable[[str], bool]] | None] = {
+    "Calibrate Voltages": (
+        "Calibration->Voltages...",
+        lambda title: title == "Voltage Calibration",
+    ),
+    "File Opts.": (
+        "Setup->File Options...",
+        lambda title: title == "File Options",
+    ),
+    "Sequences": (
+        "Sequence->Setup...",
+        lambda title: title.startswith("Sequence Editor"),
+    ),
+    "Control Theta": (
+        "DA30->Control Theta...",
+        lambda title: title == "Control Theta",
+    ),
+    "Center Deflection": (
+        "DA30->Center Deflection",
+        None,
+    ),
+}
+"""
+Actions to be added to the widget.
+
+The keys are the labels of the buttons, and the values are tuples. The first element of
+the tuple is a string that indicates the path to the menu item, and the second element
+is a callable that takes a string and returns whether it matches the title of the window
+that is meant to be opened by the action. If the action does not open a window, the
+second element can be None.
+
+"""
+
 
 def get_ses_proc() -> psutil.Process:
     for proc in psutil.process_iter():
@@ -129,6 +162,12 @@ class SESController:
         self._ses_app = pywinauto.Application(backend="win32").connect(
             process=self._pid
         )
+
+    def is_window_visible(self, match: Callable[[str], bool]) -> bool:
+        if not self.alive:
+            raise RuntimeError("SES is not running")
+        handle = get_matching_window(self._pid, match)
+        return bool(win32gui.IsWindowVisible(handle))
 
     def click_menu(self, path: str, match: Callable[[str], bool] | None = None) -> int:
         # Click menu given by path. If the menu item opens some window, match needs to

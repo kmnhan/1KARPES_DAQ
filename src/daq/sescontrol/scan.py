@@ -227,8 +227,11 @@ class ScanWorker(QtCore.QRunnable):
                     .menu()
                     .get_menu_path(f"Sequence->{button}")
                 )
-                path[-1].ctrl.send_message(path[-1].menu.COMMAND, path[-1].item_id())
-                pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
+                if path[-1].is_enabled():
+                    path[-1].ctrl.send_message(
+                        path[-1].menu.COMMAND, path[-1].item_id()
+                    )
+                    pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
             except win32.lib.pywintypes.error:
                 log.exception(f"Error while clicking sequence button {button}")
                 continue
@@ -329,8 +332,11 @@ class ScanWorker(QtCore.QRunnable):
         if len(self.motors) == 0:
             # No motors, single scan
             self.signals.sigStepStarted.emit(1)
-            self.sequence_run_wait()
-            self.signals.sigStepFinished.emit(1, ())
+            ret = self.sequence_run_wait()
+            if not ret:
+                log.info("Aborted during scan")
+            else:
+                self.signals.sigStepFinished.emit(1, ())
         else:
             for i, ax in enumerate(self.motors):
                 ax.pre_motion()

@@ -20,7 +20,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
 from sescontrol.plugins import Motor
 from sescontrol.scan import MotorPosWriter, ScanWorker, gen_data_name, restore_names
-from sescontrol.ses_win import SESController, get_file_info, next_index
+from sescontrol.ses_win import SES_ACTIONS, SESController, get_file_info, next_index
 
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553
@@ -505,7 +505,24 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             self.sigStopPoint.emit()
             self.stop_point_btn.setText("Cancel Stop")
 
+    def is_startable(self):
+        ses = SESController()
+        path = (
+            ses._ses_app.window(handle=ses._hwnd).menu().get_menu_path("Sequence->Run")
+        )
+        if not path[-1].is_enabled():
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Cannot start scan",
+                "The sequence menu is disabled. A window may be open.",
+            )
+            return False
+        return True
+
     def start_scan(self):
+        if not self.is_startable():
+            return
+
         # get motor arguments only if enabled
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
@@ -736,40 +753,10 @@ class SESShortcuts(QtWidgets.QWidget):
     ----------
     sigAliveChanged
         A signal emitted when the SES connection status changes.
-    SES_ACTIONS
-        Actions to be added to the widget. The keys are the labels of the buttons, and
-        the values are tuples. The first element of the tuple is a string that indicates
-        the path to the menu item, and the second element is a callable that takes a
-        string and returns whether it matches the title of the window that is meant to
-        be opened by the action. If the action does not open a window, the second
-        element can be None.
 
     """
 
     sigAliveChanged = QtCore.Signal(bool)
-
-    SES_ACTIONS: dict[str, tuple[str, Callable[[str], bool]] | None] = {
-        "Calibrate Voltages": (
-            "Calibration->Voltages...",
-            lambda title: title == "Voltage Calibration",
-        ),
-        "File Opts.": (
-            "Setup->File Options...",
-            lambda title: title == "File Options",
-        ),
-        "Sequences": (
-            "Sequence->Setup...",
-            lambda title: title.startswith("Sequence Editor"),
-        ),
-        "Control Theta": (
-            "DA30->Control Theta...",
-            lambda title: title == "Control Theta",
-        ),
-        "Center Deflection": (
-            "DA30->Center Deflection",
-            None,
-        ),
-    }
 
     def __init__(self):
         super().__init__()
@@ -803,7 +790,7 @@ class SESShortcuts(QtWidgets.QWidget):
     @QtCore.Slot(str)
     @QtCore.Slot(str, object)
     def try_click(self, path: str, match: Callable[[str], bool] | None = None):
-        if path == self.SES_ACTIONS["Calibrate Voltages"][0]:
+        if path == SES_ACTIONS["Calibrate Voltages"][0]:
             ret = QtWidgets.QMessageBox.warning(
                 self,
                 "Reminder for MCP protection",
@@ -824,7 +811,7 @@ class SESShortcuts(QtWidgets.QWidget):
 
     def create_buttons(self):
         self.buttons: list[QtWidgets.QPushButton] = []
-        for label, args in self.SES_ACTIONS.items():
+        for label, args in SES_ACTIONS.items():
             btn = QtWidgets.QPushButton(label)
 
             btn.clicked.connect(lambda *, args=args: self.try_click(*args))
