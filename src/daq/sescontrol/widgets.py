@@ -634,7 +634,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
             text += " | "
             text += f"{total_remaining_str} left ({step_str} per point)"
-            text += " |"
+            text += " | "
             text += f"{point_remaining_str} left for this point"
 
         self.line.setText(text)
