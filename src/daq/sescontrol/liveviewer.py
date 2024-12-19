@@ -354,8 +354,6 @@ class LiveImageTool(ImageTool):
         self._base_file = base_file
         self._data_idx = data_idx
 
-        self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
-
         if len(self._motor_coords) == 0:
             self.motor_controls.setDisabled(True)
 
@@ -370,7 +368,9 @@ class LiveImageTool(ImageTool):
     @QtCore.Slot(int, object)
     def update_data(self, niter: int, wave: xr.DataArray):
         if niter == 1:
-            return self.slicer_area.set_data(wave)
+            self.slicer_area.set_data(wave)
+            self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
+            return
         else:
             indices = list(
                 np.unravel_index(
