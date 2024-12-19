@@ -335,6 +335,7 @@ class LiveImageTool(ImageTool):
         )
         motor_dock.setWidget(self.widget_box(self.motor_controls))
         self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, motor_dock)
+        self.slicer_area.toggle_snap(True)
 
     def set_busy(self, busy: bool):
         self.motor_controls.busy = busy
@@ -632,6 +633,7 @@ def get_workfile_array(
 class WorkFileImageTool(BaseImageTool):
     def __init__(self, parent=None):
         super().__init__(data=np.ones((2, 2, 2), dtype=np.float32), parent=parent)
+        self.slicer_area.toggle_snap(True)
 
         self.threadpool = QtCore.QThreadPool.globalInstance()
 
@@ -661,7 +663,7 @@ class WorkFileImageTool(BaseImageTool):
         self.autoupdate_spin = QtWidgets.QDoubleSpinBox()
         self.autoupdate_spin.setMinimum(0.5)
         self.autoupdate_spin.setMaximum(60.0)
-        self.autoupdate_spin.setValue(5.0)
+        self.autoupdate_spin.setValue(2.0)
         self.autoupdate_spin.setKeyboardTracking(False)
         self.autoupdate_spin.valueChanged.connect(self.refresh_update_timer)
 
