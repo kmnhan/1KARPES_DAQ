@@ -398,7 +398,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
 
         # Timer to update remaining time for current scan
         self.timeleft_update_timer = QtCore.QTimer(self)
-        self.timeleft_update_timer.setInterval(1000)
+        self.timeleft_update_timer.setInterval(250)
         self.timeleft_update_timer.timeout.connect(self.update_remaining_time)
 
         # Current iteration, used for progress bar
@@ -450,12 +450,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     def has_motor(self) -> bool:
         """Whether at least one motor is enabled."""
         return self.motors[0].isChecked() or self.motors[1].isChecked()
-
-    @property
-    def time_per_step(self) -> float:
-        if len(self.step_times) <= 1:
-            return np.inf
-        return np.mean(np.diff(self.step_times))
 
     def update_motor_list(self):
         for i, m in enumerate(self.motors):
@@ -612,15 +606,21 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         if self._niter == 1:
             text += " started"
         else:
+            step_times = np.diff(self.step_times)
+            step_time_avg = np.mean(step_times)
+            step_time_stderr = np.std(step_times) / np.sqrt(len(step_times))
+
             after_point = (
                 self.numpoints - self._niter
-            ) * self.time_per_step  # Time left excluding current point
+            ) * step_time_avg  # Time left excluding current point
             last_step_finished = (
                 self.start_time + self.step_times[-1]
             )  # When the last step finished
-            point_remaining = self.time_per_step - (
+            point_remaining = step_time_avg - (
                 time.perf_counter() - last_step_finished
             )  # Time left for current point
+            if point_remaining < 0:
+                point_remaining = 0
 
             total_remaining_str: str = humanize.naturaldelta(
                 datetime.timedelta(seconds=after_point + point_remaining)
@@ -629,8 +629,12 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
                 datetime.timedelta(seconds=point_remaining)
             )
             step_str: str = humanize.precisedelta(
-                datetime.timedelta(seconds=self.time_per_step)
+                datetime.timedelta(seconds=step_time_avg)
             )
+            step_err_str: str = humanize.precisedelta(
+                datetime.timedelta(seconds=step_time_stderr)
+            )
+            step_str += f" ± {step_err_str}"
 
             text += " | "
             text += f"{total_remaining_str} left ({step_str} per point)"
@@ -642,19 +646,6 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
     @QtCore.Slot(int)
     def step_started(self, niter: int):
         self._niter = niter
-        text: str = f"{self.current_file}"
-        if niter == 1:
-            text += " started"
-        else:
-            steptime: float = self.time_per_step
-            timeleft: float = (self.numpoints - (niter - 1)) * steptime
-
-            timeleft: str = humanize.naturaldelta(datetime.timedelta(seconds=timeleft))
-            steptime: str = humanize.precisedelta(datetime.timedelta(seconds=steptime))
-
-            text += " | "
-            text += f"{timeleft} left ({steptime} per point)"
-        self._base_progress_text = text
         self.update_remaining_time()
         self.timeleft_update_timer.start()
 
