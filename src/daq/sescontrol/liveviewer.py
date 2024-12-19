@@ -382,6 +382,12 @@ class LiveImageTool(ImageTool):
                     len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
                 )
 
+            while True:
+                # Wait until first scan is displayed
+                time.sleep(10e-3)
+                if all(d in self.array_slicer._obj.coords for d in wave.dims):
+                    break
+
             # Assign equal coordinates since the energy axis values might be slightly
             # different probably due to rounding errors in SES software corrections
             wave = wave.assign_coords(
