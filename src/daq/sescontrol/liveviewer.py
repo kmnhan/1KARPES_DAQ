@@ -7,13 +7,12 @@ import threading
 import time
 import zipfile
 
-import erlab.io
+import erlab
 import numpy as np
 import xarray as xr
 from erlab.interactive.imagetool import (
     BaseImageTool,
     ImageTool,
-    ItoolMenuBar,
     itool,
     manager,
 )
@@ -304,6 +303,11 @@ class DataFetcher(QtCore.QRunnable):
         #         {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
         #     ).mean()
 
+        if self._niter == 1:
+            first_scan_dim_coords = {k: wave[k] for k in wave.dims}
+        else:
+            wave = wave.assign_coords(first_scan_dim_coords)
+
         if self._niter == 1 and len(self._motor_coords) > 0:
             # Reserve space for future scans
             wave = wave.expand_dims(
@@ -336,6 +340,7 @@ class LiveImageTool(ImageTool):
         motor_dock.setWidget(self.widget_box(self.motor_controls))
         self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, motor_dock)
         self.slicer_area.toggle_snap(True)
+        self._itool_initialized: bool = False
 
     def set_busy(self, busy: bool):
         self.motor_controls.busy = busy
@@ -367,9 +372,16 @@ class LiveImageTool(ImageTool):
 
     @QtCore.Slot(int, object)
     def update_data(self, niter: int, wave: xr.DataArray):
+        if niter > 1 and not self._itool_initialized:
+            QtCore.QTimer.singleShot(150, lambda: self.update_data(niter, wave))
+        else:
+            self._set_data(niter, wave)
+
+    def _set_data(self, niter: int, wave: xr.DataArray):
         if niter == 1:
             self.slicer_area.set_data(wave)
             self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
+            self._itool_initialized = True
             return
         else:
             indices = list(
@@ -382,12 +394,6 @@ class LiveImageTool(ImageTool):
                 indices[-1] = (
                     len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
                 )
-
-            while True:
-                # Wait until first scan is displayed
-                time.sleep(10e-3)
-                if all(d in self.array_slicer._obj.coords for d in wave.dims):
-                    break
 
             # Assign equal coordinates since the energy axis values might be slightly
             # different probably due to rounding errors in SES software corrections
@@ -416,7 +422,7 @@ class LiveImageTool(ImageTool):
 
             # Before setting data, reset any filters
             old_func = self.slicer_area._applied_func
-            self.slicer_area.apply_func(None)
+            self.slicer_area.apply_func(None, update=False)
 
             # We want to know the dims of target array before assigning new values since
             # the user might have transposed it
@@ -436,10 +442,10 @@ class LiveImageTool(ImageTool):
 
             # Reapply old filter
             if old_func:
-                self.slicer_area.apply_func(old_func)
+                self.slicer_area.apply_func(old_func, update=False)
 
-            self.array_slicer.clear_dim_cache(include_vals=True)
-            self.slicer_area.refresh_all(only_plots=True)
+            self.array_slicer.clear_val_cache(include_vals=True)
+            # self.slicer_area.refresh_all(only_plots=True)
 
     @QtCore.Slot()
     def to_manager(self):
@@ -694,8 +700,6 @@ class WorkFileImageTool(BaseImageTool):
 
         self.update_timer = QtCore.QTimer(self)
         self.update_timer.timeout.connect(self.reload)
-
-        # self.mnb = ItoolMenuBar(self)
 
     @QtCore.Slot()
     def refresh_update_timer(self):
