@@ -303,11 +303,6 @@ class DataFetcher(QtCore.QRunnable):
         #         {d: 4 for d in wave.dims if d != "theta"}, boundary="trim"
         #     ).mean()
 
-        if self._niter == 1:
-            first_scan_dim_coords = {k: wave[k] for k in wave.dims}
-        else:
-            wave = wave.assign_coords(first_scan_dim_coords)
-
         if self._niter == 1 and len(self._motor_coords) > 0:
             # Reserve space for future scans
             wave = wave.expand_dims(
