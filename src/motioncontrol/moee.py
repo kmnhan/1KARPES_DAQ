@@ -8,6 +8,7 @@ import threading
 import time
 from multiprocessing import shared_memory
 
+import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
 
 log = logging.getLogger("moee")
@@ -183,7 +184,7 @@ class MMThread(QtCore.QThread):
             freq = 1e6 / usec
             return freq
 
-    def set_frequency(self, channel: int, frequency: int | float):
+    def set_frequency(self, channel: int, frequency: float):
         if self.compat:
             if (frequency >= 50) and (frequency <= 500):
                 sigtime = round(50000000 / frequency)
@@ -203,7 +204,7 @@ class MMThread(QtCore.QThread):
         amp = self.mmrecv()
         return amp / 65535 * 60.0
 
-    def set_amplitude(self, channel: int, amplitude: int | float):
+    def set_amplitude(self, channel: int, amplitude: float):
         sigamp = min((65535, round(amplitude * 65535 / 60)))
         log.info(f"ctrl{self.index} setting amplitude to {sigamp / 65535 * 60.0:.2f}")
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
@@ -221,6 +222,7 @@ class MMThread(QtCore.QThread):
 
     def set_relay(self, channel: int, state: int):
         if self.compat:
+            # command only in new controller
             return
 
         if state not in (0, 1):
@@ -395,7 +397,9 @@ class MMThread(QtCore.QThread):
                 self.set_amplitude(self._channel, self._amplitudes[0])
 
             # set frequency
-            self.set_frequency(self._channel, self._sigtime)
+            curr_freq = self.get_frequency(self._channel)
+            if round(curr_freq) != self._sigtime:
+                self.set_frequency(self._channel, self._sigtime)
 
             delta_list: list[int | float] = [
                 self._target - self.get_position(self._channel)
