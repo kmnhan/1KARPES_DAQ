@@ -13,7 +13,6 @@ datas = [
     ("pyloncam.ui", "."),
     ("cameramonitor_config.ui", "."),
     ("icon.ico", "."),
-    ("qt_extensions/*", "./qt_extensions/"),
 ]
 datas += copy_metadata("numpy")
 # For some reason, xarray requires numpy metadata on import
