@@ -1,25 +1,17 @@
 [project]
-name = "erpes_daq"
+name = "erpes_software"
 version = "0.0.1"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"
-dependencies = [
-    "webcam",
-    "tempcontroller",
-    "pyloncam",
-    "motioncontrol",
-    "mg15",
-    "logviewer",
-    "f70h",
-    "daq",
-]
+dependencies = ["logviewer", "erpes_daq", "qt_extensions"]
 
 [tool.uv.sources]
-bird-feeder = { workspace = true }
+qt_extensions = { workspace = true }
+erpes_daq = { workspace = true }
+logviewer = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/*"]
-exclude = ["packages/shared"]
+members = ["shared/*", "src/logviewer", "src/erpes_daq"]
 
 
 [build-system]

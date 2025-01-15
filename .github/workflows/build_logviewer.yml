@@ -29,10 +29,10 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r packages/logviewer/requirements.txt pyinstaller
+      run: pip install -r src/logviewer/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller packages/logviewer/main.spec
+      run: pyinstaller src/logviewer/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4

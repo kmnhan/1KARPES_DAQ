@@ -7,7 +7,6 @@ import time
 from itertools import starmap
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
 import tomlkit
