@@ -34,7 +34,7 @@ jobs:
     #     install-only: true
 
     - name: Building...
-      working-directory: ./src/logviewer
+      working-directory: ./src/f70h
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
