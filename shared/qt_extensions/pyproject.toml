@@ -1,6 +1,6 @@
 [project]
 name = "qt_extensions"
-version = "0.0.1"
+version = "0.1.0"
 description = "Utility functions related to Qt and pyqtgraph"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"

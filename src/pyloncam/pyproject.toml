@@ -1,0 +1,23 @@
+[project]
+name = "pyloncam"
+version = "0.1.0"
+description = "Lightweight GUI for Basler cameras using Pylon SDK"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "h5netcdf>=1.4.1",
+    "matplotlib>=3.10.0",
+    "numpy>=2.0.2",
+    "pypylon>=4.1.0",
+    "pyqt6>=6.8.0",
+    "pyqtgraph>=0.13.7",
+    "qt_extensions",
+    "qtpy>=2.4.2",
+    "xarray>=2025.1.1",
+]
+
+[tool.uv.sources]
+qt-extensions = { workspace = true }
+
+[dependency-groups]
+dev = ["pyinstaller>=6.11.1"]

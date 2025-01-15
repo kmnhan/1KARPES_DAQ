@@ -3,15 +3,34 @@ name = "erpes_software"
 version = "0.1.0"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"
-dependencies = ["logviewer", "erpes_daq", "qt_extensions"]
+dependencies = [
+    "qt_extensions",
+    "erpes_daq",
+    "logviewer",
+    "f70h",
+    "mg15",
+    "motioncontrol",
+    "pyloncam",
+    "tempcontroller",
+    "webcam",
+]
+
+[dependency-groups]
+dev = ["pre-commit>=4.0.1"]
 
 [tool.uv.sources]
 qt_extensions = { workspace = true }
 erpes_daq = { workspace = true }
 logviewer = { workspace = true }
+f70h = { workspace = true }
+mg15 = { workspace = true }
+motioncontrol = { workspace = true }
+pyloncam = { workspace = true }
+tempcontroller = { workspace = true }
+webcam = { workspace = true }
 
 [tool.uv.workspace]
-members = ["shared/*", "src/logviewer", "src/erpes_daq", "src/f70h", "src/mg15", "src/motioncontrol"]
+members = ["shared/*", "src/*"]
 
 [tool.ruff]
 line-length = 88

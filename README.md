@@ -7,28 +7,40 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 ## Prerequisites
 
 - Python 3.11 or higher
-- Additional dependencies for each program are listed in the `requirements.txt` file in
-  each subdirectory under `packages/`
+- Additional dependencies for each program are listed in the `pyproject.toml` file in
+  each subdirectory under `src`
 
 ## Development
 
-1. Clone the repository and navigate to the root directory.
+1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-2. Setup a mamba environment:
+   - On Windows:
+
+     ```bash
+     winget install --id=astral-sh.uv  -e
+     ```
+
+   - On macOS:
+
+     ```bash
+     brew install uv
+     ```
+
+2. Clone the repository and navigate to the root directory.
+
+3. Run:
+
    ```bash
-   mamba env create -f environment.yml
-   mamba activate daq
+   uv sync --all-extras --dev
    ```
-   This will create and activate a new environment called `daq` with all the necessary dependencies.
 
 4. Install pre-commit hooks by running `pre-commit install` in the root directory.
 
 ### Notes
-- Builds must be trigerred manually from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
-- If you add or modify any dependencies, make sure to update the `requirements.txt` file
-  in the corresponding subdirectory and the `environment.yml` file in the root
-  directory
 
+- Builds must be trigerred manually from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
+- When adding or modifying dependencies, use `uv` to manage them. Do not modify the
+  `pyproject.toml` files manually.
 
 ## Build status
 
