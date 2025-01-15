@@ -1,6 +1,6 @@
 [project]
 name = "erpes_daq"
-version = "0.0.1"
+version = "0.1.0"
 description = "Main DAQ software for 1K ARPES"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"

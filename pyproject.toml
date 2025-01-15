@@ -1,6 +1,6 @@
 [project]
 name = "erpes_software"
-version = "0.0.1"
+version = "0.1.0"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"
 dependencies = ["logviewer", "erpes_daq", "qt_extensions"]
@@ -11,12 +11,7 @@ erpes_daq = { workspace = true }
 logviewer = { workspace = true }
 
 [tool.uv.workspace]
-members = ["shared/*", "src/logviewer", "src/erpes_daq"]
-
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+members = ["shared/*", "src/logviewer", "src/erpes_daq", "src/f70h"]
 
 [tool.ruff]
 line-length = 88

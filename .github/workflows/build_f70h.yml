@@ -18,24 +18,27 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Set up Python
+      run: uv python install
+
+    - name: Install the project
+      working-directory: ./src/f70h
+      run: uv sync --all-extras --dev
+
     # - name: Install UPX
     #   uses: crazy-max/ghaction-upx@v2
     #   with:
     #     install-only: true
 
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Resolving dependencies...
-      run: pip install -r packages/f70h/requirements.txt pyinstaller
-
     - name: Building...
-      run: pyinstaller packages/f70h/main.spec
+      working-directory: ./src/logviewer
+      run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: F70H Monitor
-        path: dist/f70h/
+        path: src/f70h/dist/f70h/
