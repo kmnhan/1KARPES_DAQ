@@ -4,12 +4,13 @@ import sys
 from typing import TYPE_CHECKING
 
 os.environ["QT_API"] = "pyqt6"
-from attributeserver.dell_server import (
+from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from erpes_daq.attributeserver.dell_server import (
     PositionServer,
     PressureServer,
     TemperatureServer,
 )
-from qtpy import QtCore, QtGui, QtWidgets, uic
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)

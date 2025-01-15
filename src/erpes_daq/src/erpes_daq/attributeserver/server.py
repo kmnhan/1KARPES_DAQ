@@ -14,7 +14,7 @@ from multiprocessing import shared_memory
 import zmq
 from qtpy import QtCore
 
-from attributeserver.getter import get_header
+from erpes_daq.attributeserver.getter import get_header
 
 log = logging.getLogger("attrs")
 

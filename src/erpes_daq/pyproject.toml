@@ -1,0 +1,21 @@
+[project]
+name = "erpes_daq"
+version = "0.0.1"
+description = "Main DAQ software for 1K ARPES"
+authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
+requires-python = ">=3.11"
+dependencies = [
+    "erlab",
+    "humanize",
+    "numbagg",
+    "numpy",
+    "pyqt6",
+    "pywin32",
+    "pywinauto",
+    "pyzmq",
+    "qtpy",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

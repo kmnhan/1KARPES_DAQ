@@ -8,7 +8,7 @@ import socket
 import struct
 import threading
 
-from attributeserver.getter import (
+from erpes_daq.attributeserver.getter import (
     MANIPULATOR_AXES,
     PORT_POSITION,
     PORT_PRESSURE,

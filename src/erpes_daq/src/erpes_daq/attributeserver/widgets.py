@@ -9,12 +9,12 @@ from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from attributeserver.getter import (
+from erpes_daq.attributeserver.getter import (
     SLIT_TABLE,
     get_pressure_strings,
     get_temperature_strings,
 )
-from attributeserver.server import AttributeServer
+from erpes_daq.attributeserver.server import AttributeServer
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)

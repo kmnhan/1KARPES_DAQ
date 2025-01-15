@@ -19,9 +19,9 @@ from erlab.interactive.imagetool import (
 from erlab.interactive.imagetool.controls import ItoolControlsBase
 from qtpy import QtCore, QtGui, QtWidgets
 
-from sescontrol.plugins import Motor
-from sescontrol.scan import TEMPFILE_PREFIX, gen_data_name
-from sescontrol.ses_win import SES_DIR
+from erpes_daq.sescontrol.plugins import Motor
+from erpes_daq.sescontrol.scan import TEMPFILE_PREFIX, gen_data_name
+from erpes_daq.sescontrol.ses_win import SES_DIR
 
 log = logging.getLogger("scan")
 

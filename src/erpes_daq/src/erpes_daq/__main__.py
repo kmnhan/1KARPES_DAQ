@@ -5,9 +5,10 @@ import os
 import sys
 
 os.environ["QT_API"] = "pyqt6"
-from attributeserver.widgets import StatusWidget
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from sescontrol.widgets import ScanType, SESShortcuts
+
+from erpes_daq.attributeserver.widgets import StatusWidget
+from erpes_daq.sescontrol.widgets import ScanType, SESShortcuts
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)

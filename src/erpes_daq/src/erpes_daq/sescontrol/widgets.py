@@ -18,10 +18,20 @@ sys.coinit_flags = 2
 from erlab.interactive.imagetool import manager
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
-from sescontrol.plugins import Motor
-from sescontrol.scan import MotorPosWriter, ScanWorker, gen_data_name, restore_names
-from sescontrol.ses_win import SES_ACTIONS, SESController, get_file_info, next_index
+from erpes_daq.sescontrol.liveviewer import LiveImageTool, WorkFileImageTool
+from erpes_daq.sescontrol.plugins import Motor
+from erpes_daq.sescontrol.scan import (
+    MotorPosWriter,
+    ScanWorker,
+    gen_data_name,
+    restore_names,
+)
+from erpes_daq.sescontrol.ses_win import (
+    SES_ACTIONS,
+    SESController,
+    get_file_info,
+    next_index,
+)
 
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553

@@ -19,8 +19,8 @@ import pywinauto.win32functions
 import win32.lib.pywintypes
 from qtpy import QtCore
 
-from sescontrol.plugins import Motor
-from sescontrol.ses_win import get_ses_properties
+from erpes_daq.sescontrol.plugins import Motor
+from erpes_daq.sescontrol.ses_win import get_ses_properties
 
 log = logging.getLogger("scan")
 
