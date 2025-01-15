@@ -17,3 +17,6 @@ dependencies = [
 
 [tool.uv.sources]
 qt_extensions = { workspace = true }
+
+[dependency-groups]
+dev = ["pyinstaller>=6.11.1"]

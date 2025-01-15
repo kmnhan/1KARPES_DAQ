@@ -18,19 +18,22 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
 
-    - name: Resolving dependencies...
-      run: pip install -r packages/logviewer/requirements.txt pyinstaller
+    - name: Set up Python
+      run: uv python install
+
+    - name: Install the project
+      working-directory: ./src/logviewer
+      run: uv sync --all-extras --dev
 
     - name: Building...
-      run: pyinstaller packages/logviewer/main.spec
+      working-directory: ./src/logviewer
+      run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Log Viewer
-        path: dist/
+        path: src/logviewer/dist/
