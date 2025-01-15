@@ -7,6 +7,8 @@ members = [
     "erpes-software",
     "f70h",
     "logviewer",
+    "mg15",
+    "motioncontrol",
     "qt-extensions",
 ]
 
@@ -688,6 +690,66 @@ wheels = [
 ]
 
 [[package]]
+name = "mg15"
+version = "0.1.0"
+source = { virtual = "src/mg15" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pymodbus" },
+    { name = "pyqt6" },
+    { name = "pyqtgraph" },
+    { name = "qtpy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pyinstaller" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0.2" },
+    { name = "pymodbus", specifier = "<=3.6.9" },
+    { name = "pyqt6", specifier = ">=6.8.0" },
+    { name = "pyqtgraph", specifier = ">=0.13.4" },
+    { name = "qtpy", specifier = ">=2.4.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyinstaller", specifier = ">=6.11.1" }]
+
+[[package]]
+name = "motioncontrol"
+version = "0.1.0"
+source = { virtual = "src/motioncontrol" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pyqt6" },
+    { name = "pyqtgraph" },
+    { name = "pyzmq" },
+    { name = "qtawesome" },
+    { name = "qtpy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pyinstaller" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0.2" },
+    { name = "pyqt6", specifier = ">=6.8.0" },
+    { name = "pyqtgraph", specifier = ">=0.13.4" },
+    { name = "pyzmq", specifier = ">=26.2.0" },
+    { name = "qtawesome", specifier = ">=1.3.1" },
+    { name = "qtpy", specifier = ">=2.4.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyinstaller", specifier = ">=6.11.1" }]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -984,6 +1046,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/06/df/9fa06adfc7ac4fe07fd796a7bd402ec91ada4d360329a90d17e0275beaba/pyinstaller_hooks_contrib-2024.11.tar.gz", hash = "sha256:84399af6b4b902030958063df25f657abbff249d0f329c5344928355c9833ab4", size = 141622 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/af/965f81a65f4d9bcb337dd0e87845fd2e081c4ab5a1c0b3e0cf20abeac423/pyinstaller_hooks_contrib-2024.11-py3-none-any.whl", hash = "sha256:2781d121a1ee961152ba7287a262c65a1078da30c9ef7621cb8c819326884fd5", size = 339452 },
+]
+
+[[package]]
+name = "pymodbus"
+version = "3.6.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/a4/5322c8e3be3bb2db7ab3eb7c2160fd2ec325083d7e60a76cd9cc896dd7bd/pymodbus-3.6.9.tar.gz", hash = "sha256:f4223b72c20cd00a2cf25f6ddb31ecb2c0587309111a55283b2f4a1ac115e4cc", size = 193922 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/1e/579762ad921bb7c0dd5108ae00cedd07b7baa150083d210bcd2b1aeb4262/pymodbus-3.6.9-py3-none-any.whl", hash = "sha256:91dea79f157ca2d26c137190de76dce5a6c99c0ea514d2d1bf3980acbbdaf29c", size = 186547 },
 ]
 
 [[package]]

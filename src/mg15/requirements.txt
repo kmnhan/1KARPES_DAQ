@@ -1,5 +1,0 @@
-pyqtgraph>=0.13.4
-numpy
-pymodbus<=3.6.9
-pyqt6
-qtpy

@@ -1,6 +1,0 @@
-pyqt6
-pyvisa
-pyvisa-py
-pyserial
-qtpy
-slack_sdk

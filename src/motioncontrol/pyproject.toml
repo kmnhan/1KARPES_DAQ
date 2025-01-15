@@ -1,20 +1,18 @@
 [project]
-name = "f70h"
+name = "motioncontrol"
 version = "0.1.0"
-description = "GUI for the F70H Helium Compressor"
+description = "GUI for moeemotion piezo controllers"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "numpy>=2.0.2",
     "pyqt6>=6.8.0",
-    "pyserial>=3.5",
-    "pyvisa>=1.14.1",
-    "pyvisa-py>=0.7.2",
+    "pyqtgraph>=0.13.4",
+    "pyzmq>=26.2.0",
+    "qtawesome>=1.3.1",
     "qtpy>=2.4.2",
-    "slack-sdk>=3.34.0",
 ]
 
 [dependency-groups]
-dev = [
-    "pyinstaller>=6.11.1",
-]
+dev = ["pyinstaller>=6.11.1"]

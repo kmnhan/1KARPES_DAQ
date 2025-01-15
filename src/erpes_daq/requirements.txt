@@ -1,9 +1,0 @@
-erlab
-humanize
-numbagg
-numpy
-pyqt6
-pywin32
-pywinauto
-pyzmq
-qtpy

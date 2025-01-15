@@ -11,7 +11,7 @@ erpes_daq = { workspace = true }
 logviewer = { workspace = true }
 
 [tool.uv.workspace]
-members = ["shared/*", "src/logviewer", "src/erpes_daq", "src/f70h"]
+members = ["shared/*", "src/logviewer", "src/erpes_daq", "src/f70h", "src/mg15", "src/motioncontrol"]
 
 [tool.ruff]
 line-length = 88

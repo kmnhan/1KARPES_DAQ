@@ -28,11 +28,6 @@ jobs:
       working-directory: ./src/logviewer
       run: uv sync --all-extras --dev
 
-    # - name: Install UPX
-    #   uses: crazy-max/ghaction-upx@v2
-    #   with:
-    #     install-only: true
-
     - name: Building...
       working-directory: ./src/logviewer
       run: uv run pyinstaller main.spec
