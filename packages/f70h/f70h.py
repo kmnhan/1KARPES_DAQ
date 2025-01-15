@@ -53,9 +53,9 @@ class F70HInstrument:
         return float(self.query("ID1")[1])
 
     def query(self, cmd: str):
-        log.debug(f"Querying {cmd}")
+        log.debug("Querying %s", cmd)
         out = parse_message(self.instrument.query(make_command(cmd)))
-        log.debug(f"Received {out}")
+        log.debug("Received %s", out)
         return out
 
     def turn_on(self) -> None:
@@ -74,7 +74,7 @@ class F70HInstrument:
         bits = self.status
         for k, v in F70H_ALARM_BITS.items():
             if bits[-v - 1] == "1":
-                log.error(f"{k} alarm")
+                log.error("%s alarm", k)
 
 
 # Some code adapted from https://github.com/TUM-E21-ThinFilms/Sumitomo-F70H
@@ -114,7 +114,11 @@ def parse_message(message: str) -> list[str]:
 
     if checksum != checksum_msg:
         log.error(
-            f"Checksum error for {message[1:4]}: {checksum} != {checksum_msg}, received {data}"
+            "Checksum error for %s: %s != %s, received %s",
+            message[1:4],
+            checksum,
+            checksum_msg,
+            data,
         )
         return None
 

@@ -97,8 +97,7 @@ class ServerControlWidget(*uic.loadUiType("server_status.ui")):
         self.server.running = False
         if timeout is None:
             return self.server.wait()
-        else:
-            return self.server.wait(timeout)
+        return self.server.wait(timeout)
 
     def restart_server(self):
         if not self.stop_server(5000):

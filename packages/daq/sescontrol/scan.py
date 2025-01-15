@@ -162,7 +162,7 @@ class MotorPosWriter(QtCore.QRunnable):
 
         """
         if os.path.isfile(self.fname_prefixed):
-            log.info(f"Log file {self.fname_prefixed} already exists, overwriting")
+            log.info("Log file %s already exists, overwriting", self.fname_prefixed)
             os.remove(self.fname_prefixed)
 
         self.write_pos(header)
@@ -233,7 +233,7 @@ class ScanWorker(QtCore.QRunnable):
                     )
                     pywinauto.win32functions.WaitGuiThreadIdle(path[-1].ctrl.handle)
             except win32.lib.pywintypes.error:
-                log.exception(f"Error while clicking sequence button {button}")
+                log.exception("Error while clicking sequence button %s", button)
                 continue
             else:
                 break
@@ -324,9 +324,8 @@ class ScanWorker(QtCore.QRunnable):
 
         if aborted:
             return False
-        else:
-            self.n_complete += 1
-            return True
+        self.n_complete += 1
+        return True
 
     def run(self):
         if len(self.motors) == 0:
@@ -340,7 +339,7 @@ class ScanWorker(QtCore.QRunnable):
         else:
             for i, ax in enumerate(self.motors):
                 ax.pre_motion()
-                log.debug(f"Pre-motion for axis {i + 1} complete, checking bounds")
+                log.debug("Pre-motion for axis %d complete, checking bounds", i + 1)
 
                 # Last sanity check of bounds before motion start
                 if (ax.minimum is not None and min(self.array[:, i]) < ax.minimum) or (
@@ -356,7 +355,7 @@ class ScanWorker(QtCore.QRunnable):
 
             for i, ax in enumerate(self.motors):
                 ax.post_motion()
-                log.debug(f"Post-motion for axis {i + 1} complete")
+                log.debug("Post-motion for axis %d complete", i + 1)
 
             # Restore mangled filenames
             self._restore_filenames()
@@ -429,7 +428,7 @@ class ScanWorker(QtCore.QRunnable):
                     # Not first iteration and same position as previous, skip move
                     continue
                 # Execute move
-                log.debug(f"Moving ({i}, {j}) to target {self.array[i, j]}")
+                log.debug("Moving (%d, %d) to target %f", i, j, self.array[i, j])
                 self.motors[j].move(self.array[i, j])
 
             # Execute sequence and wait until it finishes

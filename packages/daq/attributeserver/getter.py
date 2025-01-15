@@ -69,8 +69,7 @@ def get_from_server(
 
     if data == b"":
         raise ValueError("Server on monitoring PC failed to read shared memory")
-    else:
-        return list(struct.unpack(fmt, data))
+    return list(struct.unpack(fmt, data))
 
 
 def get_shm_or_remote(shm_func, port: int, size: int, double: bool = True):
@@ -207,7 +206,8 @@ def get_attribute_dict() -> dict[str, str]:
             d = fn()
         except Exception:
             log.exception(
-                f"Getting attribute with function {fn.__name__} from shared memory failed"
+                "Getting attribute with function %s from shared memory failed",
+                fn.__name__,
             )
         else:
             attrs |= d

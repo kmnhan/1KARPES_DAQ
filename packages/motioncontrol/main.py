@@ -1,5 +1,6 @@
 """GUI for the 1K ARPES 6-axis manipulator."""
 
+import contextlib
 import logging
 import multiprocessing
 import os
@@ -18,10 +19,8 @@ from motionwidgets import (
 )
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 LOG_DIR = "D:/Logs/Motion"
 CONNECTION_CONFIG = "D:/Logs/Motion/controllers.toml"
@@ -163,7 +162,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             mn, mx = getattr(ch, "minimum", np.nan), getattr(ch, "maximum", np.nan)
             rep = f"{mn},{mx}"
 
-        log.debug(f"Replying to request {command} {args} with {rep}")
+        log.debug("Replying to request %s %s with %s", command, args, rep)
         self.sigReply.emit(rep)
 
     @QtCore.Slot(str, str)
@@ -172,7 +171,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             unique_id = args
             self.forget_uid(unique_id)
         else:
-            log.exception(f"Command {command} not recognized")
+            log.exception("Command %s not recognized", command)
 
     @QtCore.Slot(str, float, object)
     def parse_move(self, axis: int | str, value: float, unique_id: str | None):
@@ -181,20 +180,15 @@ class MainWindow(*uic.loadUiType("controller.ui")):
             ch.move_to(float(value), unique_id=unique_id)
         else:
             log.warning(
-                f"Ignoring move command for axis {axis} which is disabled or nonexistent"
+                "Ignoring move command for axis %s which is disabled or nonexistent",
+                axis,
             )
 
     def is_finished(self, unique_id: str) -> bool:
-        for con in self.controllers:
-            if con.is_finished(unique_id):
-                return True
-        return False
+        return any(con.is_finished(unique_id) for con in self.controllers)
 
     def is_started(self, unique_id: str) -> bool:
-        for con in self.controllers:
-            if con.is_started(unique_id):
-                return True
-        return False
+        return any(con.is_started(unique_id) for con in self.controllers)
 
     def forget_uid(self, unique_id: str):
         for con in self.controllers:
@@ -206,22 +200,20 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         if isinstance(axis, int) or axis.isdigit():
             axis_idx = int(axis) - 1
             return self.controllers[axis_idx // 3].channels[axis_idx % 3]
-        else:
-            for con in self.controllers:
-                for ch in con.channels:
-                    if ch.name == axis:
-                        return ch
-            return None
+        for con in self.controllers:
+            for ch in con.channels:
+                if ch.name == axis:
+                    return ch
+        return None
 
     def get_controller(self, axis: int | str) -> SingleControllerWidget | None:
         if isinstance(axis, int) or axis.isdigit():
             return self.controllers[int(axis)]
-        else:
-            for con in self.controllers:
-                for ch in con.channels:
-                    if ch.name == axis:
-                        return con
-            return None
+        for con in self.controllers:
+            for ch in con.channels:
+                if ch.name == axis:
+                    return con
+        return None
 
     def get_xy_axes(
         self,
@@ -246,10 +238,9 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         status_list = [con.status for con in self.controllers]
         if MMStatus.Moving in status_list:
             return MMStatus.Moving
-        elif MMStatus.Aborted in status_list:
+        if MMStatus.Aborted in status_list:
             return MMStatus.Aborted
-        else:
-            return MMStatus.Done
+        return MMStatus.Done
 
     @QtCore.Slot(float)
     def step_delta(self, value: float):

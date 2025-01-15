@@ -45,7 +45,7 @@ class AttributeServer(QtCore.QThread):
             context = zmq.Context()
         socket: zmq.Socket = context.socket(zmq.PUB)
         socket.bind(f"tcp://*:{self.PORT}")
-        log.info(f"Attribute server started on TCP port {self.PORT}")
+        log.info("Attribute server started on TCP port %d", self.PORT)
 
         # Broadcast header over socket
         while not self.stopped.is_set():

@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import csv
 import datetime
 import logging
@@ -24,10 +25,8 @@ from widgets import (
     ReadingWidget,
 )
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 logging.addLevelName(5, "TRACE")
 logging.TRACE = 5
@@ -65,10 +64,7 @@ def header_changed(filename, header: list[str]) -> bool:
         for i, line in enumerate(lines):
             if line.startswith("Time"):
                 last_header = lines[i]
-    if last_header.strip().split(",") == header:
-        return False
-    else:
-        return True
+    return last_header.strip().split(",") != header
 
 
 class LoggingProc(multiprocessing.Process):
@@ -402,7 +398,7 @@ class MainWindow(MainWindowGUI):
         self.log_timer = QtCore.QTimer(self)
         self.set_logging_interval(self.log_interval, update_config=False)
         self.log_timer.timeout.connect(self.write_log)
-        log.info(f"Logging to {log_dir} every {self.log_interval} seconds")
+        log.info("Logging to %s every %s seconds", log_dir, self.log_interval)
 
         # Start acquiring & logging
         self.refresh_timer.start()
@@ -443,11 +439,10 @@ class MainWindow(MainWindowGUI):
 
     def set_logging_interval(self, value: float, update_config: bool = True):
         self.log_timer.setInterval(round(value * 1000))
-        if update_config:
-            if float(self.config["logging"]["interval"]) != value:
-                self.config["logging"]["interval"] = value
-                self.overwrite_config()
-                log.debug("Config file logging interval updated")
+        if update_config and float(self.config["logging"]["interval"]) != value:
+            self.config["logging"]["interval"] = value
+            self.overwrite_config()
+            log.debug("Config file logging interval updated")
 
     def update(self):
         # Trigger updates
@@ -472,7 +467,7 @@ class MainWindow(MainWindowGUI):
                 return
 
             if val > tol:
-                log.info(f"Regenerating, TA = {val:.4f} K")
+                log.info("Regenerating, TA = %.4f K", val)
 
                 self.heatswitch.regen_check.setChecked(False)
 
@@ -508,7 +503,7 @@ class MainWindow(MainWindowGUI):
         try:
             arr = np.ndarray((len(vals),), dtype="f8", buffer=self.shm.buf)
         except TypeError:
-            log.critical(f"Shared memory size mismatch : vals given as {vals}")
+            log.critical("Shared memory size mismatch: vals given as %s", vals)
             return
 
         self.plot_values[0].append(dt.timestamp())
@@ -617,7 +612,7 @@ class MainWindow(MainWindowGUI):
         try:
             pyvisa.ResourceManager().close()
         except pyvisa.VisaIOError as e:
-            log.critical(f"ResourceManager failed to close: {e}")
+            log.critical("ResourceManager failed to close: %s", e)
 
         # Free shared memory
         self.shm.close()

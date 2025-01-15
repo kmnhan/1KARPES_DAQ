@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import logging
 import queue
@@ -42,22 +43,22 @@ class RequestHandler:
             time.sleep(1e-4)
 
     def write(self, *args, loglevel: int = logging.DEBUG, **kwargs):
-        log.log(logging.TRACE, f"{self.resource_name} wait write...")
+        log.log(logging.TRACE, "%s wait write...", self.resource_name)
         self.wait_time()
-        log.log(logging.TRACE, f"{self.resource_name} wait write finished...")
+        log.log(logging.TRACE, "%s wait write finished...", self.resource_name)
         res = self.inst.write(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
+        log.log(loglevel, "%s  <-  %s", self.resource_name, args[0])
         return res
 
     def query(self, *args, loglevel: int = logging.DEBUG, **kwargs):
-        log.log(logging.TRACE, f"{self.resource_name} wait query...")
+        log.log(logging.TRACE, "%s wait query...", self.resource_name)
         self.wait_time()
-        log.log(logging.TRACE, f"{self.resource_name} wait query finished...")
+        log.log(logging.TRACE, "%s wait query finished...", self.resource_name)
         res = self.inst.query(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  <-  {args[0]}")
-        log.log(loglevel, f"{self.resource_name}  ->  {res}")
+        log.log(loglevel, "%s  <-  %s", self.resource_name, args[0])
+        log.log(loglevel, "%s  ->  %s", self.resource_name, res)
         return res
 
     def read(self, *args, loglevel: int = logging.DEBUG, **kwargs):
@@ -66,12 +67,12 @@ class RequestHandler:
         This is not very likely to be used. It may cause problems due to the wait time.
         Use `query` instead.
         """
-        log.log(logging.TRACE, f"{self.resource_name} wait read...")
+        log.log(logging.TRACE, "%s wait read...", self.resource_name)
         self.wait_time()
-        log.log(logging.TRACE, f"{self.resource_name} wait read finished...")
+        log.log(logging.TRACE, "%s wait read finished...", self.resource_name)
         res = self.inst.read(*args, **kwargs)
         self._last_update = time.perf_counter_ns()
-        log.log(loglevel, f"{self.resource_name}  ->  {res}")
+        log.log(loglevel, "%s  ->  %s", self.resource_name, res)
         return res
 
     def close(self):
@@ -81,8 +82,9 @@ class RequestHandler:
 class VISAThread(QtCore.QThread):
     """A QThread subclass for handling communication with a VISA instrument.
 
-    This class provides a thread for sending queries and write commands to a VISA device.
-    It uses a queue to manage the requests and executes them in a separate thread.
+    This class provides a thread for sending queries and write commands to a VISA
+    device. It uses a queue to manage the requests and executes them in a separate
+    thread.
     """
 
     sigWritten = QtCore.Signal(object)
@@ -182,10 +184,8 @@ class VISAThread(QtCore.QThread):
                         self.sigQueried.emit(time_queried)
                 self.queue.task_done()
             time.sleep(1e-3)
-        try:
+        with contextlib.suppress(pyvisa.VisaIOError):
             self.controller.close()
-        except pyvisa.VisaIOError:
-            pass
 
 
 def start_visathread(thread: VISAThread):
@@ -286,8 +286,9 @@ class VISAWidgetBase(QtWidgets.QWidget):
         """
         self.setDisabled(True)
         log.error(
-            f"Failed to communicate with {self.instrument.controller.resource_name}: "
-            f"{error}"
+            "Failed to communicate with %s: %s",
+            self.instrument.controller.resource_name,
+            error,
         )
         if self._reconnect_on_error:
             restart_visathread(self.instrument, self._reconnect_interval)

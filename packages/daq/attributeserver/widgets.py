@@ -1,8 +1,10 @@
+import contextlib
 import logging
 import os
 import sys
 import threading
 import time
+import typing
 from multiprocessing import shared_memory
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
@@ -14,10 +16,8 @@ from attributeserver.getter import (
 )
 from attributeserver.server import AttributeServer
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 log = logging.getLogger("attrs")
 
@@ -26,16 +26,21 @@ class SlitTableModel(QtCore.QAbstractTableModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def data(self, index, role):
+    def data(self, index: QtCore.QModelIndex, role: int) -> typing.Any:
+        if not index.isValid():
+            return None
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return str(SLIT_TABLE[index.row()][index.column()])
-        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+        if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
             return int(
                 QtCore.Qt.AlignmentFlag.AlignCenter
                 | QtCore.Qt.AlignmentFlag.AlignVCenter
             )
+        return None
 
-    def headerData(self, section, orientation, role):
+    def headerData(
+        self, section: int, orientation: QtCore.Qt.Orientation, role: int
+    ) -> typing.Any:
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if orientation == QtCore.Qt.Orientation.Horizontal:
                 return ("#", "width (mm)", "aperture")[section]
@@ -44,11 +49,12 @@ class SlitTableModel(QtCore.QAbstractTableModel):
                 QtCore.Qt.AlignmentFlag.AlignCenter
                 | QtCore.Qt.AlignmentFlag.AlignVCenter
             )
+        return None
 
-    def rowCount(self, index):
+    def rowCount(self, index: QtCore.QModelIndex) -> int:
         return len(SLIT_TABLE)
 
-    def columnCount(self, index):
+    def columnCount(self, index: QtCore.QModelIndex) -> int:
         return 3
 
 

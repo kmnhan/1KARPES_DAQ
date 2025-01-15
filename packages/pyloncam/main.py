@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 import logging
 import os
@@ -14,10 +15,8 @@ from pypylon import genicam, pylon
 from qt_extensions.colors import BetterColorBarItem, BetterImageItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 EXCLUDED_DEVICES: tuple[str, ...] = (
     "40049666",
@@ -526,23 +525,17 @@ class FrameGrabber(QtCore.QThread):
 
                         self.save_requested = False
                         self._img_file = None
-            else:
-                try:
-                    pass
-                    # print(
-                    #     f"Error {grab_result.ErrorCode}: ", grabResult.ErrorDescription
-                    # )
-                except UnicodeDecodeError:
-                    print(f"Error {grab_result.ErrorCode}")
 
             grab_result.Release()
-            if genicam.IsWritable(self.camera.ExposureTimeRaw):
-                if self.camera.ExposureTimeRaw.Value != self.exposure:
-                    self.camera.ExposureTimeRaw.Value = self.exposure
+            if genicam.IsWritable(self.camera.ExposureTimeRaw) and (
+                self.camera.ExposureTimeRaw.Value != self.exposure
+            ):
+                self.camera.ExposureTimeRaw.Value = self.exposure
 
-            if genicam.IsWritable(self.camera.GammaEnable):
-                if bool(self.camera.GammaEnable.Value) != self.srgb_gamma:
-                    self.camera.GammaEnable.Value = self.srgb_gamma
+            if genicam.IsWritable(self.camera.GammaEnable) and (
+                bool(self.camera.GammaEnable.Value) != self.srgb_gamma
+            ):
+                self.camera.GammaEnable.Value = self.srgb_gamma
 
             if not self.live:
                 self.camera.StopGrabbing()
@@ -564,7 +557,6 @@ class MainWindow(MainWindowGUI):
         self.frame_grabber = FrameGrabber()
         self.frame_grabber.sigGrabbed.connect(self.grabbed)
         self.frame_grabber.sigExposureRead.connect(self.update_exposure_slider)
-        # self.frame_grabber.sigFailed.connect(lambda: self.live_check.setChecked(False))
 
         self._devices: list[pylon.DeviceInfo] | None = None
         self.live_check.stateChanged.connect(self.toggle_grabbing)
@@ -699,10 +691,8 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def update_rect(self):
-        try:
+        with contextlib.suppress(AttributeError):
             self.image_item.setRect(self.get_rect(self.image_item.image.shape))
-        except AttributeError:
-            pass
 
     # @QtCore.Slot(object)
     # def set_image(self, image):

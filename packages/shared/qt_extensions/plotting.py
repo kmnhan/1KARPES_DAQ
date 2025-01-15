@@ -94,10 +94,7 @@ class SnapCurvePlotDataItem(pg.PlotDataItem):
         return f"{y:.3f}"
 
     def gen_label(self, x: float, y: float) -> str:
-        if self.name() is None:
-            label = ""
-        else:
-            label = f"{self.name()}\n"
+        label = "" if self.name() is None else f"{self.name()}\n"
         if self.opts["logMode"][0]:
             x = 10**x
         if self.opts["logMode"][1]:
@@ -204,8 +201,11 @@ class DynamicPlotItem(pg.PlotItem):
                 idx = (np.abs(plot.xData - xval)).argmin()
             yval = plot.yData[idx]
             if enabled:
-                label += f'<br><span style="color: {color.name()}; font-weight: 600;">{entry}</span>'
-                label += f'<span style="color: #FFF;"> {self.yformat(yval)}</span>'
+                label += (
+                    f'<br><span style="color: {color.name()}; font-weight: 600;">'
+                    f"{entry}</span>"
+                    f'<span style="color: #FFF;"> {self.yformat(yval)}</span>'
+                )
         self.vline.label.setHtml(label)
 
     @QtCore.Slot()
@@ -217,7 +217,7 @@ class DynamicPlotItem(pg.PlotItem):
         diff = ncurves - len(self.plots)
         if diff == 0:
             return
-        elif diff > 0:
+        if diff > 0:
             for _ in range(diff):
                 self.plots.append(self.plot_cls(**self.plot_kw))
                 self.addItem(self.plots[-1])
@@ -307,17 +307,11 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
         self.vbs[1].setGeometry(self.vb.sceneBoundingRect())
 
     def toggle_logy(self, twin: bool):
-        if twin:
-            index = 1
-        else:
-            index = 0
+        index = 1 if twin else 0
         self.set_logy(index, not self.getAxis(("left", "right")[index]).logMode)
 
     def set_logy(self, twin: bool, value: bool):
-        if twin:
-            index = 1
-        else:
-            index = 0
+        index = 1 if twin else 0
         self.getAxis(("left", "right")[index]).setLogMode(value)
         for plot in self.plots:
             if plot.getViewBox() == self.vbs[index]:
@@ -339,13 +333,10 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
                 p.getViewBox().removeItem(p)
 
         for p, label in zip(self.plots, self.legendtable.entries, strict=True):
-            if label in self.twiny_labels:
-                vb = self.vbs[1]
-            else:
-                vb = self.vbs[0]
+            vb = self.vbs[1] if label in self.twiny_labels else self.vbs[0]
             if p.getViewBox() == vb:
                 continue
-            elif p.getViewBox() is not None:
+            if p.getViewBox() is not None:
                 p.getViewBox().removeItem(p)
                 p.forgetViewBox()
             vb.addItem(p)
@@ -372,9 +363,6 @@ class DynamicPlotItemTwiny(DynamicPlotItem):
         ):
             plot.setVisible(enabled)
             plot.setData(x, y, **kwargs)
-            if label in self.twiny_labels:
-                pen_kw = self.pen_kw_twin
-            else:
-                pen_kw = self.pen_kw
+            pen_kw = self.pen_kw_twin if label in self.twiny_labels else self.pen_kw
             plot.setPen(color=color, **pen_kw)
         self.vline.setBounds((min(x), max(x)))

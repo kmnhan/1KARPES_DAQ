@@ -1,3 +1,4 @@
+import contextlib
 import csv
 import datetime
 import logging
@@ -12,10 +13,8 @@ import slack_sdk.errors
 from f70h import F70H_ALARM_BITS, F70H_STATE, F70HInstrument
 from qtpy import QtCore, QtGui, QtWidgets
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 F70_INST_NAME: str = ""
 REFRESH_INTERVAL_MS: int = 1000
@@ -291,7 +290,9 @@ class MainWindow(F70GUI):
     def stop_if_hot(self, bits: str, temperature: tuple[int, int, int], pressure: int):
         if (bits[-1] == "1") and temperature[-1] > WATER_WARNING_TEMP:
             log.warning(
-                f"Water In temperature exceeded {WATER_WARNING_TEMP}°C while compressor is on"
+                "Water In temperature %d exceeded the threshold %d°C",
+                temperature[-1],
+                WATER_WARNING_TEMP,
             )
         else:
             return
@@ -303,7 +304,8 @@ class MainWindow(F70GUI):
         # Notify slack channel
         send_message(
             [
-                f":large_orange_circle: {self.current_time_formatted} Compressor OFF, high water temperature",
+                f":large_orange_circle: {self.current_time_formatted} Compressor OFF, "
+                "high water temperature",
                 f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
                 f"Return pressure {pressure} psig",
             ]
@@ -335,17 +337,16 @@ class MainWindow(F70GUI):
                 f":white_check_mark: {self.current_time_formatted} Alarms cleared"
             )
             return
-        else:
-            # Alarms raised
-            send_message(
-                [
-                    f":warning: {self.current_time_formatted} Alarms raised:",
-                    ", ".join(alarms),
-                    status,
-                    f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
-                    f"Return pressure {pressure} psig",
-                ]
-            )
+        # Alarms raised
+        send_message(
+            [
+                f":warning: {self.current_time_formatted} Alarms raised:",
+                ", ".join(alarms),
+                status,
+                f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
+                f"Return pressure {pressure} psig",
+            ]
+        )
 
     @QtCore.Slot(str, object, int)
     def update_status(
@@ -369,7 +370,7 @@ class MainWindow(F70GUI):
             if int(bits[-v - 1]) == 1:
                 # Alarm is active
                 label.setText(self.ON_LABEL)
-                log.critical(f"ALARM: {k}")
+                log.critical("ALARM: %s", k)
                 # Add alarm to list
                 alarms.append(k)
             else:

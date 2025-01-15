@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import logging
 import os
@@ -10,10 +11,8 @@ from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 log = logging.getLogger("tempctrl")
 
@@ -264,8 +263,8 @@ class ReadingWidgetGUI(VISAWidgetBase):
         smallerfont = QtGui.QFont()
         smallerfont.setPointSize(8)
 
-        for i, input in enumerate(self.inputs):
-            input_label = QtWidgets.QLabel(input)
+        for i in range(len(self.inputs)):
+            input_label = QtWidgets.QLabel(self.inputs[i])
             input_label.setFont(boldfont)
 
             name_label = QtWidgets.QLabel()
@@ -428,13 +427,13 @@ class ReadingWidget(ReadingWidgetGUI):
 
         if len(out) >= 9:
             log.critical(
-                f"KRDG size mismatch for our controllers, raw krdg read as {self._raw_krdg[1]}"
+                "KRDG size mismatch for our controllers, raw krdg read as %s",
+                self._raw_krdg[1],
             )
 
         if return_datetime:
             return out, dt
-        else:
-            return out
+        return out
 
     def get_raw_srdg(self, threshold: float) -> list[str]:
         dt, vals = self._raw_srdg
@@ -442,8 +441,7 @@ class ReadingWidget(ReadingWidgetGUI):
         now = datetime.datetime.now()
         if now - dt > datetime.timedelta(seconds=threshold):
             return ["nan"] * len(vals)
-        else:
-            return vals
+        return vals
 
     def trigger_update(self):
         self.instrument.request_query(self.krdg_command, self.sigKRDG, loglevel=5)
@@ -565,8 +563,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
             seconds=threshold
         ):
             return "nan"
-        else:
-            return self._raw_vout[1]
+        return self._raw_vout[1]
 
     @QtCore.Slot(str, object)
     def update_vout(self, value: str | float, dt: datetime.datetime):
@@ -614,10 +611,7 @@ class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
 
     @QtCore.Slot()
     def change_output(self):
-        if self.check.isChecked():
-            value = 1
-        else:
-            value = 0
+        value = 1 if self.check.isChecked() else 0
         self.instrument.request_write(f"OUT{value}")
         self.dial.setEnabled(self.check.isChecked())
         self.trigger_update()

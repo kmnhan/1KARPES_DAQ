@@ -1,5 +1,6 @@
 __all__ = ["LegendTableView"]
 
+import typing
 from collections.abc import Sequence
 
 import pyqtgraph as pg
@@ -10,7 +11,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
     sigCurveToggled = QtCore.Signal(int, bool)
     sigColorChanged = QtCore.Signal(int, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.enabled: list[bool] = []
         self._entries: Sequence[str] = []
@@ -21,7 +22,7 @@ class LegendTableModel(QtCore.QAbstractTableModel):
         return self._entries
 
     @entries.setter
-    def entries(self, values: Sequence[str]):
+    def entries(self, values: Sequence[str]) -> None:
         if list(self._entries) == list(values):
             return
         self.beginResetModel()
@@ -45,21 +46,23 @@ class LegendTableModel(QtCore.QAbstractTableModel):
             self.colors = self.colors[: len(self._entries)]
         self.endResetModel()
 
-    def flags(self, index):
+    def flags(self, index: QtCore.QModelIndex) -> QtCore.Qt.ItemFlag:
         if index.column() == 0:
             return super().flags(index) | QtCore.Qt.ItemIsUserCheckable
-        elif index.column() == 2:
+        if index.column() == 2:
             return super().flags(index) | QtCore.Qt.ItemIsEditable
-        else:
-            return super().flags(index)
+        return super().flags(index)
 
-    def data(self, index, role):
+    def data(
+        self, index: QtCore.QModelIndex, role: QtCore.Qt.ItemDataRole
+    ) -> typing.Any:
+        if not index.isValid():
+            return None
         if index.column() == 0:
             if role == QtCore.Qt.ItemDataRole.CheckStateRole:
                 if self.enabled[index.row()]:
                     return QtCore.Qt.CheckState.Checked
-                else:
-                    return QtCore.Qt.CheckState.Unchecked
+                return QtCore.Qt.CheckState.Unchecked
         elif role == QtCore.Qt.ItemDataRole.DisplayRole:
             if index.column() == 1:
                 return str(self.entries[index.row()])
@@ -72,10 +75,12 @@ class LegendTableModel(QtCore.QAbstractTableModel):
                     QtCore.Qt.AlignmentFlag.AlignLeft
                     | QtCore.Qt.AlignmentFlag.AlignVCenter
                 )
-            else:
-                return int(QtCore.Qt.AlignmentFlag.AlignCenter)
+            return int(QtCore.Qt.AlignmentFlag.AlignCenter)
+        return None
 
-    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
+    def setData(
+        self, index: QtCore.QModelIndex, value: typing.Any, role: QtCore.Qt.ItemDataRole
+    ) -> bool:
         if index.column() == 0:
             if role == QtCore.Qt.ItemDataRole.CheckStateRole:
                 if value == QtCore.Qt.CheckState.Checked.value:
@@ -86,11 +91,10 @@ class LegendTableModel(QtCore.QAbstractTableModel):
                 self.dataChanged.emit(
                     index, index, [QtCore.Qt.ItemDataRole.CheckStateRole]
                 )
-        elif index.column() == 2:
-            if role == QtCore.Qt.ItemDataRole.EditRole:
-                self.colors[index.row()] = value
-                self.dataChanged.emit(index, index, [QtCore.Qt.ItemDataRole.EditRole])
-                self.sigColorChanged.emit(index.row(), value)
+        elif index.column() == 2 and role == QtCore.Qt.ItemDataRole.EditRole:
+            self.colors[index.row()] = value
+            self.dataChanged.emit(index, index, [QtCore.Qt.ItemDataRole.EditRole])
+            self.sigColorChanged.emit(index.row(), value)
         return True
 
     def rowCount(self, index=None):

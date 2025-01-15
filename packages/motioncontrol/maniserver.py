@@ -95,7 +95,7 @@ class ManiServer(QtCore.QThread):
         socket: zmq.Socket = context.socket(zmq.PAIR)
         socket.bind(f"tcp://*:{self.PORT}")
         self.sigSocketBound.emit()
-        log.debug(f"SERVER Bound to port {self.PORT}")
+        log.debug("SERVER Bound to port %d", self.PORT)
 
         while not self.stopped.is_set():
             try:
@@ -108,8 +108,11 @@ class ManiServer(QtCore.QThread):
                     message: list[str] = [s.strip() for s in message.split("?")]
                     command, args = message[0].upper(), "".join(message[1:])
                     self.sigRequest.emit(command, args)
+
                     log.debug(
-                        f"SERVER Received query: {command} {args}, waiting for response"
+                        "SERVER Received query: %s %s, waiting for response",
+                        command,
+                        args,
                     )
 
                     while self._ret_val is None:
@@ -117,7 +120,7 @@ class ManiServer(QtCore.QThread):
                     return_str = str(self._ret_val)
                     self.set_value(None)
 
-                    log.debug(f"SERVER Sending response: {return_str}")
+                    log.debug("SERVER Sending response: %s", return_str)
                     socket.send_string(return_str)
 
                 else:  # Command

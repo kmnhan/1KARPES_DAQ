@@ -1,4 +1,5 @@
 import configparser
+import contextlib
 import csv
 import datetime
 import json
@@ -16,10 +17,8 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 
 MBAR_TO_TORR: float = 76000 / 101325

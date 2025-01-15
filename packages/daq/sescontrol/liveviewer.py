@@ -211,20 +211,19 @@ class DataFetcher(QtCore.QRunnable):
                 # .zip files take time to be written to disk, so we wait for it
                 timeout = time.perf_counter() + 20
                 while time.perf_counter() < timeout:
-                    if os.path.isfile(filename):
-                        if os.stat(filename).st_size != 0:
-                            try:
-                                with tempfile.TemporaryDirectory() as tmpdir:
-                                    file_copied = shutil.copy(filename, tmpdir)
-                                    with zipfile.ZipFile(file_copied, "r") as _:
-                                        # Do nothing, just trying to open the file
-                                        # Will this break the file if SES is writing to it?
-                                        # Requires extensive testing
-                                        pass
-                            except zipfile.BadZipFile:
-                                pass
-                            else:
-                                break
+                    if os.path.isfile(filename) and (os.stat(filename).st_size != 0):
+                        try:
+                            with tempfile.TemporaryDirectory() as tmpdir:
+                                file_copied = shutil.copy(filename, tmpdir)
+                                with zipfile.ZipFile(file_copied, "r") as _:
+                                    # Do nothing, just trying to open the file
+                                    # Will this break the file if SES is writing to it?
+                                    # Requires extensive testing
+                                    pass
+                        except zipfile.BadZipFile:
+                            pass
+                        else:
+                            break
                     time.sleep(0.2)
         else:
             # Scan with motor coordinates
@@ -378,69 +377,66 @@ class LiveImageTool(ImageTool):
             self.setWindowTitle(self._base_file + f"{str(self._data_idx).zfill(4)}")
             self._itool_initialized = True
             return
-        else:
-            indices = list(
-                np.unravel_index(
-                    niter - 1, [len(coord) for coord in self._motor_coords.values()]
-                )
+        indices = list(
+            np.unravel_index(
+                niter - 1, [len(coord) for coord in self._motor_coords.values()]
             )
-            if (not self._raster) and (len(indices) == 2) and ((indices[0] % 2) != 0):
-                # if outer loop is odd, inner loop is reversed
-                indices[-1] = (
-                    len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
-                )
+        )
+        if (not self._raster) and (len(indices) == 2) and ((indices[0] % 2) != 0):
+            # if outer loop is odd, inner loop is reversed
+            indices[-1] = len(tuple(self._motor_coords.values())[-1]) - 1 - indices[-1]
 
-            # Assign equal coordinates since the energy axis values might be slightly
-            # different probably due to rounding errors in SES software corrections
-            wave = wave.assign_coords(
-                {d: self.array_slicer._obj.coords[d] for d in wave.dims}
-            )
+        # Assign equal coordinates since the energy axis values might be slightly
+        # different probably due to rounding errors in SES software corrections
+        wave = wave.assign_coords(
+            {d: self.array_slicer._obj.coords[d] for d in wave.dims}
+        )
 
-            # Assign motor coordinates
-            wave = wave.expand_dims(
-                {
-                    name: [coord[ind]]
-                    for ind, (name, coord) in zip(
-                        indices, self._motor_coords.items(), strict=True
-                    )
-                }
-            )
-
-            # These will slice the target array at the coordinates we wish to insert the
-            # received data
-            target_slices = {
-                name: self.array_slicer._obj.coords[name] == coord[ind]
+        # Assign motor coordinates
+        wave = wave.expand_dims(
+            {
+                name: [coord[ind]]
                 for ind, (name, coord) in zip(
                     indices, self._motor_coords.items(), strict=True
                 )
             }
+        )
 
-            # Before setting data, reset any filters
-            old_func = self.slicer_area._applied_func
-            self.slicer_area.apply_func(None, update=False)
+        # These will slice the target array at the coordinates we wish to insert the
+        # received data
+        target_slices = {
+            name: self.array_slicer._obj.coords[name] == coord[ind]
+            for ind, (name, coord) in zip(
+                indices, self._motor_coords.items(), strict=True
+            )
+        }
 
-            # We want to know the dims of target array before assigning new values since
-            # the user might have transposed it
-            target_dims = self.array_slicer._obj.loc[target_slices].dims
+        # Before setting data, reset any filters
+        old_func = self.slicer_area._applied_func
+        self.slicer_area.apply_func(None, update=False)
 
-            # Transpose to target shape on assignment
-            if target_dims != wave.dims:
-                self.array_slicer._obj.loc[target_slices] = wave.transpose(
-                    *target_dims
-                ).values
-            else:
-                self.array_slicer._obj.loc[target_slices] = wave.values
+        # We want to know the dims of target array before assigning new values since
+        # the user might have transposed it
+        target_dims = self.array_slicer._obj.loc[target_slices].dims
 
-            # Reset _data to include new slice
-            # This allows filter actions such as normalization to work properly
-            self.slicer_area._data = self.array_slicer._obj
+        # Transpose to target shape on assignment
+        if target_dims != wave.dims:
+            self.array_slicer._obj.loc[target_slices] = wave.transpose(
+                *target_dims
+            ).values
+        else:
+            self.array_slicer._obj.loc[target_slices] = wave.values
 
-            # Reapply old filter
-            if old_func:
-                self.slicer_area.apply_func(old_func, update=False)
+        # Reset _data to include new slice
+        # This allows filter actions such as normalization to work properly
+        self.slicer_area._data = self.array_slicer._obj
 
-            self.array_slicer.clear_val_cache(include_vals=True)
-            # self.slicer_area.refresh_all(only_plots=True)
+        # Reapply old filter
+        if old_func:
+            self.slicer_area.apply_func(old_func, update=False)
+
+        self.array_slicer.clear_val_cache(include_vals=True)
+        # self.slicer_area.refresh_all(only_plots=True)
 
     @QtCore.Slot()
     def to_manager(self):
@@ -494,8 +490,9 @@ class WorkFileFetcher(QtCore.QRunnable):
 
         if arr.shape != arr_norm.shape:
             log.error(
-                f"Array has shape {arr.shape} while norm array has "
-                f"shape {arr_norm.shape}, only updating array"
+                "Array has shape %s while norm array has shape %s, only updating array",
+                arr.shape,
+                arr_norm.shape,
             )
             arr_norm = None
 
@@ -527,16 +524,15 @@ def get_workfile_shape_kwargs(region: str) -> tuple[int | tuple[int, ...], dict]
             kwargs = {"coords": coords, "name": region_info["name"]}
             return shape, kwargs
 
-        else:
-            ses_config = configparser.ConfigParser(strict=False)
-            ses_ini_file = os.path.join(SES_DIR, r"ini\Ses.ini")
+        ses_config = configparser.ConfigParser(strict=False)
+        ses_ini_file = os.path.join(SES_DIR, r"ini\Ses.ini")
 
-            with open(shutil.copy(ses_ini_file, tmpdir)) as f:
-                ses_config.read_file(f)
+        with open(shutil.copy(ses_ini_file, tmpdir)) as f:
+            ses_config.read_file(f)
 
-            # Number of points on angle axis
-            nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
-            return nslices, {}
+        # Number of points on angle axis
+        nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
+        return nslices, {}
 
 
 def get_workfile_array(
@@ -572,63 +568,7 @@ def get_workfile_array(
 
     if as_array:
         return arr
-    else:
-        return xr.DataArray(arr, **kwargs)
-
-
-# def get_workfile(region: str, workdir: str, norm: bool = False) -> xr.DataArray | None:
-#     if norm:
-#         binfile: str = f"Spectrum_{region}_Norm.bin"
-#     else:
-#         binfile: str = f"Spectrum_{region}.bin"
-
-#     binfile = os.path.join(workdir, binfile)
-
-#     if not os.path.isfile(binfile):
-#         return None
-
-#     tmpdir = tempfile.TemporaryDirectory()
-#     arr = np.fromfile(shutil.copy(binfile, tmpdir.name), dtype=np.float32)
-
-#     ini_file = os.path.join(workdir, f"Spectrum_{region}.ini")
-
-#     if os.path.isfile(ini_file):
-#         region_info = parse_ini(shutil.copy(ini_file, tmpdir.name))["spectrum"]
-#         shape, coords = get_shape_and_coords(region_info)
-#         arr = xr.DataArray(arr.reshape(shape), coords=coords, name=region_info["name"])
-
-#     else:
-#         ses_config = configparser.ConfigParser(strict=False)
-#         ses_ini_file = os.path.join(SES_DIR, "ini\Ses.ini")
-
-#         with open(shutil.copy(ses_ini_file, tmpdir.name), "r") as f:
-#             ses_config.read_file(f)
-
-#         nslices = int(ses_config["Instrument Settings"]["Detector.Slices"])
-
-#         arr = xr.DataArray(arr.reshape(nslices, (int(len(arr) / nslices))))
-
-#     tmpdir.cleanup()
-
-#     return arr
-
-
-# class WorkFileListUpdateThread(QtCore.QThread):
-#     sigUpdate = QtCore.Signal(list[str])
-
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.workdir = None
-
-#     def set_workdir(self, workdir):
-#         self.workdir = workdir
-
-#     def run(self):
-#         regions: list[str] = []
-#         for f in os.listdir(self.workdir):
-#             if f.startswith("Spectrum_") and f.endswith("_Norm.bin"):
-#                 regions.append(f[9:-9])
-#         self.sigUpdate.emit(regions)
+    return xr.DataArray(arr, **kwargs)
 
 
 class WorkFileImageTool(BaseImageTool):
@@ -715,10 +655,9 @@ class WorkFileImageTool(BaseImageTool):
         if set(regions) == set(self.regions):
             # No change in regions, no need to update
             return
-        else:
-            self.regions = regions
-            self.region_combo.clear()
-            self.region_combo.addItems(self.regions)
+        self.regions = regions
+        self.region_combo.clear()
+        self.region_combo.addItems(self.regions)
 
     @QtCore.Slot()
     def reload(self):

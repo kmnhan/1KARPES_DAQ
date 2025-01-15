@@ -1,3 +1,4 @@
+import contextlib
 import os
 import sys
 from typing import TYPE_CHECKING
@@ -10,10 +11,8 @@ from attributeserver.dell_server import (
 )
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 if TYPE_CHECKING:
     import threading

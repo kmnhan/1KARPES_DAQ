@@ -95,21 +95,21 @@ class MMThread(QtCore.QThread):
         self.compat = compat
 
     def connect(self, host: str, port: int = 5000):
-        log.info(f"ctrl{self.index} connecting to host {host} on port {port}")
+        log.info("ctrl%d connecting to host %s on port %d", self.index, host, port)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(5)
         self.sock.connect((host, port))
 
-        log.info(f"ctrl{self.index} connected")
+        log.info("ctrl%d connected", self.index)
         self.reset()
 
     def disconnect(self):
         self.mmsend(MMCommand.DISCONNECT)
         self.mmrecv()
-        log.info(f"ctrl{self.index} disconnected, closing socket...")
+        log.info("ctrl%d disconnected, closing socket...", self.index)
         self.sock.close()
-        log.info(f"ctrl{self.index} socket closed")
+        log.info("ctrl%d socket closed", self.index)
 
     def mmsend(self, command: int, channel: int = 0, value: int = 0):
         """Send a command over the socket to the controller.
@@ -137,7 +137,11 @@ class MMThread(QtCore.QThread):
                 log.critical("Socket connection broken.")
             totalsent = totalsent + sent
         log.debug(
-            f"ctrl{self.index} sent cmd {command} to ch {channel} with val {value}"
+            "ctrl%d sent cmd %d to ch %d with val %d",
+            self.index,
+            command,
+            channel,
+            value,
         )
 
     def mmrecv(self) -> int:
@@ -151,7 +155,7 @@ class MMThread(QtCore.QThread):
         """
         raw = self.sock.recv(4)
         val = sum(raw[i] * 256**i for i in range(4))
-        log.debug(f"ctrl{self.index} received value {val} {tuple(raw)}")
+        log.debug("ctrl%d received value %d %s", self.index, val, tuple(raw))
         return val
 
     def get_capacitance(self, channel: int) -> float:
@@ -179,10 +183,8 @@ class MMThread(QtCore.QThread):
 
         if self.compat:
             return 50000000 / sigtime
-        else:
-            usec = sigtime / 50
-            freq = 1e6 / usec
-            return freq
+        usec = sigtime / 50
+        return 1e6 / usec
 
     def set_frequency(self, channel: int, frequency: float):
         if self.compat:
@@ -190,11 +192,13 @@ class MMThread(QtCore.QThread):
                 sigtime = round(50000000 / frequency)
             else:
                 sigtime = int(50000000 / 200)
-            log.info(f"ctrl{self.index} setting frequency to {50000000 / sigtime}")
+            log.info("ctrl%d setting frequency to %.5f", self.index, 50000000 / sigtime)
         else:
             period_usec = 1e6 / frequency
             sigtime = round(period_usec * 50)
-            log.info(f"ctrl{self.index} setting frequency to {1e6/(sigtime/50)}")
+            log.info(
+                "ctrl%d setting frequency to %.5f", self.index, 1e6 / (sigtime / 50)
+            )
         self.mmsend(MMCommand.SETSIGTIME, int(channel), sigtime)
         return self.mmrecv()
 
@@ -206,33 +210,33 @@ class MMThread(QtCore.QThread):
 
     def set_amplitude(self, channel: int, amplitude: float):
         sigamp = min((65535, round(amplitude * 65535 / 60)))
-        log.info(f"ctrl{self.index} setting amplitude to {sigamp / 65535 * 60.0:.2f}")
+        log.info("ctrl%d setting amplitude to %.3f", self.index, sigamp / 65535 * 60.0)
         self.mmsend(MMCommand.SETSIGAMP, int(channel), sigamp)
         return self.mmrecv()
 
     def set_direction(self, channel: int, direction: int):
-        log.info(f"ctrl{self.index} setting direction to {direction}")
+        log.info("ctrl%d setting direction to %d", self.index, direction)
         self.mmsend(MMCommand.SETSIGDIR, int(channel), int(direction))
         return self.mmrecv()
 
     def set_pulse_train(self, channel: int, train: int):
-        log.info(f"ctrl{self.index} setting pulse train {train}")
+        log.info("ctrl %d setting pulse train %d", self.index, train)
         self.mmsend(MMCommand.SETSIGNUM, int(channel), int(train))
         return self.mmrecv()
 
     def set_relay(self, channel: int, state: int):
         if self.compat:
             # command only in new controller
-            return
+            return None
 
         if state not in (0, 1):
             raise ValueError("State must be 0 or 1.")
-        log.info(f"ctrl{self.index} setting relay {state}")
+        log.info("ctrl%d setting relay %d", self.index, state)
         self.mmsend(MMCommand.SETRELAY, int(channel), int(state))
         return self.mmrecv()
 
     def reset(self, channel: int | None = None):
-        log.info(f"ctrl{self.index} resetting channel {channel}")
+        log.info("ctrl%d resetting channel %s", self.index, channel)
         if channel is None:
             self.mmsend(MMCommand.RESET)
         else:
@@ -252,9 +256,7 @@ class MMThread(QtCore.QThread):
         self.set_frequency(channel, 500)
         self.set_direction(channel, 1)
 
-    def _read_averaged_position(
-        self, channel: int, navg: int
-    ) -> tuple[int | float, float]:
+    def _read_averaged_position(self, channel: int, navg: int) -> tuple[float, float]:
         vals: list[int] = []
         for _ in range(navg):
             self._send_signal_once(channel)
@@ -262,9 +264,8 @@ class MMThread(QtCore.QThread):
 
         if navg == 1:
             return vals[0], 0.0
-        else:
-            avg = float(sum(vals) / len(vals))
-            return avg, (sum(abs(v - avg) ** 2 for v in vals) / len(vals)) ** (1 / 2)
+        avg = float(sum(vals) / len(vals))
+        return avg, (sum(abs(v - avg) ** 2 for v in vals) / len(vals)) ** (1 / 2)
 
     def _send_signal_once(self, channel: int) -> None:
         self.mmsend(MMCommand.SENDSIGONCE, int(channel))
@@ -274,7 +275,7 @@ class MMThread(QtCore.QThread):
         self,
         channel: int,
         navg: int = 1,
-    ) -> int | float:
+    ) -> float:
         # Just reading the position will not return the correct values... probably
         # controller error? So actuate with 0V first
         self._set_reading_params(channel)
@@ -282,10 +283,10 @@ class MMThread(QtCore.QThread):
         avg, std = self._read_averaged_position(channel, navg)
 
         if navg == 1:
-            log.info(f"ctrl{self.index} Read pos {avg}")
+            log.info("ctrl%d Read pos %s", self.index, avg)
             self.sigPosRead.emit(channel, avg)
         else:
-            log.info(f"ctrl{self.index} Read pos {avg:.2f} ± {std:.2f}")
+            log.info("ctrl%d Read pos %.3f ± %.3f", self.index, avg, std)
             self.sigAvgPosRead.emit(channel, avg)
 
         return avg
@@ -363,10 +364,6 @@ class MMThread(QtCore.QThread):
         reverse: bool,
         unique_id: str,
     ):
-        log.info(
-            f"ctrl{self.index} Initializing parameters "
-            f"{channel} {target} {frequency} {amplitude} {threshold}"
-        )
         self._channel: int = int(channel)
         self._target: int = int(target)
         self._sigtime: int = frequency
@@ -375,6 +372,16 @@ class MMThread(QtCore.QThread):
         self._high_precision: bool = high_precision
         self._unique_id: str = unique_id
         self._reverse: bool = reverse
+
+        log.info(
+            "ctrl%d Initializing parameters %d %d %d %s %d",
+            self.index,
+            self._channel,
+            self._target,
+            self._sigtime,
+            self._amplitudes,
+            self._threshold,
+        )
 
         self.initialized: bool = True
 
@@ -401,9 +408,7 @@ class MMThread(QtCore.QThread):
             if round(curr_freq) != self._sigtime:
                 self.set_frequency(self._channel, self._sigtime)
 
-            delta_list: list[int | float] = [
-                self._target - self.get_position(self._channel)
-            ]
+            delta_list: list[float] = [self._target - self.get_position(self._channel)]
 
             time_start = time.perf_counter()
             time_list: list[float] = [time.perf_counter() - time_start]
@@ -423,11 +428,9 @@ class MMThread(QtCore.QThread):
                     break
 
                 # determine direction
+                # 0: backwards, 1: forwards
                 direction_old = direction
-                if delta_list[-1] > 0:
-                    direction = 0  # backwards
-                else:
-                    direction = 1  # forwards
+                direction = 0 if delta_list[-1] > 0 else 1
 
                 if self._reverse:
                     direction = 1 - direction
@@ -445,8 +448,9 @@ class MMThread(QtCore.QThread):
                         s0 = s1
                     if n_alt == 50:
                         log.warning(
-                            f"Current threshold {self._threshold} is too small,"
-                            " position does not converge. Terminating."
+                            "Current threshold %s is too small, position does not "
+                            "converge. Terminating.",
+                            self._threshold,
                         )
                         break
 
@@ -456,10 +460,9 @@ class MMThread(QtCore.QThread):
                 if pulse_reduced == 0 and (absdelta < 250 * self._threshold):
                     self.set_pulse_train(self._channel, 5)
                     pulse_reduced += 1
-                if absdelta < 40 * self._threshold:
-                    if pulse_reduced < 2:
-                        self.set_pulse_train(self._channel, 1)
-                        pulse_reduced += 1
+                if (absdelta < 40 * self._threshold) and (pulse_reduced < 2):
+                    self.set_pulse_train(self._channel, 1)
+                    pulse_reduced += 1
                 if pulse_reduced == 2 and absdelta < 10 * self._threshold:
                     pulse_reduced += 1  # high precision mode
 
@@ -498,7 +501,7 @@ class MMThread(QtCore.QThread):
                     break
 
         except Exception as e:
-            log.critical(f"ctrl{self.index} Exception while moving: {e}")
+            log.critical("ctrl%d Exception while moving: %s", self.index, e)
         self.initialized: bool = False
         self.sigMoveFinished.emit(self._channel, self._unique_id)
 
@@ -550,7 +553,7 @@ class EncoderThread(QtCore.QThread):
                 time.sleep(10e-3)
 
         except Exception as e:
-            log.critical(f"Exception while reading position: {e}")
+            log.critical("Exception while reading position: %s", e)
 
         self.stopped.set()
         sl.shm.close()

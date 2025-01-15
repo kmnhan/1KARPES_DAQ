@@ -14,6 +14,7 @@ __all__ = [
     "pg_colormap_to_QPixmap",
 ]
 
+import contextlib
 import weakref
 from collections.abc import Iterable, Sequence
 from typing import Literal
@@ -50,10 +51,8 @@ class ColorMapComboBox(QtWidgets.QComboBox):
     def load_thumbnail(self, index: int):
         if not self.thumbnails_loaded:
             text = self.itemText(index)
-            try:
+            with contextlib.suppress(KeyError):
                 self.setItemIcon(index, QtGui.QIcon(pg_colormap_to_QPixmap(text)))
-            except KeyError:
-                pass
 
     def load_all(self):
         self.clear()
@@ -320,8 +319,7 @@ class BetterColorBarItem(pg.PlotItem):
     def limits(self) -> tuple[float, float]:
         if self._fixedlimits is not None:
             return self._fixedlimits
-        else:
-            return self.primary_image().quickMinMax(targetSize=2**16)
+        return self.primary_image().quickMinMax(targetSize=2**16)
 
     def set_width(self, width: int):
         self.layout.setColumnFixedWidth(1, width)
@@ -462,7 +460,7 @@ class BetterColorBarItem(pg.PlotItem):
             return
         cmap = self.primary_image()._colorMap
         lut = cmap.getStops()[1]
-        if not self._colorbar.image.shape[0] == lut.shape[0]:
+        if self._colorbar.image.shape[0] != lut.shape[0]:
             self._colorbar.setImage(cmap.pos.reshape((-1, 1)))
         self._colorbar._colorMap = cmap
         self._colorbar.setLookupTable(lut, update=True)
@@ -544,22 +542,21 @@ def pg_colormap_names(
     local = sorted(pg.colormap.listMaps())
     if source == "local":
         return local
+    _mpl = sorted(pg.colormap.listMaps(source="matplotlib"))
+    for cmap in _mpl:
+        if cmap.startswith("cet_"):
+            _mpl = list(filter((cmap).__ne__, _mpl))
+        elif cmap.endswith("_r"):
+            # _mpl_r.append(cmap)
+            _mpl = list(filter((cmap).__ne__, _mpl))
+    if source == "all":
+        cet = sorted(pg.colormap.listMaps(source="colorcet"))
+        # if (_mpl != []) and (cet != []):
+        # local = []
+        # _mpl_r = []
+        all_cmaps = local + cet + _mpl  # + _mpl_r
     else:
-        _mpl = sorted(pg.colormap.listMaps(source="matplotlib"))
-        for cmap in _mpl:
-            if cmap.startswith("cet_"):
-                _mpl = list(filter((cmap).__ne__, _mpl))
-            elif cmap.endswith("_r"):
-                # _mpl_r.append(cmap)
-                _mpl = list(filter((cmap).__ne__, _mpl))
-        if source == "all":
-            cet = sorted(pg.colormap.listMaps(source="colorcet"))
-            # if (_mpl != []) and (cet != []):
-            # local = []
-            # _mpl_r = []
-            all_cmaps = local + cet + _mpl  # + _mpl_r
-        else:
-            all_cmaps = local + _mpl
+        all_cmaps = local + _mpl
     return list(dict.fromkeys(all_cmaps))
 
 

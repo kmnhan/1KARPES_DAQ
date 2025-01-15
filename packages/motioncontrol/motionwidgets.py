@@ -1,3 +1,4 @@
+import contextlib
 import csv
 import datetime
 import logging
@@ -16,10 +17,8 @@ import qtawesome as qta
 from moee import EncoderThread, MMStatus, MMThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 CONFIG_FILE = "D:/Logs/Motion/piezomotors.toml"
 
@@ -180,7 +179,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
             self.config: dict = tomllib.load(f)
 
         self.combobox.clear()
-        for k in self.config.keys():
+        for k in self.config:
             self.combobox.addItem(self.config[k].get("alias", k))
         self.combobox.currentTextChanged.connect(self.update_motor)
         self.combobox.setCurrentText("raw")
@@ -206,12 +205,11 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         tol = self.current_config.get("tol", None)
         if tol is None:
             return 4
-        else:
-            return round(abs(tol * 1e-3 / self.cal_A))
+        return round(abs(tol * 1e-3 / self.cal_A))
 
     @property
     def reverse_required(self) -> bool:
-        """In case of misconnected encoder, the actuating direction should be reversed."""
+        """In case of misconnected encoder, the actuating direction is reversed."""
         return self.current_config.get("reverse", False)
 
     @property
@@ -222,8 +220,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
     def current_pos(self) -> float:
         if self.enabled:
             return self.convert_pos(self.raw_position)
-        else:
-            return np.nan
+        return np.nan
 
     @property
     def minimum(self) -> float:
@@ -293,7 +290,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         if self.raw_position is not None:
             self.set_current_pos(self.raw_position)
 
-    def convert_pos(self, pos: int | float) -> float:
+    def convert_pos(self, pos: float) -> float:
         """Convert raw position integer to calibrated position."""
         return self.cal_A * pos + self.cal_B
 
@@ -303,7 +300,7 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
 
     @QtCore.Slot(float)
     @QtCore.Slot(int)
-    def set_current_pos(self, pos: int | float):
+    def set_current_pos(self, pos: float):
         self.raw_position = pos
         self.pos_lineedit.setText(f"{self.convert_pos(self.raw_position):.4f}")
 
@@ -492,10 +489,9 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def status(self) -> MMStatus:
         if self.mmthread.isRunning():
             return MMStatus.Moving
-        elif self.mmthread.stopped:
+        if self.mmthread.stopped:
             return MMStatus.Aborted
-        else:
-            return MMStatus.Done
+        return MMStatus.Done
 
     @property
     def channels(
@@ -550,7 +546,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         try:
             self.connect_raise()
         except Exception:
-            log.exception(f"Connection to {self.address} failed, silently ignored")
+            log.exception("Connection to %s failed, silently ignored", self.address)
 
     @QtCore.Slot()
     def disconnect(self):
@@ -618,7 +614,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
 
     @QtCore.Slot(int, float)
     @QtCore.Slot(int, int)
-    def set_position(self, channel: int, pos: int | float):
+    def set_position(self, channel: int, pos: float):
         ch: SingleChannelWidget = self.get_channel(channel)
         ch.set_current_pos(pos)
         ch_idx = int((channel - 1) + 3 * self.index)
@@ -689,8 +685,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
     def is_started(self, unique_id: str) -> bool:
         if self.is_finished(unique_id):
             return True
-        else:
-            return unique_id in self.started_uid
+        return unique_id in self.started_uid
 
     def is_finished(self, unique_id: str) -> bool:
         return unique_id in self.finished_uid
@@ -778,7 +773,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
         # Various sanity checks
         if not self.is_channel_enabled(ch_num):
             # This may happen when the channel is disabled after the motion was queued.
-            log.warning(f"Move called on a disabled channel {ch_num} ignored.")
+            log.warning("Move called on a disabled channel %d ignored.", ch_num)
             self.queue.task_done()
             return
         if self.mmthread.isRunning():

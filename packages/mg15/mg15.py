@@ -163,8 +163,7 @@ class MG15(QtCore.QObject):
         if self.get_state(channel) == GAUGE_STATE[0]:
             idx = channel - 1
             return uint8_to_ieee754(self.registers[3 * idx : 3 * idx + 2])
-        else:
-            return float("nan")
+        return float("nan")
 
     def get_pressure_torr(self, channel: int) -> float:
         return self.get_pressure_mbar(channel) * MBAR_TO_TORR
@@ -183,8 +182,7 @@ class MG15(QtCore.QObject):
         idx = channel - 1
         if idx < 4:
             return self.registers[72 + idx * 20]
-        else:
-            return self.registers[149 + (idx - 4) * 17]
+        return self.registers[149 + (idx - 4) * 17]
 
     def get_setpoint(self, number: int) -> tuple[float, float]:
         idx = number - 1

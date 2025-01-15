@@ -92,8 +92,7 @@ class ManiClient(_SingletonBase):
     def query(self, cmd: str) -> str:
         with self.connection():
             self.socket.send_string(cmd)
-            ret = self.socket.recv_string()
-        return ret
+            return self.socket.recv_string()
 
     def write(self, cmd: str) -> None:
         with self.connection():
@@ -134,8 +133,7 @@ class ManiClient(_SingletonBase):
     def status(self, controller: int | None = None) -> int:
         if controller is None:
             return self.query_int("STATUS?")
-        else:
-            return self.query_int(f"STATUS? {controller}")
+        return self.query_int(f"STATUS? {controller}")
 
     def wait_motion_finish(self, unique_id: str):
         while not bool(self.query_int(f"FIN? {unique_id}")):

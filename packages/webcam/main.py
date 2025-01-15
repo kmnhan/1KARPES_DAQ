@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import time
@@ -9,11 +10,8 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
-
 
 SAVE_DIR: str = os.path.join(
     os.path.expanduser("~"), "Pictures", "Camera Roll"
@@ -48,7 +46,9 @@ class CameraHandler(QtCore.QThread):
                     if self.save_requested:
                         filename = os.path.join(
                             SAVE_DIR,
-                            f"Image__{time.strftime('%Y-%m-%d__%H-%M-%S', time.localtime())}.jpg",
+                            "Image__{}.jpg".format(
+                                time.strftime("%Y-%m-%d__%H-%M-%S", time.localtime())
+                            ),
                         )
                         cv2.imwrite(filename, image)
                         self.save_requested = False

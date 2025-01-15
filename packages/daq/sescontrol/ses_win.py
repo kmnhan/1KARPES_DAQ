@@ -57,7 +57,7 @@ second element can be None.
 
 def get_ses_proc() -> psutil.Process:
     for proc in psutil.process_iter():
-        if "Ses.exe" == proc.name():
+        if proc.name() == "Ses.exe":
             return proc
     raise RuntimeError("SES is not running")
 
@@ -145,8 +145,7 @@ def next_index(base_dir: str, base_file: str, valid_ext: Iterable[str]) -> int:
     ]
     if len(files) == 0:
         return 1
-    else:
-        return int(os.path.splitext(files[-1])[0][len(base_file) :][:4]) + 1
+    return int(os.path.splitext(files[-1])[0][len(base_file) :][:4]) + 1
 
 
 class SESController:
@@ -189,8 +188,7 @@ class SESController:
                 # Bring the window to the top
                 win32gui.BringWindowToTop(handle)
             return 0
-        else:
-            return 1
+        return 1
 
     @property
     def alive(self) -> bool:

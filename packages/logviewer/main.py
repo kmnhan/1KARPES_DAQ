@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import gc
 import os
@@ -22,10 +23,8 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 if TYPE_CHECKING:
     import pandas as pd
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 
 class PressureSnapCurvePlotDataItem(XDateSnapCurvePlotDataItem):
@@ -46,13 +45,13 @@ class BetterCalendarWidget(QtWidgets.QCalendarWidget):
         )
         self.setGridVisible(True)
 
-        prev = self.findChild(QtWidgets.QToolButton, "qt_calendar_prevmonth")
-        if prev:
-            prev.setIcon(qta.icon("mdi6.arrow-left"))
+        prev_btn = self.findChild(QtWidgets.QToolButton, "qt_calendar_prevmonth")
+        if prev_btn:
+            prev_btn.setIcon(qta.icon("mdi6.arrow-left"))
 
-        next = self.findChild(QtWidgets.QToolButton, "qt_calendar_nextmonth")
-        if next:
-            next.setIcon(qta.icon("mdi6.arrow-right"))
+        next_btn = self.findChild(QtWidgets.QToolButton, "qt_calendar_nextmonth")
+        if next_btn:
+            next_btn.setIcon(qta.icon("mdi6.arrow-right"))
 
 
 class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
@@ -178,10 +177,8 @@ class MainWindow(MainWindowGUI):
             lambda val: self.update_timer.setInterval(round(val * 1000))
         )
         self.actiononlymain.toggled.connect(self.update_plot)
-        try:
+        with contextlib.suppress(ValueError):
             self.load_data()
-        except ValueError:
-            pass
 
     @QtCore.Slot()
     def curve_toggled(self):

@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import os
 import sys
@@ -71,10 +72,7 @@ def parse_single_cryo(filename):
             legacy = True
 
     # for now, discard data above the last header
-    if legacy:
-        time_col = 1
-    else:
-        time_col = 0
+    time_col = 1 if legacy else 0
     return pd.read_csv(
         filename,
         skiprows=header_rows[-1],
@@ -93,20 +91,21 @@ def get_log(
     converter: Callable,
     error: bool = True,
 ) -> pd.DataFrame | None:
-    """Read all log data in `directory` between `startdate` and `enddate` into a `pandas.DataFrame`."""
+    """Read log files.
+
+    Reads all log data in `directory` between `startdate` and `enddate` into a pandas
+    DataFrame. The `converter` function is used to parse the log files.
+    """
     dataframes = []
     for fname in map(
         datetime_to_filename, pd.date_range(start=startdate.date(), end=enddate.date())
     ):
-        try:
+        with contextlib.suppress(FileNotFoundError):
             dataframes.append(converter(os.path.join(directory, fname)))
-        except FileNotFoundError:
-            pass
     if len(dataframes) == 0:
         if error:
             raise ValueError("No log files were found in specified range.")
-        else:
-            return None
+        return None
     return pd.concat(dataframes).sort_index()[slice(startdate, enddate)]
 
 

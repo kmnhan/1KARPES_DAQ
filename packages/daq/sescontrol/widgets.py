@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import gc
 import logging
@@ -25,10 +26,8 @@ from sescontrol.ses_win import SES_ACTIONS, SESController, get_file_info, next_i
 # pywinauto imports must come after Qt imports
 # https://github.com/pywinauto/pywinauto/issues/472#issuecomment-489816553
 
-try:
+with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
-except:  # noqa: E722
-    pass
 
 log = logging.getLogger("scan")
 
@@ -96,8 +95,7 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
     def npoints(self) -> int:
         if self.isChecked():
             return len(self.motor_coord)
-        else:
-            return 1
+        return 1
 
     @property
     def name(self) -> str:
@@ -107,8 +105,7 @@ class SingleMotorSetup(QtWidgets.QGroupBox):
     def motor_properties(self) -> tuple[str, np.ndarray] | None:
         if self.isChecked():
             return (self.combo.currentText(), self.motor_coord)
-        else:
-            return None
+        return None
 
     def set_limits(self, minimum: float | None, maximum: float | None):
         if minimum is None:
@@ -197,7 +194,7 @@ class ArrayTableModel(QtCore.QAbstractTableModel):
             or role == QtCore.Qt.ItemDataRole.EditRole
         ):
             return str(self._array[index.row(), index.column()])
-        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+        if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
             return int(
                 QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
             )
@@ -235,8 +232,9 @@ class ArrayTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if orientation == QtCore.Qt.Orientation.Horizontal:
                 return str(self._clabels[section])
-            elif orientation == QtCore.Qt.Orientation.Vertical:
+            if orientation == QtCore.Qt.Orientation.Vertical:
                 return str(section + 1)
+        return None
 
 
 class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
@@ -520,14 +518,13 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
         motor_args: list[tuple[str, np.ndarray]] = [
             m.motor_properties for m in self.motors if m.isChecked()
         ]
-        if len(motor_args) == 2:
-            if motor_args[0][0] == motor_args[1][0]:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Duplicate Axes",
-                    "The second motor axes must be different from the first.",
-                )
-                return
+        if len(motor_args) == 2 and motor_args[0][0] == motor_args[1][0]:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Duplicate Axes",
+                "The second motor axes must be different from the first.",
+            )
+            return
 
         motor_coords: dict[str, npt.NDArray] = {}
         for ma in motor_args:
@@ -750,7 +747,7 @@ class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
             ret = QtWidgets.QMessageBox.question(
                 self, "A measurement is still running", "Force close?"
             )
-            if not ret == QtWidgets.QMessageBox.Yes:
+            if ret != QtWidgets.QMessageBox.Yes:
                 event.ignore()
                 return
         self.pos_logger.stop()
