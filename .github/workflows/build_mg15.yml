@@ -29,10 +29,10 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r src/mg15/requirements.txt pyinstaller
+      run: pip install -r packages/mg15/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller src/mg15/main.spec
+      run: pyinstaller packages/mg15/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4

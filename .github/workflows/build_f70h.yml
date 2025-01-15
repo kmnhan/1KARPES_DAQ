@@ -29,10 +29,10 @@ jobs:
         python-version: '3.12'
 
     - name: Resolving dependencies...
-      run: pip install -r src/f70h/requirements.txt pyinstaller
+      run: pip install -r packages/f70h/requirements.txt pyinstaller
 
     - name: Building...
-      run: pyinstaller src/f70h/main.spec
+      run: pyinstaller packages/f70h/main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4

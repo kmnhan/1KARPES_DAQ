@@ -8,7 +8,7 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 
 - Python 3.11 or higher
 - Additional dependencies for each program are listed in the `requirements.txt` file in
-  each subdirectory under `src/`
+  each subdirectory under `packages/`
 
 ## Development
 

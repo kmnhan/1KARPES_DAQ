@@ -1,10 +1,9 @@
 import multiprocessing
 import sys
 
+import mg15
 import numpy as np
 from qtpy import QtGui, QtWidgets, uic
-
-import mg15
 
 
 class PressuresWidget(*uic.loadUiType("pressures.ui")):
