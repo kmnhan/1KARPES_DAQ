@@ -347,8 +347,7 @@ class MainWindow(*uic.loadUiType("controller.ui")):
         ret = QtWidgets.QMessageBox.question(
             self,
             "Capacitance check",
-            "Check capacitance for all enabled channel(s) "
-            f"{', '.join(valid_names)}?",
+            f"Check capacitance for all enabled channel(s) {', '.join(valid_names)}?",
         )
         if ret == QtWidgets.QMessageBox.Yes:
             res = []

@@ -35,7 +35,7 @@ members = ["shared/*", "src/*"]
 [tool.ruff]
 line-length = 88
 indent-width = 4
-include = ["pyproject.toml", "packages/**/*.py"]
+include = ["pyproject.toml", "*.py"]
 
 [tool.ruff.lint]
 select = [
