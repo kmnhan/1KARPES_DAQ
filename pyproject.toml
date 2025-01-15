@@ -3,6 +3,28 @@ name = "erpes_daq"
 version = "0.0.1"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"
+dependencies = [
+    "webcam",
+    "tempcontroller",
+    "pyloncam",
+    "motioncontrol",
+    "mg15",
+    "logviewer",
+    "f70h",
+    "daq",
+]
+
+[tool.uv.sources]
+bird-feeder = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["packages/shared"]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 88
