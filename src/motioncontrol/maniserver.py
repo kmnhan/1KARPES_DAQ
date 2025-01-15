@@ -40,8 +40,8 @@ CLR <uid>
     This command is used to signal that the given unique identifier can be cleared from
     memory. Future calls to `FIN?` with the same <uid> will be undefined. This command
     must only be called when the motion corresponding to the given unique identifier no
-    longer needs to be tracked. When this function is called while the corresponding
-    motion is still ongoing, the behavior is undefined.
+    longer needs to be tracked. This command has no effect if it is called while the
+    corresponding motion is still ongoing.
 MOVE <axis>,<position>[,<uid>]
     Queues the motion to move the specified axis to <position>. If the <uid> parameter
     is provided, the state of the motion can be tracked with the given identifier using
@@ -75,7 +75,7 @@ class ManiServer(QtCore.QThread):
         self.stopped = threading.Event()
 
     @property
-    def running(self):
+    def running(self) -> bool:
         return not self.stopped.is_set()
 
     @QtCore.Slot(object)
