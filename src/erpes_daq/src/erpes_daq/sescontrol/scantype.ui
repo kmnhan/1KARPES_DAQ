@@ -93,7 +93,7 @@
   <customwidget>
    <class>SingleMotorSetup</class>
    <extends>QGroupBox</extends>
-   <header>sescontrol.widgets</header>
+   <header>erpes_daq.sescontrol.widgets</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

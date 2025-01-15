@@ -212,7 +212,7 @@
   <customwidget>
    <class>SlitWidget</class>
    <extends>QComboBox</extends>
-   <header>attributeserver.widgets</header>
+   <header>erpes_daq.attributeserver.widgets</header>
   </customwidget>
  </customwidgets>
  <resources/>

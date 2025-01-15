@@ -247,7 +247,9 @@ class ArrayTableModel(QtCore.QAbstractTableModel):
         return None
 
 
-class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
+class MotorDialog(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "motordialog.ui"))
+):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -346,7 +348,9 @@ class MotorDialog(*uic.loadUiType("sescontrol/motordialog.ui")):
         self.pw.showGrid(x=True, y=True, alpha=0.5)
 
 
-class RenameDialog(*uic.loadUiType("sescontrol/renamedialog.ui")):
+class RenameDialog(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "renamedialog.ui"))
+):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -369,7 +373,7 @@ class RenameDialog(*uic.loadUiType("sescontrol/renamedialog.ui")):
         )
 
 
-class ScanType(*uic.loadUiType("sescontrol/scantype.ui")):
+class ScanType(*uic.loadUiType(os.path.join(os.path.dirname(__file__), "scantype.ui"))):
     sigStopPoint = QtCore.Signal()
     sigCancelStopPoint = QtCore.Signal()
 

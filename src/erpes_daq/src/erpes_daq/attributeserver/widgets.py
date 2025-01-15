@@ -134,7 +134,9 @@ class StatusThread(QtCore.QThread):
         log.info("Status thread stopped")
 
 
-class StatusWidget(*uic.loadUiType("attributeserver/status.ui")):
+class StatusWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "status.ui"))
+):
     def __init__(self):
         super().__init__()
         self.setupUi(self)

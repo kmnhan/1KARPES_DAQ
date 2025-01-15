@@ -41,7 +41,9 @@ class QHLine(QtWidgets.QFrame):
         self.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
 
 
-class MainWindowGUI(*uic.loadUiType("main.ui")):
+class MainWindowGUI(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "main.ui"))
+):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
