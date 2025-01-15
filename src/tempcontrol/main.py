@@ -120,7 +120,7 @@ class LoggingProc(multiprocessing.Process):
                     if need_header:
                         writer.writerow(self.header)
                     writer.writerow([dt.isoformat(), *msg])
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, msg))

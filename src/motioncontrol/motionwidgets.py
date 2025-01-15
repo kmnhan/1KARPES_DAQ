@@ -60,7 +60,7 @@ class LoggingProc(multiprocessing.Process):
                 ) as f:
                     writer = csv.writer(f)
                     writer.writerow([dt.isoformat(), *msg])
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 # put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, msg))
@@ -382,7 +382,7 @@ class MotionPlot(pg.PlotWidget):
         if index is None:
             self.setWindowTitle("Relative position")
         else:
-            self.setWindowTitle(f"[{index+1}] Relative position")
+            self.setWindowTitle(f"[{index + 1}] Relative position")
 
         self.curve: pg.PlotDataItem = self.plot(pen="w")
         self.resize(420, 315)

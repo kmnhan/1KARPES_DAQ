@@ -72,7 +72,7 @@ class LoggingProc(multiprocessing.Process):
                 ) as f:
                     writer = csv.writer(f)
                     writer.writerow([dt.isoformat(), *msg])
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 # Put back the retrieved message in the queue
                 n_left = int(self.queue.qsize())
                 self.queue.put((dt, msg))
