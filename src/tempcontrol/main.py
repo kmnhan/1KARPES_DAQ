@@ -157,9 +157,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.setWindowTitle("1KARPES Temperature Controller")
 
         # Read config file
-        with open(
-            QtCore.QSettings("erlab", "tempcontroller").value("config_file")
-        ) as f:
+        with open(QtCore.QSettings("erlab", "tempcontrol").value("config_file")) as f:
             self.config = tomlkit.load(f)
 
         self.readings_336 = ReadingWidget(
@@ -264,7 +262,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
     def overwrite_config(self):
         with open(
-            QtCore.QSettings("erlab", "tempcontroller").value("config_file"), "w"
+            QtCore.QSettings("erlab", "tempcontrol").value("config_file"), "w"
         ) as f:
             tomlkit.dump(self.config, f)
 
@@ -653,7 +651,7 @@ class ConfigFileDialog(QtWidgets.QDialog):
 
     def accept(self):
         if valid_config(self.line.text()):
-            QtCore.QSettings("erlab", "tempcontroller").setValue(
+            QtCore.QSettings("erlab", "tempcontrol").setValue(
                 "config_file", self.line.text()
             )
         else:
@@ -677,7 +675,7 @@ class ConfigFileDialog(QtWidgets.QDialog):
 def valid_config(filename: str | None = None) -> bool:
     """Return True if a valid config file has been added, False otherwise."""
     if filename is None:
-        filename = QtCore.QSettings("erlab", "tempcontroller").value("config_file", "")
+        filename = QtCore.QSettings("erlab", "tempcontrol").value("config_file", "")
     try:
         with open(filename) as f:
             tomlkit.load(f)

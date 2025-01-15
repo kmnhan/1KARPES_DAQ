@@ -25,15 +25,15 @@ jobs:
       run: uv python install
 
     - name: Install the project
-      working-directory: ./src/tempcontroller
+      working-directory: ./src/tempcontrol
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/tempcontroller
+      working-directory: ./src/tempcontrol
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Temperature Controller
-        path: src/tempcontroller/dist/tempcontroller/
+        path: src/tempcontrol/dist/tempcontrol/

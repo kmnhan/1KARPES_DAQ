@@ -1,5 +1,5 @@
 [project]
-name = "tempcontroller"
+name = "tempcontrol"
 version = "0.1.0"
 description = "GUI for Lakeshore temperature controllers"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]

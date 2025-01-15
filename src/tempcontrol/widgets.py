@@ -630,7 +630,7 @@ if __name__ == "__main__":
     # import erlab.io
 
     # with open(
-    #     "/Users/khan/Source/python/1KARPES_DAQ/src/tempcontroller/config.toml", "r"
+    #     "/Users/khan/Source/python/1KARPES_DAQ/src/tempcontrol/config.toml", "r"
     # ) as f:
     #     config = tomlkit.load(f)
     # names = (

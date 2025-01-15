@@ -214,7 +214,7 @@ class MainWindow(MainWindowGUI):
         if self.df is not None:
             self.plot0.set_labels(self.df.columns)
 
-            config_file: str | None = QtCore.QSettings("erlab", "tempcontroller").value(
+            config_file: str | None = QtCore.QSettings("erlab", "tempcontrol").value(
                 "config_file", None
             )
             if config_file is None or not os.path.isfile(config_file):

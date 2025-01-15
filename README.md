@@ -44,7 +44,7 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 
 ## Build status
 
-<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_tempcontroller.yml"><img alt="Temperature Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontroller.yml?label=Temperature%20Controller"></a>
+<a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_tempcontrol.yml"><img alt="Temperature Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_tempcontrol.yml?label=Temperature%20Controller"></a>
 
 <a href="https://github.com/kmnhan/1KARPES_DAQ/actions/workflows/build_motioncontrol.yml"><img alt="Motion Controller" src="https://img.shields.io/github/actions/workflow/status/kmnhan/1KARPES_DAQ/build_motioncontrol.yml?label=Motion%20Controller"></a>
 

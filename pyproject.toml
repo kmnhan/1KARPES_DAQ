@@ -11,7 +11,7 @@ dependencies = [
     "mg15",
     "motioncontrol",
     "pyloncam",
-    "tempcontroller",
+    "tempcontrol",
     "webcam",
 ]
 
@@ -26,7 +26,7 @@ f70h = { workspace = true }
 mg15 = { workspace = true }
 motioncontrol = { workspace = true }
 pyloncam = { workspace = true }
-tempcontroller = { workspace = true }
+tempcontrol = { workspace = true }
 webcam = { workspace = true }
 
 [tool.uv.workspace]

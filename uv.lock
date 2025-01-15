@@ -16,7 +16,7 @@ members = [
     "motioncontrol",
     "pyloncam",
     "qt-extensions",
-    "tempcontroller",
+    "tempcontrol",
     "webcam",
 ]
 
@@ -293,7 +293,7 @@ dependencies = [
     { name = "motioncontrol" },
     { name = "pyloncam" },
     { name = "qt-extensions" },
-    { name = "tempcontroller" },
+    { name = "tempcontrol" },
     { name = "webcam" },
 ]
 
@@ -311,7 +311,7 @@ requires-dist = [
     { name = "motioncontrol", virtual = "src/motioncontrol" },
     { name = "pyloncam", virtual = "src/pyloncam" },
     { name = "qt-extensions", editable = "shared/qt_extensions" },
-    { name = "tempcontroller", virtual = "src/tempcontroller" },
+    { name = "tempcontrol", virtual = "src/tempcontrol" },
     { name = "webcam", virtual = "src/webcam" },
 ]
 
@@ -697,7 +697,7 @@ name = "macholib"
 version = "1.16.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "altgraph", marker = "sys_platform == 'darwin'" },
+    { name = "altgraph" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/95/ee/af1a3842bdd5902ce133bd246eb7ffd4375c38642aeb5dc0ae3a0329dfa2/macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30", size = 59309 }
 wheels = [
@@ -1373,7 +1373,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "comtypes", marker = "sys_platform == 'win32'" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "six", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "six" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2c/85/cc65e3b64e7473cc86c07f0b5c415d509402c03ef19dadc39c583835eb5f/pywinauto-0.6.9.tar.gz", hash = "sha256:94d710bfa796df245250f952ffa65d97233d9807bcd42e052b71b81af469b6de", size = 434734 }
 wheels = [
@@ -1601,9 +1601,9 @@ wheels = [
 ]
 
 [[package]]
-name = "tempcontroller"
+name = "tempcontrol"
 version = "0.1.0"
-source = { virtual = "src/tempcontroller" }
+source = { virtual = "src/tempcontrol" }
 dependencies = [
     { name = "numpy" },
     { name = "pyqt6" },
