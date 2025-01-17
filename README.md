@@ -12,10 +12,10 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
 2. Power on the DAQ PC (left) and log in with appropriate credentials.
 3. Once the DAQ PC is on, power on the logging PC (right) and check if the network drive (D:) is connected.
 4. On the logging PC, start the following programs from the desktop (order does not matter):
-   - F70H
    - MG15
-   - Temperature controller
-   - Motion controller
+   - 🥶 Temperature controller
+   - 😇 Motion controller
+   - 🎛️ F70H (not required, but recommended to be always running)
 
    Check if the programs are running correctly by looking at value updates.
 5. Once the programs are running, double click on `Start Servers` in the desktop. In the
@@ -61,18 +61,6 @@ All attributes are recorded when the scan ends.
 ### Installation
 
 1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
-
-   - On Windows:
-
-     ```bash
-     winget install --id=astral-sh.uv  -e
-     ```
-
-   - On macOS:
-
-     ```bash
-     brew install uv
-     ```
 
 2. Clone the repository and navigate to the root directory.
 
