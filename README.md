@@ -85,9 +85,12 @@ Upon starting the program, the user will be prompted to select a COM port. The H
 compressor is connected via a RS-232 serial connection to a USB-to-serial multiport
 adapter (4 ports), which is connected to a USB isolator and then to the monitoring PC.
 The COM port numbers are assigned by Windows and is subject to change, but the 4 ports
-of the multiport adapter are usually assigned to consecutive COM port numbers. The
-largest COM port number is the one assigned to the F70H, and the smallest COM port
-number is used for the RGA. The two middle ports are unused.
+of the multiport adapter are usually assigned to consecutive COM port numbers. In the
+list of available COM ports, look for 4 consecutive COM port numbers. The largest COM
+port number is the one assigned to the F70H, and the smallest COM port number is used
+for the RGA. The two middle ports are unused. If this is ambiguous, power on the RGA and
+check the COM port number assigned to it through the RGA software. Add 3 to this number
+to get the COM port number assigned to the F70H.
 
 Once a valid COM port is selected, the program will start. Check the alarm status and
 make sure all indicators are showing 🟢.
