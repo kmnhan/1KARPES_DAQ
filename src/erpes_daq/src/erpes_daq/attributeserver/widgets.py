@@ -26,7 +26,9 @@ class SlitTableModel(QtCore.QAbstractTableModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def data(self, index: QtCore.QModelIndex, role: int) -> typing.Any:
+    def data(
+        self, index: QtCore.QModelIndex, role: int = QtCore.Qt.ItemDataRole.DisplayRole
+    ) -> typing.Any:
         if not index.isValid():
             return None
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
@@ -39,7 +41,10 @@ class SlitTableModel(QtCore.QAbstractTableModel):
         return None
 
     def headerData(
-        self, section: int, orientation: QtCore.Qt.Orientation, role: int
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role: int = QtCore.Qt.ItemDataRole.DisplayRole,
     ) -> typing.Any:
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if orientation == QtCore.Qt.Orientation.Horizontal:
@@ -51,10 +56,10 @@ class SlitTableModel(QtCore.QAbstractTableModel):
             )
         return None
 
-    def rowCount(self, index: QtCore.QModelIndex) -> int:
+    def rowCount(self, index: QtCore.QModelIndex | None = None) -> int:
         return len(SLIT_TABLE)
 
-    def columnCount(self, index: QtCore.QModelIndex) -> int:
+    def columnCount(self, index: QtCore.QModelIndex | None = None) -> int:
         return 3
 
 
