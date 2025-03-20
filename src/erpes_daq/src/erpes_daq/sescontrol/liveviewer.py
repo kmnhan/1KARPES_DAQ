@@ -604,7 +604,8 @@ class WorkFileImageTool(BaseImageTool):
         self.autoupdate_spin = QtWidgets.QDoubleSpinBox()
         self.autoupdate_spin.setMinimum(0.5)
         self.autoupdate_spin.setMaximum(60.0)
-        self.autoupdate_spin.setValue(2.0)
+        self.autoupdate_spin.setSingleStep(0.5)
+        self.autoupdate_spin.setValue(1.0)
         self.autoupdate_spin.setKeyboardTracking(False)
         self.autoupdate_spin.valueChanged.connect(self.refresh_update_timer)
 
