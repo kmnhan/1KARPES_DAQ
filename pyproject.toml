@@ -13,10 +13,14 @@ dependencies = [
     "pyloncam",
     "tempcontrol",
     "webcam",
+    "opticscontrol",
 ]
 
 [dependency-groups]
-dev = ["pre-commit>=4.0.1"]
+dev = [
+    "mypy>=1.15.0",
+    "pre-commit>=4.0.1",
+]
 
 [tool.uv.sources]
 qt_extensions = { workspace = true }
@@ -28,6 +32,7 @@ motioncontrol = { workspace = true }
 pyloncam = { workspace = true }
 tempcontrol = { workspace = true }
 webcam = { workspace = true }
+opticscontrol = { workspace = true }
 
 [tool.uv.workspace]
 members = ["shared/*", "src/*"]
@@ -109,3 +114,17 @@ docstring-code-line-length = "dynamic"
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+plugins = ["numpy.typing.mypy_plugin"]
+strict = false
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+allow_redefinition = true
+check_untyped_defs = false
+exclude = []
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+disable_error_code = ["import-untyped"]
+pretty = true
