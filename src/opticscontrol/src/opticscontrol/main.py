@@ -251,6 +251,8 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
     @QtCore.Slot(object)
     def _update_angles(self, output):
+        if output is None:
+            return
         address, pos = output
         if address == 0:
             self._hwp_ang.setValue(np.rad2deg(pos))

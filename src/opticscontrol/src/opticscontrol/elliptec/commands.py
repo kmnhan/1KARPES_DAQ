@@ -86,7 +86,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
 
     def home(
         self, address: int, direction: typing.Literal["cw", "ccw"] = "cw"
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int] | None:
         """Home the device.
 
         Direction is unused for non-rotary devices.
@@ -101,10 +101,11 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
             timeout=MOTION_TIMEOUT,
         )
         if ret_cmd != "PO":
-            raise ValueError(f"Home command returned unexpected command {ret_cmd}.")
+            print(f"Home command returned unexpected command {ret_cmd}.")
+            return None
         return ret_addr, Long.parse(binascii.unhexlify(response))
 
-    def move_abs(self, address: int, position: int) -> tuple[int, int]:
+    def move_abs(self, address: int, position: int) -> tuple[int, int] | None:
         """Move the device to an absolute position in pulses.
 
         Blocks until the move is complete, and returns the final position in pulses.
@@ -114,13 +115,17 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
         )
         if ret_cmd != "PO":
             print(f"Move command returned unexpected command {ret_cmd}.")
+            return None
         return ret_addr, Long.parse(binascii.unhexlify(response))
 
-    def move_abs_physical(self, address: int, position: float) -> tuple[int, float]:
+    def move_abs_physical(
+        self, address: int, position: float
+    ) -> tuple[int, float] | None:
         """Move the device to an absolute position in physical units (mm or radians)."""
-        ret_addr, raw_pos = self.move_abs(
-            address, round(position * self.pulse_unit(address))
-        )
+        out = self.move_abs(address, round(position * self.pulse_unit(address)))
+        if out is None:
+            return None
+        ret_addr, raw_pos = out
         return ret_addr, raw_pos / self.pulse_unit(address)
 
     def move_rel(self, address: int, distance: int) -> tuple[int, int]:
@@ -133,6 +138,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
         )
         if ret_cmd != "PO":
             print(f"Move command returned unexpected command {ret_cmd}.")
+            return None
         return ret_addr, Long.parse(binascii.unhexlify(response))
 
     def position(self, address: int) -> tuple[int, float]:
