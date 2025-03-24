@@ -211,11 +211,17 @@ class ScanWorker(QtCore.QRunnable):
 
     def check_finished(self) -> bool:
         """Return whether if sequence is finished."""
-        path = (
-            self._ses_app.window(handle=self._hwnd)
-            .menu()
-            .get_menu_path("Sequence->Run")
-        )
+        try:
+            path = (
+                self._ses_app.window(handle=self._hwnd)
+                .menu()
+                .get_menu_path("Sequence->Run")
+            )
+        except win32.lib.pywintypes.error:
+            log.exception(
+                "Error while checking if sequence is finished, assuming not finished"
+            )
+            return False
         return path[-1].is_enabled()
 
     def click_sequence_button(self, button: str):
