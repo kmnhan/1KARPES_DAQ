@@ -434,7 +434,12 @@ class ScanType(*uic.loadUiType(os.path.join(os.path.dirname(__file__), "scantype
         tool.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self._itools[uid] = tool
         self._active_itool = uid
-        tool.destroyed.connect(lambda: self._itools.pop(uid))
+        tool.destroyed.connect(lambda: self.cleanup_itool(uid))
+
+    def cleanup_itool(self, uid: str):
+        self._itools.pop(uid)
+        if self._active_itool == uid:
+            self._active_itool = None
 
     @property
     def itool(self) -> LiveImageTool | None:
