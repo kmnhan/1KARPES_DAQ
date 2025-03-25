@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import queue
 import sys
@@ -84,10 +86,115 @@ class _WaitDialog(QtWidgets.QDialog):
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow)
 
 
+class _RotatorWidget(QtWidgets.QWidget):
+    sigToggled = QtCore.Signal()
+
+    def __init__(
+        self, parent: PolarizationControlWidget, title: str, address: int
+    ) -> None:
+        super().__init__(parent)
+        self.address = int(address)
+
+        self._layout = QtWidgets.QHBoxLayout(self)
+        self.setLayout(self._layout)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+
+        self.check = QtWidgets.QCheckBox(title)
+        self.check.setChecked(True)
+        self.check.toggled.connect(self._toggled)
+        self._layout.addWidget(self.check)
+
+        self.val_spin = QtWidgets.QDoubleSpinBox()
+        self.val_spin.setRange(-365, 365)
+        self.val_spin.setDecimals(2)
+        self.val_spin.setReadOnly(True)
+        self.val_spin.setButtonSymbols(self.val_spin.ButtonSymbols.NoButtons)
+        self.val_spin.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.val_spin.setValue(0)
+        self._layout.addWidget(self.val_spin)
+
+        self.target_spin = QtWidgets.QDoubleSpinBox()
+        self.target_spin.setRange(0, 357)
+        self.target_spin.setDecimals(2)
+        self.target_spin.setSingleStep(1)
+        self.target_spin.setValue(0)
+        self._layout.addWidget(self.target_spin)
+
+        self.go_btn = QtWidgets.QPushButton("Go")
+        self.go_btn.clicked.connect(self.move)
+        self.go_btn.setFixedWidth(
+            QtGui.QFontMetrics(self.go_btn.font())
+            .boundingRect(self.go_btn.text())
+            .width()
+            + 15
+        )
+        self._layout.addWidget(self.go_btn)
+
+        self.home_btn = QtWidgets.QPushButton("Home")
+        self.home_btn.clicked.connect(self.home)
+        self.home_btn.setFixedWidth(
+            QtGui.QFontMetrics(self.home_btn.font())
+            .boundingRect(self.home_btn.text())
+            .width()
+            + 15
+        )
+        self._layout.addWidget(self.home_btn)
+
+    @property
+    def sigValueChanged(self) -> QtCore.Signal:
+        return self.val_spin.valueChanged
+
+    @property
+    def pcw(self) -> PolarizationControlWidget:
+        return self.parent()
+
+    @property
+    def value(self) -> float:
+        return self.val_spin.value() if self.enabled else np.nan
+
+    @property
+    def enabled(self) -> bool:
+        return self.check.isChecked()
+
+    def set_value(self, value: float) -> None:
+        if self.enabled:
+            self.val_spin.setValue(np.rad2deg(value))
+
+    @QtCore.Slot()
+    def update_value(self):
+        if self.enabled:
+            self.pcw._thread.request_command(
+                "position_physical", self.pcw.sigRecvPos, (self.address,)
+            )
+
+    @QtCore.Slot()
+    def _toggled(self):
+        self.val_spin.setDisabled(not self.enabled)
+        self.target_spin.setDisabled(not self.enabled)
+        self.go_btn.setDisabled(not self.enabled)
+        self.home_btn.setDisabled(not self.enabled)
+        self.sigToggled.emit()
+
+    @QtCore.Slot()
+    def move(self):
+        self.pcw._thread.request_command(
+            "move_abs_physical",
+            self.pcw.sigRecvPos,
+            (self.address, float(np.deg2rad(self.target_spin.value()))),
+        )
+
+    @QtCore.Slot()
+    def home(self):
+        if self.enabled:
+            self.pcw._thread.request_command(
+                "home", self.pcw.sigRecvPos, (self.address,)
+            )
+
+
 class PolarizationControlWidget(QtWidgets.QWidget):
     sigRecvPos = QtCore.Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -102,100 +209,24 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         # Setup controls
         self._control_widget = QtWidgets.QWidget()
         self._layout.addWidget(self._control_widget)
-        control_layout = QtWidgets.QGridLayout(self._control_widget)
-        control_layout.setContentsMargins(0, 0, 0, 0)
-        self._control_widget.setLayout(control_layout)
+        self.control_layout = QtWidgets.QVBoxLayout(self._control_widget)
+        self.control_layout.setContentsMargins(0, 0, 0, 0)
+        self._control_widget.setLayout(self.control_layout)
 
-        # lambda/2 waveplate controls
-        self._hwp_check = QtWidgets.QCheckBox("λ/2")
-        self._hwp_check.setChecked(True)
-        self._hwp_check.toggled.connect(self._plate_toggled)
-        control_layout.addWidget(self._hwp_check, 0, 0)
+        self._motors = {
+            0: _RotatorWidget(self, "λ/2", 0),
+            1: _RotatorWidget(self, "λ/4", 1),
+        }
 
-        self._hwp_ang = QtWidgets.QDoubleSpinBox()
-        self._hwp_ang.setRange(-365, 365)
-        self._hwp_ang.setDecimals(2)
-        self._hwp_ang.setReadOnly(True)
-        self._hwp_ang.setButtonSymbols(self._hwp_ang.ButtonSymbols.NoButtons)
-        self._hwp_ang.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self._hwp_ang.setValue(0)
-        self._hwp_ang.valueChanged.connect(self._update_plot)
-        control_layout.addWidget(self._hwp_ang, 0, 1)
-
-        self._hwp_setter = QtWidgets.QDoubleSpinBox()
-        self._hwp_setter.setRange(0, 357)
-        self._hwp_setter.setDecimals(2)
-        self._hwp_setter.setSingleStep(1)
-        self._hwp_setter.setValue(0)
-        control_layout.addWidget(self._hwp_setter, 0, 2)
-
-        self._hwp_go_btn = QtWidgets.QPushButton("Go")
-        self._hwp_go_btn.clicked.connect(self._move_hwp)
-        self._hwp_go_btn.setFixedWidth(
-            QtGui.QFontMetrics(self._hwp_go_btn.font())
-            .boundingRect(self._hwp_go_btn.text())
-            .width()
-            + 15
-        )
-        control_layout.addWidget(self._hwp_go_btn, 0, 3)
-
-        self._hwp_home_btn = QtWidgets.QPushButton("Home")
-        self._hwp_home_btn.clicked.connect(self._home_hwp)
-        self._hwp_home_btn.setFixedWidth(
-            QtGui.QFontMetrics(self._hwp_home_btn.font())
-            .boundingRect(self._hwp_home_btn.text())
-            .width()
-            + 15
-        )
-        control_layout.addWidget(self._hwp_home_btn, 0, 4)
-
-        # lambda/4 waveplate controls
-        self._qwp_check = QtWidgets.QCheckBox("λ/4")
-        self._qwp_check.setChecked(True)
-        self._qwp_check.toggled.connect(self._plate_toggled)
-        control_layout.addWidget(self._qwp_check, 1, 0)
-
-        self._qwp_ang = QtWidgets.QDoubleSpinBox()
-        self._qwp_ang.setRange(-365, 365)
-        self._qwp_ang.setDecimals(2)
-        self._qwp_ang.setReadOnly(True)
-        self._qwp_ang.setButtonSymbols(self._qwp_ang.ButtonSymbols.NoButtons)
-        self._qwp_ang.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self._qwp_ang.setValue(0)
-        self._qwp_ang.valueChanged.connect(self._update_plot)
-        control_layout.addWidget(self._qwp_ang, 1, 1)
-
-        self._qwp_setter = QtWidgets.QDoubleSpinBox()
-        self._qwp_setter.setRange(0, 357)
-        self._qwp_setter.setDecimals(2)
-        self._qwp_setter.setSingleStep(1)
-        self._qwp_setter.setValue(0)
-        control_layout.addWidget(self._qwp_setter, 1, 2)
-
-        self._qwp_go_btn = QtWidgets.QPushButton("Go")
-        self._qwp_go_btn.clicked.connect(self._move_qwp)
-        self._qwp_go_btn.setFixedWidth(
-            QtGui.QFontMetrics(self._qwp_go_btn.font())
-            .boundingRect(self._qwp_go_btn.text())
-            .width()
-            + 15
-        )
-        control_layout.addWidget(self._qwp_go_btn, 1, 3)
-
-        self._qwp_home_btn = QtWidgets.QPushButton("Home")
-        self._qwp_home_btn.clicked.connect(self._home_qwp)
-        self._qwp_home_btn.setFixedWidth(
-            QtGui.QFontMetrics(self._qwp_home_btn.font())
-            .boundingRect(self._qwp_home_btn.text())
-            .width()
-            + 15
-        )
-        control_layout.addWidget(self._qwp_home_btn, 1, 4)
+        for motor in self._motors.values():
+            motor.sigToggled.connect(self._update_plot)
+            motor.sigValueChanged.connect(self._update_plot)
+            self.control_layout.addWidget(motor)
 
         # Uncomment after installing lamba/4 waveplate
-        self._qwp_check.setChecked(False)
-        self._plate_toggled()
-        self._qwp_check.setDisabled(True)
+        self._motors[1].check.setChecked(False)
+        self._motors[1]._toggled()
+        self._motors[1].check.setDisabled(True)
 
         self.update_btn = QtWidgets.QPushButton("Get Positions")
         self.update_btn.clicked.connect(self._get_positions)
@@ -213,7 +244,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         while self._thread.stopped.is_set():
             time.sleep(1e-4)
 
-        self.sigRecvPos.connect(self._update_angles)
+        self.sigRecvPos.connect(self._pos_recv)
 
     @QtCore.Slot()
     def command_started(self):
@@ -231,64 +262,20 @@ class PolarizationControlWidget(QtWidgets.QWidget):
             self._wait_dialog.show()
 
     @QtCore.Slot()
-    def _plate_toggled(self):
-        self._hwp_ang.setDisabled(not self._hwp_check.isChecked())
-        self._hwp_setter.setDisabled(not self._hwp_check.isChecked())
-        self._hwp_go_btn.setDisabled(not self._hwp_check.isChecked())
-        self._hwp_home_btn.setDisabled(not self._hwp_check.isChecked())
-        self._qwp_ang.setDisabled(not self._qwp_check.isChecked())
-        self._qwp_setter.setDisabled(not self._qwp_check.isChecked())
-        self._qwp_go_btn.setDisabled(not self._qwp_check.isChecked())
-        self._qwp_home_btn.setDisabled(not self._qwp_check.isChecked())
-        self._update_plot()
-
-    @QtCore.Slot()
     def _get_positions(self):
-        if self._hwp_check.isChecked():
-            self._thread.request_command("position_physical", self.sigRecvPos, (0,))
-        if self._qwp_check.isChecked():
-            self._thread.request_command("position_physical", self.sigRecvPos, (1,))
+        for motor in self._motors.values():
+            motor.update_value()
 
     @QtCore.Slot(object)
-    def _update_angles(self, output):
+    def _pos_recv(self, output):
         if output is None:
             return
         address, pos = output
-        if address == 0:
-            self._hwp_ang.setValue(np.rad2deg(pos))
-        elif address == 1:
-            self._qwp_ang.setValue(np.rad2deg(pos))
-
-    @QtCore.Slot()
-    def _move_hwp(self):
-        self._thread.request_command(
-            "move_abs_physical",
-            self.sigRecvPos,
-            (0, float(np.deg2rad(self._hwp_setter.value()))),
-        )
-
-    @QtCore.Slot()
-    def _move_qwp(self):
-        self._thread.request_command(
-            "move_abs_physical",
-            self.sigRecvPos,
-            (1, float(np.deg2rad(self._qwp_setter.value()))),
-        )
-
-    @QtCore.Slot()
-    def _home_hwp(self):
-        self._thread.request_command("home", self.sigRecvPos, (0,))
-
-    @QtCore.Slot()
-    def _home_qwp(self):
-        self._thread.request_command("home", self.sigRecvPos, (1,))
+        self._motors[address].set_value(pos)
 
     @QtCore.Slot()
     def _update_plot(self):
-        pol = calculate_polarization(
-            self._hwp_ang.value() if self._hwp_check.isChecked() else None,
-            self._qwp_ang.value() if self._qwp_check.isChecked() else None,
-        )
+        pol = calculate_polarization(self._motors[0].value, self._motors[1].value)
         self._plotter.set_polarization(pol)
         self._pol_info.setText(polarization_info(pol))
 

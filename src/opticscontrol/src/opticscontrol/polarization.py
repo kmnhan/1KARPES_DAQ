@@ -73,21 +73,19 @@ def polarization_info(pol, tol=1e-3) -> str:
     return f"Elliptical ({handedness})"
 
 
-def calculate_polarization(
-    hwp_angle: float | None, qwp_angle: float | None
-) -> np.ndarray:
+def calculate_polarization(hwp_angle: float, qwp_angle: float) -> np.ndarray:
     """Calculate the polarization state after passing through a HWP and QWP.
 
     Assumes initial LV polarization.
 
     Parameters
     ----------
-    hwp_angle : float or None
+    hwp_angle : float
         Angle of the half-wave plate (HWP) fast axis in degrees.
-        If None, the HWP is not present.
-    qwp_angle : float or None
+        If NaN, the HWP is not present.
+    qwp_angle : float
         Angle of the quarter-wave plate (QWP) fast axis in degrees.
-        If None, the QWP is not present.
+        If NaN, the QWP is not present.
 
     Returns
     -------
@@ -97,10 +95,10 @@ def calculate_polarization(
     """
     pol = np.array([0.0, 1.0])
 
-    if hwp_angle is not None:
+    if not np.isnan(hwp_angle):
         pol = jones_hwp(hwp_angle) @ pol
 
-    if qwp_angle is not None:
+    if not np.isnan(qwp_angle):
         pol = jones_qwp(qwp_angle) @ pol
 
     return pol
