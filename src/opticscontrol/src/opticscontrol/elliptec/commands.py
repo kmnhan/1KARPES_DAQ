@@ -49,7 +49,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
         self._pulse_unit_cache: dict[int, int] = {}
 
     def info(self, address: int) -> construct.Container:
-        _, response = self.query_command_check(address, "in", out_command="IN")
+        _, _, response = self.query_command_check(address, "in", out_command="IN")
         return Info.parse(response)
 
     def pulse_unit(self, address: int, use_cache: bool = True) -> int:
@@ -66,7 +66,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
 
     def status(self, address: int) -> int:
         """Get the status number of the device."""
-        _, response = self.query_command_check(address, "gs", out_command="GS")
+        _, _, response = self.query_command_check(address, "gs", out_command="GS")
         return int(response, base=16)
 
     def status_text(self, address: int) -> str:
@@ -75,7 +75,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
 
     def motor1_info(self, address: int) -> int:
         """Get the motor 1 info of the device."""
-        _, response = self.query_command_check(address, "i1", out_command="I1")
+        _, _, response = self.query_command_check(address, "i1", out_command="I1")
         return MotorInfo.parse(binascii.unhexlify(response))
 
     def isolate(self, address: int, minutes: int) -> None:
@@ -143,7 +143,7 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
 
     def position(self, address: int) -> tuple[int, float]:
         """Get the position of the device in pulses."""
-        ret_addr, response = self.query_command_check(address, "gp", out_command="PO")
+        ret_addr, _, response = self.query_command_check(address, "gp", out_command="PO")
         return ret_addr, Long.parse(binascii.unhexlify(response))
 
     def position_physical(self, address: int) -> tuple[int, float]:

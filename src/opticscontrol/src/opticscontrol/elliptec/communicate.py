@@ -122,7 +122,7 @@ class ElliptecFtdiDeviceBase(pyftdi.ftdi.Ftdi):
         out_command: str | list[str],
         data: str | bytes | None = None,
         timeout: float = 2.0,
-    ) -> tuple[str, bytes]:
+    ) -> tuple[int, str, bytes]:
         if isinstance(out_command, str):
             out_command = [out_command]
 
@@ -136,4 +136,4 @@ class ElliptecFtdiDeviceBase(pyftdi.ftdi.Ftdi):
             )
         if ret_cmd not in out_command:
             raise RuntimeError(f"Unexpected command {ret_cmd} in response.")
-        return ret_cmd, response
+        return ret_addr, ret_cmd, response

@@ -5,6 +5,7 @@ import queue
 import sys
 import threading
 import time
+import weakref
 
 import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
@@ -92,8 +93,10 @@ class _RotatorWidget(QtWidgets.QWidget):
     def __init__(
         self, parent: PolarizationControlWidget, title: str, address: int
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self.address = int(address)
+
+        self._pcw = weakref.ref(parent)
 
         self._layout = QtWidgets.QHBoxLayout(self)
         self.setLayout(self._layout)
@@ -146,7 +149,7 @@ class _RotatorWidget(QtWidgets.QWidget):
 
     @property
     def pcw(self) -> PolarizationControlWidget:
-        return self.parent()
+        return self._pcw()
 
     @property
     def value(self) -> float:
@@ -271,7 +274,11 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         if output is None:
             return
         address, pos = output
-        self._motors[address].set_value(pos)
+
+        log.debug("Received pos result %s", output)
+
+        if address in self._motors:
+            self._motors[address].set_value(pos)
 
     @QtCore.Slot()
     def _update_plot(self):
