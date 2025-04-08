@@ -196,9 +196,12 @@ class _RotatorWidget(QtWidgets.QWidget):
         self.sigToggled.emit()
 
     @QtCore.Slot()
-    @QtCore.Slot(object)
-    def move(self, unique_id: str | None = None):
+    @QtCore.Slot(float)
+    @QtCore.Slot(float, object)
+    def move(self, value: float | None = None, unique_id: str | None = None):
         if self.enabled:
+            if value is not None:
+                self.target_spin.setValue(value)
             self.pcw._thread.request_command(
                 "move_abs_physical",
                 callback_signal=self.pcw.sigRecvPos,
