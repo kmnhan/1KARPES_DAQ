@@ -137,9 +137,6 @@ class _MotorizedOptic(Motor):
         # Get bounds (mm)
         self.minimum, self.maximum = self.client.bounds(self.AXIS)
 
-        # Get tolerance (mm)
-        self.tolerance = self.client.abs_tolerance(self.AXIS)
-
     def move(self, target: float) -> float:
         self.refresh_state()
         if not self.enabled:
