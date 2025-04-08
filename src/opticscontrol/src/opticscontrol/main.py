@@ -299,8 +299,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
             if args == "":
                 rep = ",".join([str(int(motor.enabled)) for motor in self._motors])
             else:
-                motor = self._motors[int(args)]
-                rep = str(int(motor.enabled))
+                rep = str(int(self._motors[int(args)].enabled))
         elif command == "POS":
             if args == "":
                 rep = ",".join([str(motor.value) for motor in self._motors])
@@ -315,7 +314,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
             self.check_finished_uid(args)
             rep = "1" if self.check_finished_uid(args) else "0"
 
-        # log.debug("Replying to request %s %s with %s", command, args, rep)
+        log.debug("Replying to request %s %s with %s", command, args, rep)
         self.sigServerReply.emit(rep)
 
     @QtCore.Slot(str, str)
