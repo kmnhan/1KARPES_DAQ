@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 import weakref
+from multiprocessing import shared_memory
 
 import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
@@ -199,6 +200,11 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+
+        # Shared memory for access by other processes
+        # Will be created on initial data update
+        self.shm: shared_memory.SharedMemory | None = None
+
         self._layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(self._layout)
 
@@ -250,27 +256,27 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self.sigRecvPos.connect(self._pos_recv)
 
     @QtCore.Slot()
-    def command_started(self):
+    def command_started(self) -> None:
         self.busy = True
         QtCore.QTimer.singleShot(200, self._show_busy_if_still_running)
 
     @QtCore.Slot()
-    def command_finished(self):
+    def command_finished(self) -> None:
         self.busy = False
         self._wait_dialog.close()
 
     @QtCore.Slot()
-    def _show_busy_if_still_running(self):
+    def _show_busy_if_still_running(self) -> None:
         if self.busy:
             self._wait_dialog.show()
 
     @QtCore.Slot()
-    def _get_positions(self):
+    def _get_positions(self) -> None:
         for motor in self._motors.values():
             motor.update_value()
 
     @QtCore.Slot(object)
-    def _pos_recv(self, output):
+    def _pos_recv(self, output) -> None:
         if output is None:
             return
         address, pos = output
@@ -285,8 +291,26 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         pol = calculate_polarization(self._motors[0].value, self._motors[1].value)
         self._plotter.set_polarization(pol)
         self._pol_info.setText(polarization_info(pol))
+        self._update_shm()
+
+    @QtCore.Slot()
+    def _update_shm(self):
+        if self.shm is None:
+            # Create shared memory on first update
+            self.shm = shared_memory.SharedMemory(
+                name="Optics", create=True, size=8 * len(self._motors)
+            )
+
+        arr = np.ndarray((len(self._motors),), dtype="f8", buffer=self.shm.buf)
+
+        for i, motor in enumerate(self._motors.values()):
+            arr[i] = motor.value
 
     def closeEvent(self, event):
+        # Free shared memory
+        self.shm.close()
+        self.shm.unlink()
+
         self._thread.stopped.set()
         self._thread.wait()
 
@@ -404,6 +428,7 @@ if __name__ == "__main__":
     qapp.setStyle("Fusion")
 
     win = PolarizationControlWidget()
+    # win = PolarizationVisualizer()
     win.show()
     win.activateWindow()
     qapp.exec()

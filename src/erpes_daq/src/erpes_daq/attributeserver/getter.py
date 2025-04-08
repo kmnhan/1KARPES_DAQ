@@ -39,6 +39,8 @@ TEMPERATURE_KEYS: tuple[str, ...] = (
     "T0",
 )
 
+OPTICS_KEYS: tuple[str, ...] = ("hwp", "qwp")
+
 MANIPULATOR_AXES: tuple[str, ...] = ("ch1", "ch2", "ch3", "ch4", "ch5", "ch6")
 
 PORT_POSITION: int = 18001
@@ -193,6 +195,15 @@ def get_slit_dict() -> dict[str, str]:
     }
 
 
+def get_waveplate_dict() -> dict[str, str]:
+    try:
+        ang_list: list[np.float64] = get_shared_array("Optics", len(OPTICS_KEYS), "f8")
+    except FileNotFoundError:
+        ang_list = [np.nan] * len(OPTICS_KEYS)
+
+    return dict(zip(OPTICS_KEYS, [np.round(v, 3) for v in ang_list], strict=True))
+
+
 def get_attribute_dict() -> dict[str, str]:
     attrs = {"attrs_time": datetime.datetime.now().isoformat()}
     for fn in (
@@ -201,6 +212,7 @@ def get_attribute_dict() -> dict[str, str]:
         get_slit_dict,
         get_position_dict,
         get_pressure_dict,
+        get_waveplate_dict,
     ):
         try:
             d = fn()
