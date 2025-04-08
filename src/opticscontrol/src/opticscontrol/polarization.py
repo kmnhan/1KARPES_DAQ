@@ -73,6 +73,26 @@ def polarization_info(pol, tol=1e-3) -> str:
     return f"Elliptical ({handedness})"
 
 
+def polarization_integer(pol, tol=1e-3) -> float:
+    """Convert polarization state to an integer.
+
+    RC: -1, LH: 0, LC: 1, LV: 2
+    """
+    info = polarization_info(pol, tol)
+
+    match info:
+        case "Circular (R)":
+            return -1.0
+        case "Linear (H)":
+            return 0.0
+        case "Circular (L)":
+            return 1.0
+        case "Linear (V)":
+            return 2.0
+        case _:
+            return np.nan
+
+
 def calculate_polarization(hwp_angle: float, qwp_angle: float) -> np.ndarray:
     """Calculate the polarization state after passing through a HWP and QWP.
 

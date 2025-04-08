@@ -1,34 +1,16 @@
 from __future__ import annotations
 
 import contextlib
-import enum
-import math
 import time
 import uuid
-from multiprocessing import shared_memory
 from typing import Self
 
+import numpy as np
 import zmq
 
 from erpes_daq.sescontrol.plugins import Motor
 
-PIEZOSERVER_PORT: int = 42625
-
-
-def _controller_on_local() -> bool:
-    try:
-        shared_memory.SharedMemory(name="MotorPositions")
-    except FileNotFoundError:
-        return False
-    else:
-        return True
-
-
-class MMStatus(enum.IntEnum):
-    Moving = 1
-    Done = 2
-    Aborted = 3
-    Error = 4
+OPTICS_PORT: int = 42633
 
 
 class _SingletonBase:
@@ -51,7 +33,7 @@ class _SingletonBase:
         return cls()
 
 
-class ManiClient(_SingletonBase):
+class OpticsClient(_SingletonBase):
     def __init__(self):
         self.connected: bool = False
 
@@ -61,10 +43,7 @@ class ManiClient(_SingletonBase):
             if not context:
                 context = zmq.Context()
             self.socket = context.socket(zmq.PAIR)
-            if _controller_on_local():
-                self.socket.connect(f"tcp://localhost:{PIEZOSERVER_PORT}")
-            else:
-                self.socket.connect(f"tcp://192.168.0.193:{PIEZOSERVER_PORT}")
+            self.socket.connect(f"tcp://localhost:{OPTICS_PORT}")
             self.connected = True
 
     def disconnect(self):
@@ -77,7 +56,7 @@ class ManiClient(_SingletonBase):
         """Context manager for socket connection.
 
         If the connection is already established, the existing socket is returned and
-        nothing is done on exit. Otherwise,  the socket is closed after the block is
+        nothing is done on exit. Otherwise, the socket is closed after the block is
         exited.
         """
         need_connect: bool = not self.connected
@@ -119,59 +98,35 @@ class ManiClient(_SingletonBase):
     def pos(self, axis: int | str) -> float:
         return self.query_float(f"POS? {axis}")
 
-    def tolerance(self, axis: int | str) -> float:
-        return self.query_float(f"TOL? {axis}")
-
-    def abs_tolerance(self, axis: int | str) -> float:
-        return self.query_float(f"ATOL? {axis}")
-
     def request_move(self, axis: str | int, target: float) -> str:
         unique_id: str = str(uuid.uuid4())
         self.write(f"MOVE {axis},{target},{unique_id}")
         return unique_id
 
-    def status(self, controller: int | None = None) -> int:
-        if controller is None:
-            return self.query_int("STATUS?")
-        return self.query_int(f"STATUS? {controller}")
+    # def status(self, controller: int | None = None) -> int:
+    #     if controller is None:
+    #         return self.query_int("STATUS?")
+    #     return self.query_int(f"STATUS? {controller}")
 
     def wait_motion_finish(self, unique_id: str):
-        while not bool(self.query_int(f"FIN? {unique_id}")):
+        while not bool(self.query_int(f"CMD? {unique_id}")):
             time.sleep(0.01)
 
     def clear_uid(self, unique_id: str):
         self.write(f"CLR {unique_id}")
 
-    def wait_busy(self, axis: str | int | None = None):
-        if axis is None:
-            controller_idx = None
-        else:  # axis name str | digit-like str | int
-            if isinstance(axis, str):
-                if axis.isdigit():
-                    axis = int(axis)
-                else:
-                    names: tuple[str] = self.query_sequence("NAME?")
-                    try:
-                        axis = names.index(axis) + 1
-                    except ValueError:
-                        print("Axis not found")
-                        return
-            controller_idx = (axis - 1) // 3
-        while self.status(controller_idx) == MMStatus.Moving:
-            time.sleep(0.005)
 
-
-class _PiezoMotor(Motor):
-    """Base class for all piezomotors."""
+class _MotorizedOptic(Motor):
+    """Base class for all motorized optics."""
 
     enabled: bool = True
     fix_delta: bool = False
-    delta: float = 0.1
-    AXIS: str | int | None = None  # motor name
+    delta: float = 45.0
+    AXIS: int | None = None  # motor index
 
     def __init__(self) -> None:
         super().__init__()
-        self.client = ManiClient()
+        self.client = OpticsClient()
 
     def refresh_state(self):
         self.enabled: bool = self.client.enabled(self.AXIS)
@@ -202,85 +157,69 @@ class _PiezoMotor(Motor):
         self.client.clear_uid(unique_id)
         print("uid cleared")
 
-        # get final position
-        # return self._get_pos(self.AXIS)
-
-        # log the target position instead of the real position, target position should
-        # be added to data header
         return target
 
     def post_motion(self):
         self.client.disconnect()
 
 
-class X(_PiezoMotor):
-    AXIS = "X"
+class HWP(_MotorizedOptic):
+    AXIS = 0
 
 
-class Y(_PiezoMotor):
-    AXIS = "Y"
+class QWP(_MotorizedOptic):
+    AXIS = 1
 
 
-class Z(_PiezoMotor):
-    AXIS = "Z"
+class Pol(_MotorizedOptic):
+    # -1 0 1 2
+    # rc lh lc lv
 
+    minimum: float = -1
+    maximum: float = 2
+    delta: float = 2
 
-class Polar(_PiezoMotor):
-    AXIS = "Polar"
-
-
-class Tilt(_PiezoMotor):
-    AXIS = "Tilt"
-
-
-class Azi(_PiezoMotor):
-    AXIS = "Azi"
-
-
-class Beam(_PiezoMotor):
-    beam_incidence: float = math.radians(50)
+    pol_to_angles: dict[int, tuple[float, float]] = {
+        -1: (0.0, 45.0),
+        0: (45.0, 0.0),
+        1: (45.0, 45.0),
+        2: (0.0, 0.0),
+    }
 
     def refresh_state(self):
-        self.enabled: bool = self.client.enabled("X") and self.client.enabled("Y")
+        self.enabled: bool = self.client.enabled(0)
+        # Allow without QWP
 
     def pre_motion(self):
         self.client.connect()
 
-        # get bounds (mm)
-        xmin, xmax = self.client.bounds("X")
-        ymin, ymax = self.client.bounds("Y")
-
-        # get current position
-        self.client.wait_busy()
-        self.x0, self.y0 = self.client.pos("X"), self.client.pos("Y")
-
-        # get motor limits
-        self.minimum = max(
-            (xmin - self.x0) / math.sin(self.beam_incidence),
-            (ymin - self.y0) / math.cos(self.beam_incidence),
-        )
-        self.maximum = min(
-            (xmax - self.x0) / math.sin(self.beam_incidence),
-            (ymax - self.y0) / math.cos(self.beam_incidence),
-        )
-
     def move(self, target: float) -> float:
-        xtarget = self.x0 + target * math.sin(self.beam_incidence)
-        ytarget = self.y0 + target * math.cos(self.beam_incidence)
+        target_int: int = round(target)
+        if target_int not in self.pol_to_angles:
+            return np.nan
 
-        # send x move command
-        uid_x: str = self.client.request_move("X", xtarget)
-        # send y move command
-        uid_y: str = self.client.request_move("Y", ytarget)
+        qwp_enabled: bool = self.client.enabled(1)
 
-        self.client.wait_motion_finish(uid_x)
-        self.client.wait_motion_finish(uid_y)
+        if not qwp_enabled:
+            if target_int == -1:
+                # RCP to LH
+                target_int = 0
+            elif target_int == 0:
+                # LCP to LV
+                target_int = 2
+
+        hwp, qwp = self.pol_to_angles[target_int]
+
+        uid_hwp: str = self.client.request_move(0, hwp)
+        if qwp_enabled:
+            uid_qwp: str = self.client.request_move(1, qwp)
+
+        self.client.wait_motion_finish(uid_hwp)
+
+        if qwp_enabled:
+            self.client.wait_motion_finish(uid_qwp)
 
         return target
 
-    def post_motion(self, reset: bool = True):
-        if reset:
-            # go back to initial position
-            self.client.request_move("X", self.x0)
-            self.client.request_move("Y", self.y0)
+    def post_motion(self):
         self.client.disconnect()

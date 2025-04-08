@@ -9,10 +9,12 @@ import weakref
 from multiprocessing import shared_memory
 
 import numpy as np
+import numpy.typing as npt
 from qtpy import QtCore, QtGui, QtWidgets
 
 from opticscontrol.elliptec.commands import ElliptecFtdiDevice
 from opticscontrol.polarization import calculate_polarization, polarization_info
+from opticscontrol.server import OpticsServer
 
 log = logging.getLogger("opticscontrol")
 log.setLevel(logging.DEBUG)
@@ -24,8 +26,8 @@ log.addHandler(handler)
 
 
 class ElliptecThread(QtCore.QThread):
-    sigExecutionStarted = QtCore.Signal()
-    sigExecutionFinished = QtCore.Signal()
+    sigExecutionStarted = QtCore.Signal(object)
+    sigExecutionFinished = QtCore.Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -36,12 +38,18 @@ class ElliptecThread(QtCore.QThread):
         return not self.stopped.is_set()
 
     @QtCore.Slot(str, object)
-    def request_command(self, meth_name, callback_signal, args):
+    def request_command(
+        self,
+        meth_name: str,
+        callback_signal: QtCore.Signal,
+        args: tuple,
+        uid: str | None = None,
+    ) -> None:
         # meth_name must be a string of the method name of ElliptecFtdiDevice to call
         # callback_signal must be a signal to emit the result of the command
         # args must be a tuple of positional arguments
         self.mutex.lock()
-        self.queue.put((meth_name, callback_signal, args))
+        self.queue.put((meth_name, callback_signal, args, uid))
         self.mutex.unlock()
 
     def run(self):
@@ -54,15 +62,15 @@ class ElliptecThread(QtCore.QThread):
 
         while not self.stopped.is_set():
             if not self.queue.empty():
-                meth_name, callback_signal, args = self.queue.get()
+                meth_name, callback_signal, args, uid = self.queue.get()
 
-                self.sigExecutionStarted.emit()
+                self.sigExecutionStarted.emit(uid)
                 try:
                     result = getattr(device, meth_name)(*args)
                 except Exception:
                     log.exception("Error while calling %s", meth_name)
                     result = None
-                self.sigExecutionFinished.emit()
+                self.sigExecutionFinished.emit(uid)
 
                 if callback_signal is not None:
                     callback_signal.emit(result)
@@ -109,7 +117,7 @@ class _RotatorWidget(QtWidgets.QWidget):
         self._layout.addWidget(self.check)
 
         self.val_spin = QtWidgets.QDoubleSpinBox()
-        self.val_spin.setRange(-365, 365)
+        self.val_spin.setRange(-360, 360)
         self.val_spin.setDecimals(2)
         self.val_spin.setReadOnly(True)
         self.val_spin.setButtonSymbols(self.val_spin.ButtonSymbols.NoButtons)
@@ -118,7 +126,7 @@ class _RotatorWidget(QtWidgets.QWidget):
         self._layout.addWidget(self.val_spin)
 
         self.target_spin = QtWidgets.QDoubleSpinBox()
-        self.target_spin.setRange(0, 357)
+        self.target_spin.setRange(0, 359.99)
         self.target_spin.setDecimals(2)
         self.target_spin.setSingleStep(1)
         self.target_spin.setValue(0)
@@ -157,6 +165,14 @@ class _RotatorWidget(QtWidgets.QWidget):
         return self.val_spin.value() if self.enabled else np.nan
 
     @property
+    def minimum(self) -> float:
+        return self.target_spin.minimum()
+
+    @property
+    def maximum(self) -> float:
+        return self.target_spin.maximum()
+
+    @property
     def enabled(self) -> bool:
         return self.check.isChecked()
 
@@ -180,12 +196,15 @@ class _RotatorWidget(QtWidgets.QWidget):
         self.sigToggled.emit()
 
     @QtCore.Slot()
-    def move(self):
-        self.pcw._thread.request_command(
-            "move_abs_physical",
-            self.pcw.sigRecvPos,
-            (self.address, float(np.deg2rad(self.target_spin.value()))),
-        )
+    @QtCore.Slot(object)
+    def move(self, unique_id: str | None = None):
+        if self.enabled:
+            self.pcw._thread.request_command(
+                "move_abs_physical",
+                callback_signal=self.pcw.sigRecvPos,
+                args=(self.address, float(np.deg2rad(self.target_spin.value()))),
+                uid=unique_id,
+            )
 
     @QtCore.Slot()
     def home(self):
@@ -197,13 +216,14 @@ class _RotatorWidget(QtWidgets.QWidget):
 
 class PolarizationControlWidget(QtWidgets.QWidget):
     sigRecvPos = QtCore.Signal(object)
+    sigServerReply = QtCore.Signal(object)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
         # Shared memory for access by other processes
         # Will be created on initial data update
-        self.shm: shared_memory.SharedMemory | None = None
+        self.shm_optics: shared_memory.SharedMemory | None = None
 
         self._layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -222,17 +242,16 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self.control_layout.setContentsMargins(0, 0, 0, 0)
         self._control_widget.setLayout(self.control_layout)
 
-        self._motors = {
-            0: _RotatorWidget(self, "λ/2", 0),
-            1: _RotatorWidget(self, "λ/4", 1),
-        }
-
-        for motor in self._motors.values():
+        self._motors = [
+            _RotatorWidget(self, "λ/2", 0),
+            _RotatorWidget(self, "λ/4", 1),
+        ]
+        for motor in self._motors:
             motor.sigToggled.connect(self._update_plot)
             motor.sigValueChanged.connect(self._update_plot)
             self.control_layout.addWidget(motor)
 
-        # Uncomment after installing lamba/4 waveplate
+        # Comment after installing lamba/4 waveplate
         self._motors[1].check.setChecked(False)
         self._motors[1]._toggled()
         self._motors[1].check.setDisabled(True)
@@ -255,15 +274,88 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
         self.sigRecvPos.connect(self._pos_recv)
 
-    @QtCore.Slot()
-    def command_started(self) -> None:
+        # Setup server
+        self.server = OpticsServer()
+        self.server.sigRequest.connect(self._parse_server_request)
+        self.server.sigCommand.connect(self._parse_server_command)
+        self.server.sigMove.connect(self._parse_server_move)
+        self.sigServerReply.connect(self.server.set_value)
+        self.server.start()
+
+        self._started_uid: set[str] = set()
+        self._finished_uid: set[str] = set()
+
+    @property
+    def polarization(self) -> npt.NDArray[np.complex128]:
+        """Get the current polarization state."""
+        return calculate_polarization(self._motors[0].value, self._motors[1].value)
+
+    @QtCore.Slot(str, str)
+    def _parse_server_request(self, command: str, args: str) -> None:
+        if command == "ENABLED":
+            if args == "":
+                rep = ",".join([str(int(motor.enabled)) for motor in self._motors])
+            else:
+                motor = self._motors[int(args)]
+                rep = str(int(motor.enabled))
+        elif command == "POS":
+            if args == "":
+                rep = ",".join([str(motor.value) for motor in self._motors])
+            else:
+                motor = self._motors[int(args)]
+                rep = str(motor.value)
+        elif command == "MINMAX":
+            motor = self._motors[int(args)]
+            rep = f"{motor.minimum},{motor.maximum}"
+        elif command == "CMD":
+            # args is the uid
+            self.check_finished_uid(args)
+            rep = "1" if self.check_finished_uid(args) else "0"
+
+        log.debug("Replying to request %s %s with %s", command, args, rep)
+        self.sigServerReply.emit(rep)
+
+    @QtCore.Slot(str, str)
+    def _parse_server_command(self, command: str, args: str):
+        if command == "CLR":
+            unique_id = args
+            self.forget_uid(unique_id)
+        else:
+            log.exception("Command %s not recognized", command)
+
+    @QtCore.Slot(str, float, object)
+    def _parse_server_move(self, axis: str, value: float, unique_id: str | None):
+        motor = self._motors[int(axis)]
+        motor.move(value, unique_id=unique_id)
+
+    @QtCore.Slot(object)
+    def command_started(self, uid: str | None) -> None:
         self.busy = True
         QtCore.QTimer.singleShot(200, self._show_busy_if_still_running)
 
-    @QtCore.Slot()
-    def command_finished(self) -> None:
+        if uid is not None:
+            # Store the unique id of the command
+            self._started_uid.add(uid)
+
+    @QtCore.Slot(object)
+    def command_finished(self, uid: str | None) -> None:
         self.busy = False
         self._wait_dialog.close()
+
+        if uid is not None:
+            # Remove the unique id of the command
+            self._started_uid.discard(uid)
+            self._finished_uid.add(uid)
+
+    @QtCore.Slot(str)
+    def forget_uid(self, uid: str) -> None:
+        # Remove the unique id of the command
+        self._finished_uid.discard(uid)
+
+    @QtCore.Slot(str)
+    def check_finished_uid(self, uid: str) -> bool:
+        # Check if the unique id is in the finished set
+        return uid in self._finished_uid
 
     @QtCore.Slot()
     def _show_busy_if_still_running(self) -> None:
@@ -272,7 +364,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def _get_positions(self) -> None:
-        for motor in self._motors.values():
+        for motor in self._motors:
             motor.update_value()
 
     @QtCore.Slot(object)
@@ -283,36 +375,44 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
         log.debug("Received pos result %s", output)
 
-        if address in self._motors:
-            self._motors[address].set_value(pos)
+        for motor in self._motors:
+            if motor.address == address:
+                motor.set_value(pos)
+                break
 
     @QtCore.Slot()
     def _update_plot(self):
-        pol = calculate_polarization(self._motors[0].value, self._motors[1].value)
+        pol = self.polarization
         self._plotter.set_polarization(pol)
         self._pol_info.setText(polarization_info(pol))
         self._update_shm()
 
     @QtCore.Slot()
     def _update_shm(self):
-        if self.shm is None:
+        if self.shm_optics is None:
             # Create shared memory on first update
-            self.shm = shared_memory.SharedMemory(
+            self.shm_optics = shared_memory.SharedMemory(
                 name="Optics", create=True, size=8 * len(self._motors)
             )
 
-        arr = np.ndarray((len(self._motors),), dtype="f8", buffer=self.shm.buf)
+        arr = np.ndarray((len(self._motors),), dtype="f8", buffer=self.shm_optics.buf)
 
-        for i, motor in enumerate(self._motors.values()):
+        for i, motor in enumerate(self._motors):
             arr[i] = motor.value
 
-    def closeEvent(self, event):
+    def closeEvent(self, *args, **kwargs) -> None:
         # Free shared memory
-        self.shm.close()
-        self.shm.unlink()
+        self.shm_optics.close()
+        self.shm_optics.unlink()
+
+        # Stop server
+        self.server.stopped.set()
+        self.server.wait(2000)
 
         self._thread.stopped.set()
         self._thread.wait()
+
+        super().closeEvent(*args, **kwargs)
 
 
 class PolarizationVisualizer(QtWidgets.QWidget):
