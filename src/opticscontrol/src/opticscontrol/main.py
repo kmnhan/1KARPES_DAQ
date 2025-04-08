@@ -312,7 +312,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
             self.check_finished_uid(args)
             rep = "1" if self.check_finished_uid(args) else "0"
 
-        log.debug("Replying to request %s %s with %s", command, args, rep)
+        # log.debug("Replying to request %s %s with %s", command, args, rep)
         self.sigServerReply.emit(rep)
 
     @QtCore.Slot(str, str)
@@ -325,6 +325,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
     @QtCore.Slot(str, float, object)
     def _parse_server_move(self, axis: str, value: float, unique_id: str | None):
+        log.debug("Move %s %s %s", axis, value, unique_id)
         motor = self._motors[int(axis)]
         motor.move(value, unique_id=unique_id)
 

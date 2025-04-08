@@ -110,7 +110,7 @@ class OpticsClient(_SingletonBase):
 
     def wait_motion_finish(self, unique_id: str):
         while not bool(self.query_int(f"CMD? {unique_id}")):
-            time.sleep(0.01)
+            time.sleep(0.5)
 
     def clear_uid(self, unique_id: str):
         self.write(f"CLR {unique_id}")
