@@ -224,6 +224,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setWindowTitle("Polarization Control")
 
         # Shared memory for access by other processes
         # Will be created on initial data update
@@ -438,7 +439,10 @@ class PolarizationVisualizer(QtWidgets.QWidget):
         self._hwp_ang.setValue(0)
         self._hwp_ang.setKeyboardTracking(False)
         self._hwp_ang.valueChanged.connect(self._update_polarization)
-        self._layout.addRow("λ/2", self._hwp_ang)
+        self._hwp_check = QtWidgets.QCheckBox("λ/2")
+        self._hwp_check.setChecked(True)
+        self._hwp_check.toggled.connect(self._update_polarization)
+        self._layout.addRow(self._hwp_check, self._hwp_ang)
 
         self._qwp_ang = QtWidgets.QDoubleSpinBox()
         self._qwp_ang.setRange(-360, 360)
@@ -446,15 +450,18 @@ class PolarizationVisualizer(QtWidgets.QWidget):
         self._qwp_ang.setValue(0)
         self._qwp_ang.setKeyboardTracking(False)
         self._qwp_ang.valueChanged.connect(self._update_polarization)
-        self._layout.addRow("λ/4", self._qwp_ang)
+        self._qwp_check = QtWidgets.QCheckBox("λ/4")
+        self._qwp_check.setChecked(True)
+        self._qwp_check.toggled.connect(self._update_polarization)
+        self._layout.addRow(self._qwp_check, self._qwp_ang)
 
         self._update_polarization()
 
     @QtCore.Slot()
-    def _update_polarization(self):
-        pol = calculate_polarization(
-            float(self._hwp_ang.value()), float(self._qwp_ang.value())
-        )
+    def _update_polarization(self) -> None:
+        hwp: float = self._hwp_ang.value() if self._hwp_check.isChecked() else np.nan
+        qwp: float = self._qwp_ang.value() if self._qwp_check.isChecked() else np.nan
+        pol = calculate_polarization(hwp, qwp)
         self._plotter.set_polarization(pol)
         self._pol_info.setText(polarization_info(pol))
 
@@ -499,7 +506,8 @@ class PolarizationPlotter(QtWidgets.QWidget):
         # Draw the polarization ellipse.
         painter.save()
         painter.translate(center)
-        painter.rotate(angle * 180 / np.pi)
+        painter.rotate(np.rad2deg(angle))
+
         painter.setPen(QtGui.QPen(QtGui.QColor("blue"), 2))
         painter.drawEllipse(
             QtCore.QRectF(-A * scale, -B * scale, 2 * A * scale, 2 * B * scale)

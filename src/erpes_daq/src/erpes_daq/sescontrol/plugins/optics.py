@@ -171,18 +171,15 @@ class QWP(_MotorizedOptic):
 
 
 class Pol(_MotorizedOptic):
-    # -1 0 1 2
-    # rc lh lc lv
-
     minimum: float = -1
     maximum: float = 2
     delta: float = 2
 
     pol_to_angles: dict[int, tuple[float, float]] = {
-        -1: (0.0, 45.0),
-        0: (45.0, 0.0),
-        1: (45.0, 45.0),
-        2: (0.0, 0.0),
+        -1: (0.0, 45.0),  # RC
+        0: (45.0, 0.0),  # LH
+        1: (45.0, 45.0),  # LC
+        2: (0.0, 0.0),  # LV
     }
 
     def refresh_state(self):

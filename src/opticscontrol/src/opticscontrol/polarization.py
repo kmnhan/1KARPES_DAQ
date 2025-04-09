@@ -15,6 +15,13 @@ def jones_qwp(theta) -> np.ndarray:
     return (1 / np.sqrt(2)) * np.array([[1 + 1j * c, 1j * s], [1j * s, 1 - 1j * c]])
 
 
+def jones_polarizer(theta) -> np.ndarray:
+    """Jones matrix for a linear polarizer with transmission axis at angle theta."""
+    theta = np.deg2rad(theta)
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c**2, c * s], [c * s, s**2]])
+
+
 def get_phase_diff(pol) -> float:
     """Get the phase difference of the polarization vector."""
     Ex, Ey = pol
