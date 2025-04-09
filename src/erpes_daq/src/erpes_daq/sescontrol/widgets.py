@@ -620,7 +620,11 @@ class ScanType(*uic.loadUiType(os.path.join(os.path.dirname(__file__), "scantype
 
         text: str = f"{self.current_file}"
         if self._niter == 1:
-            text += " started"
+            elapsed_time = time.perf_counter() - self.start_time
+            elapsed_time_str: str = humanize.precisedelta(
+                datetime.timedelta(seconds=elapsed_time)
+            )
+            text += f" started {elapsed_time_str} ago"
         else:
             step_times = np.diff(self.step_times)
             step_time_avg = np.mean(step_times)
