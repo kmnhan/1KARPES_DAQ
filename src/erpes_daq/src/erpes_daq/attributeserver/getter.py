@@ -135,11 +135,23 @@ def get_temperatures_shm() -> list[np.float64]:
 
 
 def get_pressures() -> list[np.float32]:
-    return get_shm_or_remote(get_pressures_shm, PORT_PRESSURE, 3, double=False)
+    try:
+        p_list = get_shm_or_remote(get_pressures_shm, PORT_PRESSURE, 3, double=False)
+    except Exception:
+        log.exception("Getting pressures failed, NaNs will be returned")
+        p_list = [np.nan] * 3
+    return p_list
 
 
 def get_positions() -> list[np.float64]:
-    return get_shm_or_remote(get_positions_shm, PORT_POSITION, len(MANIPULATOR_AXES))
+    try:
+        pos_list = get_shm_or_remote(
+            get_positions_shm, PORT_POSITION, len(MANIPULATOR_AXES)
+        )
+    except Exception:
+        log.exception("Getting positions failed, NaNs will be returned")
+        pos_list = [np.nan] * len(MANIPULATOR_AXES)
+    return pos_list
 
 
 def get_temperatures() -> list[np.float64]:
