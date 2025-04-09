@@ -232,13 +232,13 @@ class _PolSelect(QtWidgets.QWidget):
             "LC (1)": (45.0, 45.0),
             "LV (2)": (0.0, 0.0),
         }
-        btn_width: int = (
-            QtGui.QFontMetrics(self.go_btn.font()).boundingRect("RC (−1)").width() + 15
-        )
 
         self._btns = []
         for label, angles in pols.items():
             btn = QtWidgets.QPushButton(label)
+            btn_width: int = (
+                QtGui.QFontMetrics(btn.font()).boundingRect("RC (−1)").width() + 15
+            )
             btn.setFixedWidth(btn_width)
             btn.clicked.connect(lambda _, angles=angles: self._go_to_values(*angles))
 
