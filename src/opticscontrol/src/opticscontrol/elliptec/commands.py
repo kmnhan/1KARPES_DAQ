@@ -143,7 +143,9 @@ class ElliptecFtdiDevice(ElliptecFtdiDeviceBase):
 
     def position(self, address: int) -> tuple[int, float]:
         """Get the position of the device in pulses."""
-        ret_addr, _, response = self.query_command_check(address, "gp", out_command="PO")
+        ret_addr, _, response = self.query_command_check(
+            address, "gp", out_command="PO"
+        )
         return ret_addr, Long.parse(binascii.unhexlify(response))
 
     def position_physical(self, address: int) -> tuple[int, float]:

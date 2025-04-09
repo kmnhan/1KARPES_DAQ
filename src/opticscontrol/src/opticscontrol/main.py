@@ -13,8 +13,8 @@ import numpy.typing as npt
 from qtpy import QtCore, QtGui, QtWidgets
 
 from opticscontrol.elliptec.commands import ElliptecFtdiDevice
+from opticscontrol.opticsserver import OpticsServer
 from opticscontrol.polarization import calculate_polarization, polarization_info
-from opticscontrol.server import OpticsServer
 
 log = logging.getLogger("opticscontrol")
 log.setLevel(logging.DEBUG)
