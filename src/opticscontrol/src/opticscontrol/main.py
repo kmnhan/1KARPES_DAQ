@@ -150,7 +150,7 @@ class _RotatorWidget(QtWidgets.QWidget):
             .width()
             + 15
         )
-        # self._layout.addWidget(self.home_btn)
+        self._layout.addWidget(self.home_btn)
 
     @property
     def sigValueChanged(self) -> QtCore.Signal:
@@ -297,8 +297,8 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._control_widget.setLayout(self.control_layout)
 
         self._motors = [
-            _RotatorWidget(self, "λ/2", 0),
-            _RotatorWidget(self, "λ/4", 1),
+            _RotatorWidget(self, "λ/2", 1),
+            _RotatorWidget(self, "λ/4", 2),
         ]
         for motor in self._motors:
             motor.sigToggled.connect(self._update_plot)
@@ -306,9 +306,9 @@ class PolarizationControlWidget(QtWidgets.QWidget):
             self.control_layout.addWidget(motor)
 
         # Comment after installing lamba/4 waveplate
-        self._motors[1].check.setChecked(False)
-        self._motors[1]._toggled()
-        self._motors[1].check.setDisabled(True)
+        # self._motors[1].check.setChecked(False)
+        # self._motors[1]._toggled()
+        # self._motors[1].check.setDisabled(True)
 
         self.update_btn = QtWidgets.QPushButton("Get Positions")
         self.update_btn.clicked.connect(self._get_positions)
