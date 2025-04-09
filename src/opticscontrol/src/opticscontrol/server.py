@@ -44,7 +44,7 @@ import time
 import zmq
 from qtpy import QtCore
 
-log = logging.getLogger("moee")
+log = logging.getLogger("opticscontrol")
 
 
 class OpticsServer(QtCore.QThread):

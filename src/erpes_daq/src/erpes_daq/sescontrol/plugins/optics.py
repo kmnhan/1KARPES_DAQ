@@ -13,14 +13,14 @@ from erpes_daq.sescontrol.plugins import Motor
 OPTICS_PORT: int = 42633
 
 
-class _SingletonBase:
+class _OpticsClientSingleton:
     """Base class for singletons.
 
     This class implements the singleton pattern, ensuring that only one instance of the
     class is created and used throughout the application.
     """
 
-    __instance: _SingletonBase | None = None
+    __instance: _OpticsClientSingleton | None = None
 
     def __new__(cls):
         if not isinstance(cls.__instance, cls):
@@ -33,7 +33,7 @@ class _SingletonBase:
         return cls()
 
 
-class OpticsClient(_SingletonBase):
+class OpticsClient(_OpticsClientSingleton):
     def __init__(self):
         self.connected: bool = False
 
@@ -43,7 +43,9 @@ class OpticsClient(_SingletonBase):
             if not context:
                 context = zmq.Context()
             self.socket = context.socket(zmq.PAIR)
+            print("socket prepared, connecting...")
             self.socket.connect(f"tcp://localhost:{OPTICS_PORT}")
+            print("socket connected!")
             self.connected = True
 
     def disconnect(self):
@@ -69,13 +71,13 @@ class OpticsClient(_SingletonBase):
                 self.disconnect()
 
     def query(self, cmd: str) -> str:
-        with self.connection():
-            self.socket.send_string(cmd)
-            return self.socket.recv_string()
+        with self.connection() as soc:
+            soc.send_string(cmd)
+            return soc.recv_string()
 
     def write(self, cmd: str) -> None:
-        with self.connection():
-            self.socket.send_string(cmd)
+        with self.connection() as soc:
+            soc.send_string(cmd)
 
     def query_float(self, cmd: str) -> float:
         return float(self.query(cmd))
@@ -192,29 +194,41 @@ class Pol(_MotorizedOptic):
 
     def move(self, target: float) -> float:
         target_int: int = round(target)
+        print(f"target {target_int}")
         if target_int not in self.pol_to_angles:
+            print("terminating with nan, invalid pol input")
             return np.nan
 
         qwp_enabled: bool = self.client.enabled(1)
+
+        print(f"qwp enabled: {qwp_enabled}")
 
         if not qwp_enabled:
             if target_int == -1:
                 # RCP to LH
                 target_int = 0
-            elif target_int == 0:
+            elif target_int == 1:
                 # LCP to LV
                 target_int = 2
 
-        hwp, qwp = self.pol_to_angles[target_int]
+        print("target_integer", target_int)
 
-        uid_hwp: str = self.client.request_move(0, hwp)
+        hwp_ang, qwp_ang = self.pol_to_angles[target_int]
+
+        uid_hwp: str = self.client.request_move(0, hwp_ang)
+
+        print(f"requested move hwp {hwp_ang} with uid {uid_hwp}")
         if qwp_enabled:
-            uid_qwp: str = self.client.request_move(1, qwp)
+            uid_qwp: str = self.client.request_move(1, qwp_ang)
 
         self.client.wait_motion_finish(uid_hwp)
+        print("motion commanded successfully, sleeping 0.5sec")
+        time.sleep(0.5)
+        self.client.clear_uid(uid_hwp)
 
         if qwp_enabled:
             self.client.wait_motion_finish(uid_qwp)
+            self.client.clear_uid(uid_qwp)
 
         return target
 

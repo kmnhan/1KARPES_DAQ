@@ -200,12 +200,13 @@ class _RotatorWidget(QtWidgets.QWidget):
     @QtCore.Slot(float, object)
     def move(self, value: float | None = None, unique_id: str | None = None):
         if self.enabled:
-            if value is not None:
-                self.target_spin.setValue(value)
+            value = self.target_spin.value() if value is None else value
+
+            print("commanding move to ", value)
             self.pcw._thread.request_command(
                 "move_abs_physical",
                 callback_signal=self.pcw.sigRecvPos,
-                args=(self.address, float(np.deg2rad(self.target_spin.value()))),
+                args=(self.address, float(np.deg2rad(value))),
                 uid=unique_id,
             )
 
