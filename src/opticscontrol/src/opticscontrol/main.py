@@ -142,14 +142,14 @@ class _RotatorWidget(QtWidgets.QWidget):
         )
         self._layout.addWidget(self.go_btn)
 
-        # self.home_btn = QtWidgets.QPushButton("Home")
-        # self.home_btn.clicked.connect(self.home)
-        # self.home_btn.setFixedWidth(
-        #     QtGui.QFontMetrics(self.home_btn.font())
-        #     .boundingRect(self.home_btn.text())
-        #     .width()
-        #     + 15
-        # )
+        self.home_btn = QtWidgets.QPushButton("Home")
+        self.home_btn.clicked.connect(self.home)
+        self.home_btn.setFixedWidth(
+            QtGui.QFontMetrics(self.home_btn.font())
+            .boundingRect(self.home_btn.text())
+            .width()
+            + 15
+        )
         # self._layout.addWidget(self.home_btn)
 
     @property
