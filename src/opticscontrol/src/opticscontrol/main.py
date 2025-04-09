@@ -142,15 +142,15 @@ class _RotatorWidget(QtWidgets.QWidget):
         )
         self._layout.addWidget(self.go_btn)
 
-        self.home_btn = QtWidgets.QPushButton("Home")
-        self.home_btn.clicked.connect(self.home)
-        self.home_btn.setFixedWidth(
-            QtGui.QFontMetrics(self.home_btn.font())
-            .boundingRect(self.home_btn.text())
-            .width()
-            + 15
-        )
-        self._layout.addWidget(self.home_btn)
+        # self.home_btn = QtWidgets.QPushButton("Home")
+        # self.home_btn.clicked.connect(self.home)
+        # self.home_btn.setFixedWidth(
+        #     QtGui.QFontMetrics(self.home_btn.font())
+        #     .boundingRect(self.home_btn.text())
+        #     .width()
+        #     + 15
+        # )
+        # self._layout.addWidget(self.home_btn)
 
     @property
     def sigValueChanged(self) -> QtCore.Signal:
@@ -218,6 +218,52 @@ class _RotatorWidget(QtWidgets.QWidget):
             )
 
 
+class _PolSelect(QtWidgets.QWidget):
+    def __init__(self, parent: PolarizationControlWidget) -> None:
+        super().__init__(parent)
+        self._pcw = weakref.ref(parent)
+        _layout = QtWidgets.QHBoxLayout(self)
+        _layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(_layout)
+
+        pols: dict[str, tuple[float, float]] = {
+            "RC (−1)": (0.0, 45.0),
+            "LH (0)": (45.0, 0.0),
+            "LC (1)": (45.0, 45.0),
+            "LV (2)": (0.0, 0.0),
+        }
+        btn_width: int = (
+            QtGui.QFontMetrics(self.go_btn.font()).boundingRect("RC (−1)").width() + 15
+        )
+
+        self._btns = []
+        for label, angles in pols.items():
+            btn = QtWidgets.QPushButton(label)
+            btn.setFixedWidth(btn_width)
+            btn.clicked.connect(lambda _, angles=angles: self._go_to_values(*angles))
+
+            self._btns.append(btn)
+            _layout.addWidget(btn)
+
+    @QtCore.Slot()
+    def refresh_state(self):
+        if not self.pcw._motors[0].enabled:
+            for btn in self._btns:
+                btn.setDisabled(True)
+            return
+        if not self.pcw._motors[1].enabled:
+            self._btns[0].setDisabled(True)
+            self._btns[2].setDisabled(True)
+
+    def _go_to_values(self, p0, p1):
+        self.pcw._motors[0].move(p0)
+        self.pcw._motors[1].move(p1)
+
+    @property
+    def pcw(self) -> PolarizationControlWidget:
+        return self._pcw()
+
+
 class PolarizationControlWidget(QtWidgets.QWidget):
     sigRecvPos = QtCore.Signal(object)
     sigServerReply = QtCore.Signal(object)
@@ -239,6 +285,9 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._pol_info = QtWidgets.QLabel()
         self._pol_info.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._pol_info)
+
+        self._pol_choose = _PolSelect(self)
+        self._layout.addWidget(self._pol_choose)
 
         # Setup controls
         self._control_widget = QtWidgets.QWidget()
@@ -391,6 +440,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._plotter.set_polarization(pol)
         self._pol_info.setText(polarization_info(pol))
         self._update_shm()
+        self._pol_choose.refresh_state()
 
     @QtCore.Slot()
     def _update_shm(self):
