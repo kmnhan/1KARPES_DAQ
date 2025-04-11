@@ -100,15 +100,30 @@ def get_ses_properties() -> tuple[int, int]:
     return proc.pid, get_ses_window(proc)
 
 
+def get_seq_file() -> str:
+    """Get the currently active sequence file.
+
+    Does not support multiple sequences.
+    """
+    config = configparser.RawConfigParser()
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp = shutil.copy(
+            os.path.join(SES_DIR, "sequences", "SequenceList.ini"), tmpdirname
+        )
+        with open(tmp) as f:
+            config.read_file(f)
+    return os.path.join(SES_DIR, config["Sequence List"]["Sequence File 1"])
+
+
 def get_file_info() -> tuple[str, str, set[str], int, list[dict[str, str]]]:
-    """Read and parse the `factory.seq` file in the SES folder.
+    """Read and parse the sequence file in the SES folder.
 
     From the sequence file, we can determine where the current data is being saved.
 
     """
     config = configparser.RawConfigParser()
     with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp = shutil.copy(os.path.join(SES_DIR, "sequences", "factory.seq"), tmpdirname)
+        tmp = shutil.copy(get_seq_file(), tmpdirname)
         with open(tmp) as f:
             config.read_file(f)
 
