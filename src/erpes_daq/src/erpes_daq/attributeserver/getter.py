@@ -213,7 +213,7 @@ def get_optics_dict() -> dict[str, str]:
     except FileNotFoundError:
         ang_list = [np.nan] * len(OPTICS_KEYS)
 
-    return dict(zip(OPTICS_KEYS, [np.round(v, 2) for v in ang_list], strict=True))
+    return dict(zip(OPTICS_KEYS, [str(np.round(v, 2)) for v in ang_list], strict=True))
 
 
 def get_attribute_dict() -> dict[str, str]:
@@ -235,6 +235,7 @@ def get_attribute_dict() -> dict[str, str]:
             )
         else:
             attrs |= d
+    log.debug("Acquired attributes: %s", attrs)
     return attrs
 
 
