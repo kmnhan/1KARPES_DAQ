@@ -50,7 +50,7 @@ class AttributeServer(QtCore.QThread):
         # Broadcast header over socket
         while not self.stopped.is_set():
             socket.send_string(get_header())
-            time.sleep(0.1)
+            time.sleep(0.01)
 
         log.info("Attribute server stopped")
 
