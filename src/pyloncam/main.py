@@ -15,6 +15,15 @@ from pypylon import genicam, pylon
 from qt_extensions.colors import BetterColorBarItem, BetterImageItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
+log = logging.getLogger("pyloncam")
+log.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
+)
+log.addHandler(handler)
+
+
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
 
@@ -509,7 +518,7 @@ class FrameGrabber(QtCore.QThread):
                 try:
                     self.sigGrabbed.emit(grab_time, grab_result.GetArray(raw=False))
                 except ValueError:
-                    logging.exception("Exception while getting array from grabResult!")
+                    log.exception("Exception while getting array from grabResult!")
                 else:
                     if self.save_requested:
                         img.AttachGrabResultBuffer(grab_result)
