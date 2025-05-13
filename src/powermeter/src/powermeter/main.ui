@@ -136,10 +136,11 @@
    </property>
    <widget class="QMenu" name="controlmenu">
     <property name="title">
-     <string>Control...</string>
+     <string>Control</string>
     </property>
     <addaction name="actioncommand"/>
     <addaction name="actionzero"/>
+    <addaction name="actionref"/>
    </widget>
    <addaction name="controlmenu"/>
   </widget>
@@ -153,7 +154,12 @@
   </action>
   <action name="actionzero">
    <property name="text">
-    <string>Zero</string>
+    <string>Set True Zero</string>
+   </property>
+  </action>
+  <action name="actionref">
+   <property name="text">
+    <string>Set Reference</string>
    </property>
   </action>
  </widget>

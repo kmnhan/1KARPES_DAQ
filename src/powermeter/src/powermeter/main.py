@@ -261,6 +261,7 @@ class MainWindow(MainWindowGUI):
         self.log_timer.start()
 
         self.actionzero.triggered.connect(self.correct_zero)
+        self.actionref.triggered.connect(self.set_reference)
 
     @QtCore.Slot()
     def fetch_power(self) -> None:
@@ -279,6 +280,20 @@ class MainWindow(MainWindowGUI):
             if msg.strip() == "0":
                 break
         self.fetch_timer.start()
+
+    @QtCore.Slot()
+    def set_reference(self) -> None:
+        """Set the reference power value.
+
+        Sets the offset of the power meter to the mean of the last 50 measurements.
+        """
+        while len(self._recorded_values) < 50:
+            time.sleep(0.01)
+
+        ref: float = float(np.mean(self._recorded_values[-50:]) * 1e-6)
+
+        self.instr.request_write(f"SENS:POW:REF {ref}")
+        self.instr.request_write("SENS:POW:REF:STAT 1")
 
     def start_threads(self):
         self.instr.start()
