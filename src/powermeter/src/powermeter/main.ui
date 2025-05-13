@@ -44,7 +44,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="PlotWidget" name="pw1"/>
+         <widget class="PlotWidget" name="plot_live"/>
         </item>
        </layout>
       </widget>

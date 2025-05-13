@@ -1,3 +1,4 @@
+import collections
 import csv
 import datetime
 import logging
@@ -8,6 +9,7 @@ import time
 from multiprocessing import shared_memory
 
 import numpy as np
+import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from powermeter.connection import VISAThread
@@ -111,14 +113,16 @@ class MainWindowGUI(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
+        self.plot_live.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
 
         self.shm: shared_memory.SharedMemory | None = None
 
         self._command_widget: CommandWidget = CommandWidget()
         self.actioncommand.triggered.connect(self.show_command_widget)
 
-        self._recent_power: float | None = None
-        self._recent_dt: datetime.datetime | None = None
+        # About 15 minutes
+        self._recorded_times: collections.deque = collections.deque(maxlen=7200)
+        self._recorded_values: collections.deque = collections.deque(maxlen=7200)
 
         # Setup logging
         self.logwriter = LoggingProc(LOG_DIR)
@@ -144,10 +148,12 @@ class MainWindowGUI(
     @QtCore.Slot(str, object)
     def update_power(self, message: str, dt: datetime.datetime) -> None:
         """Set the power value in the GUI."""
-        self._recent_power = float(message) * 1e6  # power in μW
-        self._recent_dt = dt
+        power = float(message) * 1e6  # power in μW
 
-        self.power_label.setText(f"{self._recent_power:.4f} μW")
+        self._recorded_times.append(dt.timestamp())
+        self._recorded_values.append(power)
+
+        self.power_label.setText(f"{power:.4f} μW")
 
         if self.shm is None:
             # Create shared memory on first update
@@ -157,13 +163,19 @@ class MainWindowGUI(
             log.debug("Shared memory created")
 
         # Write the power value to shared memory
-        np.ndarray((1,), "f8", self.shm.buf)[0] = float(self._recent_power)
+        np.ndarray((1,), "f8", self.shm.buf)[0] = float(power)
+
+        # Update plot
+        self.plot_live.setData(x=self._recorded_times, y=self._recorded_values)
 
     @QtCore.Slot()
     def write_log(self) -> None:
         """Write the power value to the log file."""
-        if self._recent_power is not None and self._recent_dt is not None:
-            self.logwriter.append(self._recent_dt, [self._recent_power])
+        if self._recorded_times and self._recorded_values:
+            self.logwriter.append(
+                datetime.datetime.fromtimestamp(self._recorded_times[-1]),
+                [self._recorded_values[-1]],
+            )
 
 
 class MainWindow(MainWindowGUI):
