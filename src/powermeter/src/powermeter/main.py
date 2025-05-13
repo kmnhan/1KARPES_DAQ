@@ -241,8 +241,8 @@ class MainWindow(MainWindowGUI):
         # self.instr.request_write("SENS:RANG:AUTO ON")
         self.instr.request_write("SENS:POW:RANG MIN")
 
-        # Set full bandwidth for Photodiode sensors (no analog filter)
-        self.instr.request_write("INP:PDI:FILT:LPAS:STAT 0")
+        # Enable analog filter (limits bandwidth to ~3 Hz)
+        self.instr.request_write("INP:PDI:FILT:LPAS:STAT 1")
 
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
@@ -311,7 +311,10 @@ class MainWindow(MainWindowGUI):
                 self.instr.controller.query("SENS:POW:REF?", loglevel=logging.DEBUG)
             )
 
-        self.instr.request_write(f"SENS:POW:REF {ref}")
+        if ref < 0:
+            ref = 0.0
+
+        self.instr.request_write(f"SENS:POW:REF {np.format_float_positional(ref)}")
         self.instr.request_write("SENS:POW:REF:STAT 1")
 
         self.fetch_timer.start()
