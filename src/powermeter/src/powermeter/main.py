@@ -185,43 +185,45 @@ class MainWindow(MainWindowGUI):
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
 
-        # Set averaging to 50 (equals to 20 hz)
-        self.instr.request_write("SENS:AVER:COUN 50")
+        # Set averaging to 100 (equals to 10 hz)
+        self.instr.request_write("SENS:AVER:COUN 100")
 
         # Set wavelength to 206 nm
         self.instr.request_write("SENS:CORR:WAV 206")
 
         self.sigPowerRead.connect(self.update_power)
 
+        # Set up the signal to refresh the power value
         self.fetch_timer = QtCore.QTimer(self)
         self.fetch_timer.timeout.connect(self.fetch_power)
-        self.fetch_timer.setInterval(100)  # 100 ms
+        self.fetch_timer.setInterval(125)
         self.fetch_timer.start()
 
         self.log_timer.start()
 
     @QtCore.Slot()
     def fetch_power(self) -> None:
-        self.instr.request_query("MEAS:POW?", self.sigPowerRead)
+        self.instr.request_query("MEAS:POW?", self.sigPowerRead, loglevel=logging.TRACE)
 
     def start_threads(self):
         self.instr.start()
         # Wait until all threads are ready
-        log.info("Waiting for threads to start")
+        log.info("Starting measurement thread...")
         while any((self.instr.stopped.is_set(),)):
             time.sleep(1e-4)
-        log.info("All threads started")
+        log.info("Measurement thread started")
 
     def stop_threads(self):
-        log.info("Stopping threads")
+        log.info("Stopping measurement thread...")
         self.instr.stopped.set()
-        log.info("Waiting for threads to stop")
         self.instr.wait()
-        log.info("All threads stopped")
+        log.info("Measurement thread stopped")
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         self.stop_threads()
+
         self.logwriter.stop()
+        log.info("Logging process stopped")
 
         # Free shared memory
         self.shm.close()
