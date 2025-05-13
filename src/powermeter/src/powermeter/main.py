@@ -155,7 +155,7 @@ class MainWindowGUI(
         self._recorded_times.append(dt.timestamp())
         self._recorded_values.append(power)
 
-        self.power_label.setText(f"{power:.4f} μW")
+        self.power_label.setText(f"{power:.4f} μW".replace("-", "−"))
 
         if self.shm is None:
             # Create shared memory on first update
