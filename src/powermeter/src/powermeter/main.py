@@ -127,8 +127,8 @@ class MainWindowGUI(
         self.actioncommand.triggered.connect(self.show_command_widget)
 
         # Live plot data (not logged) - about 1 hour
-        self._recorded_times: collections.deque = collections.deque(maxlen=7200)
-        self._recorded_values: collections.deque = collections.deque(maxlen=7200)
+        self._recorded_times: collections.deque = collections.deque(maxlen=36000)
+        self._recorded_values: collections.deque = collections.deque(maxlen=36000)
 
         # Plotted data (logged)
         self._plot_times: list[float] = []
