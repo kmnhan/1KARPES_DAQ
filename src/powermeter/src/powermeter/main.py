@@ -230,7 +230,11 @@ class MainWindow(MainWindowGUI):
         self._command_widget.instrument = self.instr
 
         # Auto range
-        self.instr.request_write("SENS:RANGE:AUTO ON")
+        # self.instr.request_write("SENS:RANG:AUTO ON")
+        self.instr.request_write("SENS:POW:RANG MIN")
+
+        # Set full bandwidth for Photodiode sensors (no analog filter)
+        self.instr.request_write("INP:PDI:FILT:LPAS:STAT 0")
 
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
