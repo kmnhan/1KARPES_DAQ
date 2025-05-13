@@ -216,6 +216,15 @@ def get_optics_dict() -> dict[str, str]:
     return dict(zip(OPTICS_KEYS, [str(np.round(v, 2)) for v in ang_list], strict=True))
 
 
+def get_flux_dict() -> dict[str, str]:
+    try:
+        flux = get_shared_float("laser_power")
+    except FileNotFoundError:
+        flux = np.nan
+
+    return {"laser_power": str(flux)}
+
+
 def get_attribute_dict() -> dict[str, str]:
     attrs = {"attrs_time": datetime.datetime.now().isoformat()}
     for fn in (
@@ -225,6 +234,7 @@ def get_attribute_dict() -> dict[str, str]:
         get_position_dict,
         get_pressure_dict,
         get_optics_dict,
+        get_flux_dict,
     ):
         try:
             d = fn()

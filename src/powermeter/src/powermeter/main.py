@@ -5,7 +5,9 @@ import multiprocessing
 import os
 import sys
 import time
+from multiprocessing import shared_memory
 
+import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from powermeter.connection import VISAThread
@@ -110,6 +112,8 @@ class MainWindowGUI(
         super().__init__(*args, **kwargs)
         self.setupUi(self)
 
+        self.shm: shared_memory.SharedMemory | None = None
+
         self._command_widget: CommandWidget = CommandWidget()
         self.actioncommand.triggered.connect(self.show_command_widget)
 
@@ -144,6 +148,16 @@ class MainWindowGUI(
         self._recent_dt = dt
 
         self.power_label.setText(f"{self._recent_power:.4f} μW")
+
+        if self.shm is None:
+            # Create shared memory on first update
+            self.shm = shared_memory.SharedMemory(
+                name="laser_power", create=True, size=8
+            )
+            log.debug("Shared memory created")
+
+        # Write the power value to shared memory
+        np.ndarray((1,), "f8", self.shm.buf)[0] = float(self._recent_power)
 
     @QtCore.Slot()
     def write_log(self) -> None:
@@ -205,6 +219,12 @@ class MainWindow(MainWindowGUI):
     def closeEvent(self, event: QtGui.QCloseEvent):
         self.stop_threads()
         self.logwriter.stop()
+
+        # Free shared memory
+        self.shm.close()
+        self.shm.unlink()
+        log.debug("Shared memory unlinked")
+
         super().closeEvent(event)
 
 
