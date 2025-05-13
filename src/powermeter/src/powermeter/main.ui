@@ -136,13 +136,14 @@
      <height>37</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuConnection">
+   <widget class="QMenu" name="controlmenu">
     <property name="title">
-     <string>Connection</string>
+     <string>Control...</string>
     </property>
     <addaction name="actioncommand"/>
+    <addaction name="actionzero"/>
    </widget>
-   <addaction name="menuConnection"/>
+   <addaction name="controlmenu"/>
   </widget>
   <action name="actioncommand">
    <property name="text">
@@ -150,6 +151,11 @@
    </property>
    <property name="toolTip">
     <string>Directly read &amp; write SCPI commands</string>
+   </property>
+  </action>
+  <action name="actionzero">
+   <property name="text">
+    <string>Zero</string>
    </property>
   </action>
  </widget>

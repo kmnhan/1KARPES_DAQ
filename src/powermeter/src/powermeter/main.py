@@ -215,9 +215,25 @@ class MainWindow(MainWindowGUI):
 
         self.log_timer.start()
 
+        self.actionzero.triggered.connect(self.correct_zero)
+
     @QtCore.Slot()
     def fetch_power(self) -> None:
         self.instr.request_query("MEAS:POW?", self.sigPowerRead, loglevel=logging.TRACE)
+
+    @QtCore.Slot()
+    def correct_zero(self) -> None:
+        """Correct the zero point of the power meter."""
+        self.fetch_timer.stop()
+        self.instr.request_write("SENS:CORR:COLL:ZERO")
+        while True:
+            time.sleep(0.01)
+            msg = self.instr.controller.query(
+                "SENS:CORR:COLL:ZERO:STAT?", loglevel=logging.TRACE
+            )
+            if msg == "0":
+                break
+        self.fetch_timer.start()
 
     def start_threads(self):
         self.instr.start()
