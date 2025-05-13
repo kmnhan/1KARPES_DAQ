@@ -139,7 +139,7 @@ class MainWindowGUI(
         self.logwriter.start()
 
         self.log_timer = QtCore.QTimer(self)
-        self.set_logging_interval(10.0)
+        self.set_logging_interval(5.0)
         self.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.log_timer.timeout.connect(self.write_log)
 
@@ -239,8 +239,8 @@ class MainWindow(MainWindowGUI):
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
 
-        # Set averaging to 500 (once every 500 ms)
-        self.instr.request_write("SENS:AVER:COUN 500")
+        # Set averaging to 100 (once every 100 ms)
+        self.instr.request_write("SENS:AVER:COUN 100")
 
         # Set wavelength to 206 nm
         self.instr.request_write("SENS:CORR:WAV 206")
@@ -250,7 +250,7 @@ class MainWindow(MainWindowGUI):
         # Set up the signal to refresh the power value
         self.fetch_timer = QtCore.QTimer(self)
         self.fetch_timer.timeout.connect(self.fetch_power)
-        self.fetch_timer.setInterval(500)
+        self.fetch_timer.setInterval(100)
         self.fetch_timer.start()
 
         self.log_timer.start()
