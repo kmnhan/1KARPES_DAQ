@@ -289,8 +289,9 @@ class MainWindow(MainWindowGUI):
 
         Sets the offset of the power meter to the mean of the last 50 measurements.
         """
-        while len(self._recorded_values) < 50:
-            time.sleep(0.01)
+        if len(self._recorded_values) < 50:
+            QtCore.QTimer.singleShot(1000, self.set_reference)
+            return
 
         ref: float = float(np.mean(self._recorded_values[-50:]) * 1e-6)
 
