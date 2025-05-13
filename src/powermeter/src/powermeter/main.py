@@ -114,17 +114,25 @@ class MainWindowGUI(
         super().__init__(*args, **kwargs)
         self.setupUi(self)
         self.plot_live.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
-        self._live_plot = pg.PlotDataItem()
-        self.plot_live.addItem(self._live_plot)
+        self._plot_live_data = pg.PlotDataItem()
+        self.plot_live.addItem(self._plot_live_data)
+
+        self.plot_log.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
+        self._plot_log_data = pg.PlotDataItem()
+        self.plot_log.addItem(self._plot_log_data)
 
         self.shm: shared_memory.SharedMemory | None = None
 
         self._command_widget: CommandWidget = CommandWidget()
         self.actioncommand.triggered.connect(self.show_command_widget)
 
-        # About 15 minutes
+        # Live plot data (not logged) - about 1 hour
         self._recorded_times: collections.deque = collections.deque(maxlen=7200)
         self._recorded_values: collections.deque = collections.deque(maxlen=7200)
+
+        # Plotted data (logged)
+        self._plot_times: list[float] = []
+        self._plot_values: list[float] = []
 
         # Setup logging
         self.logwriter = LoggingProc(LOG_DIR)
@@ -168,16 +176,30 @@ class MainWindowGUI(
         np.ndarray((1,), "f8", self.shm.buf)[0] = float(power)
 
         # Update plot
-        self._live_plot.setData(self._recorded_times, self._recorded_values)
+        self._plot_live_data.setData(self._recorded_times, self._recorded_values)
 
     @QtCore.Slot()
     def write_log(self) -> None:
         """Write the power value to the log file."""
         if self._recorded_times and self._recorded_values:
-            self.logwriter.append(
-                datetime.datetime.fromtimestamp(self._recorded_times[-1]),
-                [self._recorded_values[-1]],
-            )
+            dt: float = self._recorded_times[-1]
+            val: float = self._recorded_values[-1]
+            self.logwriter.append(datetime.datetime.fromtimestamp(dt), [val])
+            self._plot_times.append(dt)
+            self._plot_values.append(val)
+
+    @QtCore.Slot()
+    def update_plot(self) -> None:
+        """Update the plot with the logged data."""
+        if self._plot_times and self._plot_values:
+            self._plot_log_data.setData(self._plot_times, self._plot_values)
+
+    @QtCore.Slot()
+    def clear_plot(self) -> None:
+        """Clear the plot."""
+        self._plot_times = []
+        self._plot_values = []
+        self._plot_log_data.setData()
 
 
 class MainWindow(MainWindowGUI):
@@ -199,8 +221,8 @@ class MainWindow(MainWindowGUI):
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
 
-        # Set averaging to 200 (equals to 5 hz)
-        self.instr.request_write("SENS:AVER:COUN 200")
+        # Set averaging to 500 (once every 500 ms)
+        self.instr.request_write("SENS:AVER:COUN 500")
 
         # Set wavelength to 206 nm
         self.instr.request_write("SENS:CORR:WAV 206")
@@ -210,7 +232,7 @@ class MainWindow(MainWindowGUI):
         # Set up the signal to refresh the power value
         self.fetch_timer = QtCore.QTimer(self)
         self.fetch_timer.timeout.connect(self.fetch_power)
-        self.fetch_timer.setInterval(200)
+        self.fetch_timer.setInterval(500)
         self.fetch_timer.start()
 
         self.log_timer.start()

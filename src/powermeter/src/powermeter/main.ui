@@ -21,6 +21,7 @@
        <font>
         <family>Arial</family>
         <pointsize>35</pointsize>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -28,14 +29,14 @@
        <string>0.0000 μW</string>
       </property>
       <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+       <set>Qt::AlignCenter|Qt::AlignHCenter|Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
       </property>
      </widget>
     </item>
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -53,7 +54,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="PlotWidget" name="pw2"/>
+         <widget class="PlotWidget" name="plot_log"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="_2">
@@ -108,7 +109,7 @@
           <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -132,7 +133,7 @@
      <x>0</x>
      <y>0</y>
      <width>456</width>
-     <height>22</height>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="controlmenu">
