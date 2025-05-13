@@ -272,6 +272,8 @@ class MainWindow(MainWindowGUI):
         log.info("Measurement thread stopped")
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        self._command_widget.close()
+
         self.stop_threads()
 
         self.logwriter.stop()
