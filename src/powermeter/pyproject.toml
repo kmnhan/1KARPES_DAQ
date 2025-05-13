@@ -1,0 +1,17 @@
+[project]
+name = "powermeter"
+version = "0.1.0"
+description = "Laser power monitor"
+readme = "README.md"
+authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
+requires-python = ">=3.11"
+dependencies = [
+    "pyqt6>=6.8.0",
+    "pyvisa>=1.15.0",
+    "pyvisa-py>=0.8.0",
+    "qtpy>=2.4.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
