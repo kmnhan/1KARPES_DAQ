@@ -20,7 +20,6 @@
       <property name="font">
        <font>
         <pointsize>35</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -132,7 +131,7 @@
      <x>0</x>
      <y>0</y>
      <width>456</width>
-     <height>37</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="controlmenu">
