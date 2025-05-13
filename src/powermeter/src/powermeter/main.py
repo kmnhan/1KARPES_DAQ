@@ -166,7 +166,11 @@ class MainWindowGUI(
         np.ndarray((1,), "f8", self.shm.buf)[0] = float(power)
 
         # Update plot
-        self.plot_live.setData(x=self._recorded_times, y=self._recorded_values)
+        self.plot_live.plotItem.setData(
+            x=self._recorded_times,
+            y=self._recorded_values,
+            pen=pg.mkPen("w"),
+        )
 
     @QtCore.Slot()
     def write_log(self) -> None:
