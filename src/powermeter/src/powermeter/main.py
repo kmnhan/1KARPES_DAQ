@@ -201,6 +201,19 @@ class MainWindowGUI(
         self._plot_values = []
         self._plot_log_data.setData()
 
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self._command_widget.close()
+
+        self.logwriter.stop()
+        log.info("Logging process stopped")
+
+        # Free shared memory
+        self.shm.close()
+        self.shm.unlink()
+        log.debug("Shared memory unlinked")
+
+        super().closeEvent(event)
+
 
 class MainWindow(MainWindowGUI):
     sigPowerRead = QtCore.Signal(str, object)
@@ -272,17 +285,7 @@ class MainWindow(MainWindowGUI):
         log.info("Measurement thread stopped")
 
     def closeEvent(self, event: QtGui.QCloseEvent):
-        self._command_widget.close()
-
         self.stop_threads()
-
-        self.logwriter.stop()
-        log.info("Logging process stopped")
-
-        # Free shared memory
-        self.shm.close()
-        self.shm.unlink()
-        log.debug("Shared memory unlinked")
 
         super().closeEvent(event)
 
