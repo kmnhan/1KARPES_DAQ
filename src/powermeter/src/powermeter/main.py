@@ -231,7 +231,7 @@ class MainWindow(MainWindowGUI):
             msg = self.instr.controller.query(
                 "SENS:CORR:COLL:ZERO:STAT?", loglevel=logging.TRACE
             )
-            if msg == "0":
+            if msg.strip() == "0":
                 break
         self.fetch_timer.start()
 
