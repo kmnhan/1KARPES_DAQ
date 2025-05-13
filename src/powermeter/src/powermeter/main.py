@@ -185,6 +185,9 @@ class MainWindow(MainWindowGUI):
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
 
+        # Set averaging to 50 (equals to 20 hz)
+        self.instr.request_write("SENS:AVER:COUN 50")
+
         # Set wavelength to 206 nm
         self.instr.request_write("SENS:CORR:WAV 206")
 
