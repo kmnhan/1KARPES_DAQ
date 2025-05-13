@@ -1226,6 +1226,7 @@ name = "powermeter"
 version = "0.1.0"
 source = { editable = "src/powermeter" }
 dependencies = [
+    { name = "numpy" },
     { name = "psutil" },
     { name = "pyqt6" },
     { name = "pyqtgraph" },
@@ -1238,6 +1239,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "numpy", specifier = ">=2.1.3" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyqt6", specifier = ">=6.8.0" },
     { name = "pyqtgraph", specifier = ">=0.13.7" },
