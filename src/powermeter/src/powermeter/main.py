@@ -164,6 +164,11 @@ class MainWindowGUI(
         self._recorded_values.append(power)
 
         self.power_label.setText(f"{power:.4f} μW".replace("-", "−"))
+        threshold = 0.01
+        if power < threshold:
+            self.power_label.setStyleSheet("color: red;")
+        else:
+            self.power_label.setStyleSheet("")
 
         if self.shm is None:
             # Create shared memory on first update
