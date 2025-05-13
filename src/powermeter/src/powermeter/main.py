@@ -187,16 +187,17 @@ class MainWindowGUI(
             self.logwriter.append(datetime.datetime.fromtimestamp(dt), [val])
             self._plot_times.append(dt)
             self._plot_values.append(val)
+            self.update_plot()
 
     @QtCore.Slot()
     def update_plot(self) -> None:
-        """Update the plot with the logged data."""
+        """Update logged plot data with the latest values."""
         if self._plot_times and self._plot_values:
             self._plot_log_data.setData(self._plot_times, self._plot_values)
 
     @QtCore.Slot()
     def clear_plot(self) -> None:
-        """Clear the plot."""
+        """Clear the logged plot."""
         self._plot_times = []
         self._plot_values = []
         self._plot_log_data.setData()
