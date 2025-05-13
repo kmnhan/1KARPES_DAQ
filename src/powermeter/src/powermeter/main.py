@@ -199,8 +199,8 @@ class MainWindow(MainWindowGUI):
         # CW mode
         self.instr.request_write("SENS:FREQ:MODE CW")
 
-        # Set averaging to 100 (equals to 10 hz)
-        self.instr.request_write("SENS:AVER:COUN 100")
+        # Set averaging to 200 (equals to 5 hz)
+        self.instr.request_write("SENS:AVER:COUN 200")
 
         # Set wavelength to 206 nm
         self.instr.request_write("SENS:CORR:WAV 206")
@@ -210,7 +210,7 @@ class MainWindow(MainWindowGUI):
         # Set up the signal to refresh the power value
         self.fetch_timer = QtCore.QTimer(self)
         self.fetch_timer.timeout.connect(self.fetch_power)
-        self.fetch_timer.setInterval(125)
+        self.fetch_timer.setInterval(200)
         self.fetch_timer.start()
 
         self.log_timer.start()
