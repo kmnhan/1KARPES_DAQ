@@ -294,12 +294,27 @@ class MainWindow(MainWindowGUI):
             QtCore.QTimer.singleShot(1000, self.set_reference)
             return
 
+        self.fetch_timer.stop()
+
         ref: float = (
             np.mean(list(itertools.islice(reversed(self._recorded_values), 50))) * 1e-6
         )
 
+        if (
+            self.instr.controller.query(
+                "SENS:POW:REF:STAT?", loglevel=logging.DEBUG
+            ).strip()
+            == "1"
+        ):
+            # If the reference is already set, add the current reference to the new one
+            ref = ref + float(
+                self.instr.controller.query("SENS:POW:REF?", loglevel=logging.DEBUG)
+            )
+
         self.instr.request_write(f"SENS:POW:REF {ref}")
         self.instr.request_write("SENS:POW:REF:STAT 1")
+
+        self.fetch_timer.start()
 
     def start_threads(self):
         self.instr.start()
