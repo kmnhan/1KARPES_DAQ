@@ -75,7 +75,7 @@
   <customwidget>
    <class>VISAWidgetBase</class>
    <extends>QWidget</extends>
-   <header>connection</header>
+   <header>powermeter.connection</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

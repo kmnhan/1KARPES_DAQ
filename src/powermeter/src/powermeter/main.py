@@ -1,5 +1,6 @@
 import csv
 import datetime
+import logging
 import multiprocessing
 import os
 import sys
@@ -9,6 +10,8 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from powermeter.connection import VISAThread
 from powermeter.widgets import CommandWidget
+
+log = logging.getLogger("powermeter")
 
 LOG_DIR = "D:/Logs/Power"
 
@@ -145,8 +148,10 @@ class MainWindow(MainWindowGUI):
         super().__init__(*args, **kwargs)
 
         self.instr: VISAThread = VISAThread(
-            "USB0::0x1313::0x8078::P0033832::INSTR", interval_ms=0
+            "USB0::4883::32888::P0033832::0::INSTR", interval_ms=0
         )
+        self.start_threads()
+
         self._command_widget.instrument = self.instr
 
         # Auto range
@@ -156,7 +161,7 @@ class MainWindow(MainWindowGUI):
         self.instr.request_write("SENS:FREQ:MODE CW")
 
         # Set wavelength to 206 nm
-        self.instr.write("SENS:CORR:WAV 206")
+        self.instr.request_write("SENS:CORR:WAV 206")
 
         self.sigPowerRead.connect(self.update_power)
 
@@ -170,6 +175,26 @@ class MainWindow(MainWindowGUI):
     @QtCore.Slot()
     def fetch_power(self) -> None:
         self.instr.request_query("MEAS:POW?", self.sigPowerRead)
+
+    def start_threads(self):
+        self.instr.start()
+        # Wait until all threads are ready
+        log.info("Waiting for threads to start")
+        while any((self.instr.stopped.is_set(),)):
+            time.sleep(1e-4)
+        log.info("All threads started")
+
+    def stop_threads(self):
+        log.info("Stopping threads")
+        self.instr.stopped.set()
+        log.info("Waiting for threads to stop")
+        self.instr.wait()
+        log.info("All threads stopped")
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.stop_threads()
+        self.logwriter.stop()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":

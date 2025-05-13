@@ -6,10 +6,14 @@ readme = "README.md"
 authors = [{ name = "Kimoon Han", email = "khan@kaist.ac.kr" }]
 requires-python = ">=3.11"
 dependencies = [
+    "psutil>=7.0.0",
     "pyqt6>=6.8.0",
+    "pyqtgraph>=0.13.7",
+    "pyusb>=1.3.1",
     "pyvisa>=1.15.0",
     "pyvisa-py>=0.8.0",
     "qtpy>=2.4.2",
+    "zeroconf>=0.147.0",
 ]
 
 [build-system]
