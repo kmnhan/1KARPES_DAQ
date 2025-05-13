@@ -114,6 +114,8 @@ class MainWindowGUI(
         super().__init__(*args, **kwargs)
         self.setupUi(self)
         self.plot_live.plotItem.setAxisItems({"bottom": pg.DateAxisItem()})
+        self._live_plot = pg.PlotDataItem()
+        self.plot_live.addItem(self._live_plot)
 
         self.shm: shared_memory.SharedMemory | None = None
 
@@ -166,11 +168,7 @@ class MainWindowGUI(
         np.ndarray((1,), "f8", self.shm.buf)[0] = float(power)
 
         # Update plot
-        self.plot_live.plotItem.setData(
-            x=self._recorded_times,
-            y=self._recorded_values,
-            pen=pg.mkPen("w"),
-        )
+        self._live_plot.setData(self._recorded_times, self._recorded_values)
 
     @QtCore.Slot()
     def write_log(self) -> None:
