@@ -163,7 +163,7 @@ class MainWindowGUI(
         self._recorded_times.append(dt.timestamp())
         self._recorded_values.append(power)
 
-        self.power_label.setText(f"{power:.4f} μW".replace("-", "−"))
+        self.power_label.setText(f"{power:.3f} μW".replace("-", "−"))
         threshold = 0.01
         if power < threshold:
             self.power_label.setStyleSheet("color: red;")
