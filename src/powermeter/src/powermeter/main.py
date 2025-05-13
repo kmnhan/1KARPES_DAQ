@@ -1,6 +1,7 @@
 import collections
 import csv
 import datetime
+import itertools
 import logging
 import multiprocessing
 import os
@@ -293,7 +294,9 @@ class MainWindow(MainWindowGUI):
             QtCore.QTimer.singleShot(1000, self.set_reference)
             return
 
-        ref: float = float(np.mean(self._recorded_values[-50:]) * 1e-6)
+        ref: float = (
+            np.mean(list(itertools.islice(reversed(self._recorded_values), 50))) * 1e-6
+        )
 
         self.instr.request_write(f"SENS:POW:REF {ref}")
         self.instr.request_write("SENS:POW:REF:STAT 1")
