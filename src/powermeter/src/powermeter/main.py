@@ -134,6 +134,7 @@ class MainWindowGUI(
         # Plotted data (logged)
         self._plot_times: list[float] = []
         self._plot_values: list[float] = []
+        self.clear_btn.clicked.connect(self.clear_plot)
 
         # Setup logging
         self.logwriter = LoggingProc(LOG_DIR)
