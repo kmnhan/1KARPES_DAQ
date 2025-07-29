@@ -120,7 +120,7 @@ def calculate_polarization(hwp_angle: float, qwp_angle: float) -> np.ndarray:
         The Jones vector of the resulting polarization state.
 
     """
-    pol = np.array([0.0, 1.0])
+    pol = np.array([1.0, 0.0])
 
     if not np.isnan(hwp_angle):
         pol = jones_hwp(hwp_angle) @ pol

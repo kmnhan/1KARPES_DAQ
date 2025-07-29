@@ -100,10 +100,15 @@ class _RotatorWidget(QtWidgets.QWidget):
     sigToggled = QtCore.Signal()
 
     def __init__(
-        self, parent: PolarizationControlWidget, title: str, address: int
+        self,
+        parent: PolarizationControlWidget,
+        title: str,
+        address: int,
+        offset: float = 0.0,
     ) -> None:
         super().__init__(parent=parent)
         self.address = int(address)
+        self.offset = offset
 
         self._pcw = weakref.ref(parent)
 
@@ -178,7 +183,7 @@ class _RotatorWidget(QtWidgets.QWidget):
 
     def set_value(self, value: float) -> None:
         if self.enabled:
-            self.val_spin.setValue(np.rad2deg(value))
+            self.val_spin.setValue((np.rad2deg(value) + self.offset) % 360)
 
     @QtCore.Slot()
     def update_value(self):
@@ -201,6 +206,7 @@ class _RotatorWidget(QtWidgets.QWidget):
     def move(self, value: float | None = None, unique_id: str | None = None):
         if self.enabled:
             value = self.target_spin.value() if value is None else value
+            value = (value - self.offset) % 360
 
             print("commanding move to ", value)
             self.pcw._thread.request_command(
@@ -227,10 +233,10 @@ class _PolSelect(QtWidgets.QWidget):
         self.setLayout(_layout)
 
         pols: dict[str, tuple[float, float]] = {
-            "RC (−1)": (0.0, 45.0),
-            "LH (0)": (45.0, 0.0),
-            "LC (1)": (45.0, 45.0),
-            "LV (2)": (0.0, 0.0),
+            "RC (−1)": (90.0, 135.0),
+            "LH (0)": (90.0, 90.0),
+            "LC (1)": (135.0, 135.0),
+            "LV (2)": (135.0, 90.0),
         }
 
         self._btns = []
@@ -297,6 +303,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._control_widget.setLayout(self.control_layout)
 
         self._motors = [
+            # _RotatorWidget(self, "λ/2", 1, offset=-5.7),
             _RotatorWidget(self, "λ/2", 1),
             _RotatorWidget(self, "λ/4", 2),
         ]
@@ -519,7 +526,7 @@ class PolarizationVisualizer(QtWidgets.QWidget):
 class PolarizationPlotter(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.jones = np.array([0.0, 1.0])
+        self.jones = np.array([1.0, 0.0])
         self.setMinimumSize(100, 100)
 
     def set_polarization(self, jones):
