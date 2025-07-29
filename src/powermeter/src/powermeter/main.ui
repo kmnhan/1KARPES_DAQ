@@ -141,6 +141,8 @@
     <addaction name="actioncommand"/>
     <addaction name="actionzero"/>
     <addaction name="actionref"/>
+    <addaction name="separator"/>
+    <addaction name="actioncopy"/>
    </widget>
    <addaction name="controlmenu"/>
   </widget>
@@ -160,6 +162,14 @@
   <action name="actionref">
    <property name="text">
     <string>Set Reference</string>
+   </property>
+  </action>
+  <action name="actioncopy">
+   <property name="text">
+    <string>Copy Value</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
    </property>
   </action>
  </widget>

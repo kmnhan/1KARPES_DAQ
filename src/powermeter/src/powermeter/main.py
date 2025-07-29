@@ -10,6 +10,7 @@ import time
 from multiprocessing import shared_memory
 
 import numpy as np
+import pyperclip
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
@@ -30,6 +31,7 @@ log.addHandler(handler)
 
 
 LOG_DIR = "D:/Logs/Power"
+NUM_AVERAGE: int = 3
 
 
 class LoggingProc(multiprocessing.Process):
@@ -145,6 +147,16 @@ class MainWindowGUI(
         self.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.log_timer.timeout.connect(self.write_log)
 
+    @property
+    def recent_values(self) -> list[float]:
+        return list(
+            itertools.islice(
+                self._recorded_values,
+                max(0, len(self._recorded_values) - NUM_AVERAGE),
+                None,
+            )
+        )
+
     @QtCore.Slot(float)
     def set_logging_interval(self, interval: float) -> None:
         """Set the logging interval in seconds."""
@@ -181,8 +193,8 @@ class MainWindowGUI(
             )
             log.debug("Shared memory created")
 
-        # Write the power value to shared memory
-        np.ndarray((1,), "f8", self.shm.buf)[0] = float(power)
+        # Write averaged power to shared memory
+        np.ndarray((1,), "f8", self.shm.buf)[0] = np.mean(self.recent_values)
 
         # Update plot
         self._plot_live_data.setData(self._recorded_times, self._recorded_values)
@@ -266,6 +278,7 @@ class MainWindow(MainWindowGUI):
 
         self.actionzero.triggered.connect(self.correct_zero)
         self.actionref.triggered.connect(self.set_reference)
+        self.actioncopy.triggered.connect(self.copy_vals)
 
     @QtCore.Slot()
     def fetch_power(self) -> None:
@@ -284,6 +297,10 @@ class MainWindow(MainWindowGUI):
             if msg.strip() == "0":
                 break
         self.fetch_timer.start()
+
+    @QtCore.Slot()
+    def copy_vals(self) -> None:
+        pyperclip.copy(f"{np.mean(self.recent_values)}")
 
     @QtCore.Slot()
     def set_reference(self) -> None:
