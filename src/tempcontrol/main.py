@@ -338,6 +338,9 @@ class MainWindow(MainWindowGUI):
 
         # Set heater options
         # Max current 0.1 A for pump is hardcoded to protect the GL4.
+        # HTRSET <output>,<heater resistance>,<max current>,
+        # <max user current>,<current/power> [336 manual 132p]
+
         log.info("Setting heater protection")
         self.lake336.request_write("HTRSET 1,1,2,0,2")
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
