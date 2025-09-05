@@ -213,6 +213,14 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         return self.current_config.get("reverse", False)
 
     @property
+    def fixed_pulse_train(self) -> int | None:
+        """Forces pulse train to constant calibration purposes."""
+        val = self.current_config.get("fixed_pulse_train", None)
+        if val is None:
+            return None
+        return int(val)
+
+    @property
     def abs_tolerance(self) -> float:
         return abs(self.cal_A * self.tolerance)
 
@@ -802,6 +810,7 @@ class SingleControllerWidget(QtWidgets.QWidget):
             kwargs["high_precision"] = True
         else:
             kwargs["high_precision"] = False
+        kwargs["fixed_pulse_train"] = ch.fixed_pulse_train
 
         self.mmthread.initialize_parameters(**kwargs)
 
