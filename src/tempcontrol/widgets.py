@@ -247,6 +247,10 @@ class ReadingWidgetGUI(VISAWidgetBase):
         # Do not reconnect on error, reconnecting will be handled by CommandWidget
         kwargs["reconnect_on_error"] = False
         super().__init__(*args, **kwargs)
+
+        if names is not None and len(names) != len(inputs):
+            raise ValueError("Length of names must match length of inputs")
+
         self.inputs = inputs
 
         self.setLayout(QtWidgets.QGridLayout())

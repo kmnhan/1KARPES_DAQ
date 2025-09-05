@@ -161,30 +161,18 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
             self.config = tomlkit.load(f)
 
         self.readings_336 = ReadingWidget(
-            inputs=("A", "B", "C", "D"),
-            num_raw_readings=4,
+            inputs=("A", "B", "C", "D1", "D2", "D3", "D4", "D5"),
+            num_raw_readings=8,
             names=self.config["general"]["names_336"],
             decimals=4,
         )
-        self.readings_218_0 = ReadingWidget(
-            inputs=tuple(str(i) for i in range(1, 5)),
+
+        self.readings_218 = ReadingWidget(
+            inputs=tuple(str(i) for i in range(1, 9)),
             num_raw_readings=8,
-            names=list(self.config["general"]["names_218"])[:4],
-            indexer=slice(0, 4),
-        )
-        self.readings_218_1 = ReadingWidget(
-            inputs=tuple(str(i) for i in range(5, 9)),
-            num_raw_readings=8,
-            names=list(self.config["general"]["names_218"])[4:],
-            indexer=slice(4, 8),
+            names=list(self.config["general"]["names_218"]),
         )
 
-        readings_218_combined = QtWidgets.QWidget()
-        readings_218_combined.setLayout(QtWidgets.QHBoxLayout())
-        readings_218_combined.layout().setContentsMargins(0, 0, 0, 0)
-        readings_218_combined.layout().addWidget(self.readings_218_0)
-        readings_218_combined.layout().addWidget(QVLine())
-        readings_218_combined.layout().addWidget(self.readings_218_1)
         self.readings_331 = ReadingWidget(
             inputs=(" ",),
             num_raw_readings=1,
@@ -196,10 +184,10 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.group0.layout().addWidget(self.readings_336)
         self.group1.layout().addWidget(self.readings_331)
-        self.group2.layout().addWidget(readings_218_combined)
+        self.group2.layout().addWidget(self.readings_218)
 
         # d1 = Dock(f"Lakeshore 336", widget=self.readings_336)
-        # d2 = Dock(f"Lakeshore 218", widget=readings_218_combined)
+        # d2 = Dock(f"Lakeshore 218", widget=self.readings_218)
         # d3 = Dock(f"Lakeshore 331", widget=self.readings_331)
         # self.area.addDock(d1, "left")
         # self.area.addDock(d2, "right", d1)
@@ -269,8 +257,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
     def toggle_sensorunits(self):
         for rw in (
             self.readings_336,
-            self.readings_218_0,
-            self.readings_218_1,
+            self.readings_218,
             self.readings_331,
         ):
             rw.set_srdg_visible(not rw.srdg_enabled)
@@ -312,8 +299,7 @@ class MainWindow(MainWindowGUI):
 
         # Link reading, command, and heater widgets to corresponding thread
         self.readings_331.instrument = self.lake331
-        self.readings_218_0.instrument = self.lake218
-        self.readings_218_1.instrument = self.lake218
+        self.readings_218.instrument = self.lake218
         self.readings_336.instrument = self.lake336
 
         self.command336.instrument = self.lake336
@@ -332,8 +318,7 @@ class MainWindow(MainWindowGUI):
 
         # Connect update signal
         self.sigUpdate.connect(self.readings_331.trigger_update)
-        self.sigUpdate.connect(self.readings_218_0.trigger_update)
-        self.sigUpdate.connect(self.readings_218_1.trigger_update)
+        self.sigUpdate.connect(self.readings_218.trigger_update)
         self.sigUpdate.connect(self.readings_336.trigger_update)
         self.sigUpdate.connect(self.heater1.trigger_update)
         self.sigUpdate.connect(self.heater2.trigger_update)
@@ -561,8 +546,7 @@ class MainWindow(MainWindowGUI):
         )
         out = (
             out
-            + self.readings_218_0.get_raw_krdg(self.refresh_time)
-            + self.readings_218_1.get_raw_krdg(self.refresh_time)
+            + self.readings_218.get_raw_krdg(self.refresh_time)
             + self.readings_331.get_raw_krdg(self.refresh_time)
         )
         return dt, out
@@ -574,12 +558,10 @@ class MainWindow(MainWindowGUI):
         )
         out = (
             out
-            + self.readings_218_0.get_raw_krdg(self.log_interval)
-            + self.readings_218_1.get_raw_krdg(self.log_interval)
+            + self.readings_218.get_raw_krdg(self.log_interval)
             + self.readings_331.get_raw_krdg(self.log_interval)
             + self.readings_336.get_raw_srdg(self.log_interval)
-            + self.readings_218_0.get_raw_srdg(self.log_interval)
-            + self.readings_218_1.get_raw_srdg(self.log_interval)
+            + self.readings_218.get_raw_srdg(self.log_interval)
             + self.readings_331.get_raw_srdg(self.log_interval)
             + self.heater1.get_raw_data(self.log_interval)[:3]
             + self.heater2.get_raw_data(self.log_interval)[:3]
