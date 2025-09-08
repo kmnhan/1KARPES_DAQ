@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 import sys
+import weakref
 from collections.abc import Sequence
 
 import pyqtgraph as pg
@@ -60,6 +61,7 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
 
     sigSetpChanged = QtCore.Signal(float)
     sigRampChanged = QtCore.Signal(int, float)
+    sigPIDInputSet = QtCore.Signal(object, int)
 
     def __init__(self, *args, **kwargs):
         # Do not reconnect on error, reconnecting will be handled by CommandWidget
@@ -79,6 +81,16 @@ class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
         # List of [update_time, value] pairs
         # [setpoint, output, range, ramp state, ramp rate]
         self._raw_data: list[list[datetime.datetime, str]] = [[None, "nan"]] * 5
+
+    def set_input_name(self, input_name: str, input_desc: str) -> None:
+        if input_name.strip() == "":
+            input_name = "B"
+        self.input_name.setText(f"Input <b>{input_name}</b>")
+        self.input_desc.setText(input_desc)
+
+    def set_heater_mode(self, mode: str) -> None:
+        self.input_name.setText(mode)
+        self.input_desc.setText("")
 
     @property
     def sigRangeChanged(self):
@@ -158,6 +170,7 @@ class HeaterWidget(HeaterWidgetGUI):
     sigRAMP = QtCore.Signal(str, object)
     sigHTR = QtCore.Signal(str, object)
     sigRANGE = QtCore.Signal(str, object)
+    sigOUTMODE = QtCore.Signal(str, object)
 
     def __init__(
         self,
@@ -165,6 +178,7 @@ class HeaterWidget(HeaterWidgetGUI):
         instrument: VISAThread | None = None,
         output: str,
         loop: str | None = None,
+        use_cmode: bool = False,
         **kwargs,
     ):
         super().__init__(*args, instrument=instrument, **kwargs)
@@ -173,23 +187,82 @@ class HeaterWidget(HeaterWidgetGUI):
             loop = self.output
         self.loop = loop
 
-        self.curr_spin: QtWidgets.QDoubleSpinBox | None = None
+        self._curr_spin: QtWidgets.QDoubleSpinBox | None = None
+
+        self._use_cmode: bool = use_cmode
 
         self.sigSETP.connect(self.update_setpoint)
         self.sigRAMP.connect(self.update_ramp)
         self.sigHTR.connect(self.update_output)
         self.sigRANGE.connect(self.update_range)
+        self.sigOUTMODE.connect(self.update_outmode_or_cmode)
 
         self.sigSetpChanged.connect(self.change_setpoint)
         self.sigRampChanged.connect(self.change_ramp)
         self.sigRangeChanged.connect(self.change_range)
         self.sigUpdateTarget.connect(self.target_current)
 
+    @property
+    def curr_spin(self) -> QtWidgets.QDoubleSpinBox | None:
+        if self._curr_spin is not None:
+            return self._curr_spin()
+        return None
+
+    @curr_spin.setter
+    def curr_spin(self, value: QtWidgets.QDoubleSpinBox):
+        self._curr_spin = weakref.ref(value)
+
     @QtCore.Slot(str, object)
     def update_ramp(self, value: str, dt: datetime.datetime):
         st, rate = value.split(",")
         self.update_rampst(st, dt)
         self.update_ramprate(rate, dt)
+
+    @QtCore.Slot(str, object)
+    def update_outmode_or_cmode(self, value: str, dt: datetime.datetime):
+        if self._use_cmode:
+            self.update_cmode(value, dt)
+        else:
+            self.update_outmode(value, dt)
+
+    @QtCore.Slot(str, object)
+    def update_cmode(self, value: str, dt: datetime.datetime):
+        # CMODE command parsed assuming 331 controller
+        mode = value.strip()
+        match int(mode):
+            case 1:
+                # Manual PID (default)
+                self.sigPIDInputSet.emit(self, 1)
+            case 2:
+                self.set_heater_mode("Zone")
+            case 3:
+                self.set_heater_mode("Open Loop")
+            case 4:
+                self.set_heater_mode("AutoTune PID")
+            case 5:
+                self.set_heater_mode("AutoTune PI")
+            case 6:
+                self.set_heater_mode("AutoTune P")
+
+    @QtCore.Slot(str, object)
+    def update_outmode(self, value: str, dt: datetime.datetime):
+        # OUTMODE command parsed assuming 336 controller
+        mode, input_number, _ = value.split(",")
+        match int(mode):
+            case 0:
+                # Heater output off
+                self.set_heater_mode("Heater OFF")
+            case 1:
+                # Closed loop PID (default)
+                self.sigPIDInputSet.emit(self, int(input_number))
+            case 2:
+                self.set_heater_mode("Zone")
+            case 3:
+                self.set_heater_mode("Open Loop")
+            case 4:
+                self.set_heater_mode("Monitor")
+            case 5:
+                self.set_heater_mode("Warmup")
 
     @QtCore.Slot(float)
     def change_setpoint(self, value: float):
@@ -218,6 +291,16 @@ class HeaterWidget(HeaterWidgetGUI):
     def target_current(self):
         if self.curr_spin is not None:
             self.set_target(self.curr_spin.value())
+
+    def trigger_outmode_update(self):
+        if self._use_cmode:
+            self.instrument.request_query(
+                f"CMODE? {self.loop}".strip(), self.sigOUTMODE, loglevel=5
+            )
+        else:
+            self.instrument.request_query(
+                f"OUTMODE? {self.loop}".strip(), self.sigOUTMODE, loglevel=5
+            )
 
     def trigger_update(self):
         self.instrument.request_query(
@@ -367,6 +450,7 @@ class ReadingWidgetGUI(VISAWidgetBase):
             #     self.layout().addWidget(self.krdg_units[i], 2 * i, 6, 2, 1)
 
     def update_names(self, names: list[str]):
+        self.names = names
         for label, name in zip(self.name_labels, names, strict=True):
             label.setText(name)
 

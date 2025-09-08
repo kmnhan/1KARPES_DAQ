@@ -163,7 +163,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.readings_336 = ReadingWidget(
             inputs=("A", "B", "C", "D1", "D2", "D3", "D4", "D5"),
             num_raw_readings=8,
-            names=self.config["general"]["names_336"],
+            names=list(self.config["general"]["names_336"]),
             decimals=4,
         )
 
@@ -176,7 +176,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
         self.readings_331 = ReadingWidget(
             inputs=(" ",),
             num_raw_readings=1,
-            names=self.config["general"]["names_331"],
+            names=list(self.config["general"]["names_331"]),
             hide_srdg=True,
             krdg_command="KRDG? B",
             srdg_command="SRDG? B",
@@ -203,16 +203,17 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
         self.heater1 = HeaterWidget(output="1")
         self.heater2 = HeaterWidget(output="2")
-        self.heater3 = HeaterWidget(output="", loop="1")
+        self.heater3 = HeaterWidget(output="", loop="1", use_cmode=True)
         self.heatswitch = HeatSwitchWidget()
-        d1 = Dock("336 Heater1 (D) Control", widget=self.heater1)
-        d2 = Dock("336 Heater2 (C) Control", widget=self.heater2)
-        d3 = Dock("331 Heater Control", widget=self.heater3)
-        d4 = Dock("Heat Switch", widget=self.heatswitch)
-        area.addDock(d2, "left")
-        area.addDock(d1, "right", d2)
-        area.addDock(d3, "right", d1)
-        area.addDock(d4, "right", d3)
+        self.dock_heater1 = Dock("336 Heater 1", widget=self.heater1)
+        self.dock_heater2 = Dock("336 Heater 2", widget=self.heater2)
+        self.dock_heater3 = Dock("331 Heater", widget=self.heater3)
+        self.dock_heatswitch = Dock("Heat Switch", widget=self.heatswitch)
+
+        area.addDock(self.dock_heater1, "left")
+        area.addDock(self.dock_heater2, "right", self.dock_heater1)
+        area.addDock(self.dock_heater3, "right", self.dock_heater2)
+        area.addDock(self.dock_heatswitch, "right", self.dock_heater3)
 
         self.commands = QtWidgets.QTabWidget()
         self.commands.setWindowTitle("Command")
@@ -235,7 +236,7 @@ class MainWindowGUI(*uic.loadUiType("main.ui")):
 
     def show_heaters(self):
         rect = self.geometry()
-        self.heaters.setGeometry(rect.x() + rect.width(), rect.y(), 300, rect.height())
+        self.heaters.setGeometry(rect.x() + rect.width(), rect.y(), 100, 100)
         self.heaters.show()
 
     def show_commands(self):
@@ -309,10 +310,9 @@ class MainWindow(MainWindowGUI):
         self.heater1.instrument = self.lake336
         self.heater2.instrument = self.lake336
         self.heater3.instrument = self.lake331
-
-        self.heater1.curr_spin = self.readings_336.krdg_spins[3]
-        self.heater2.curr_spin = self.readings_336.krdg_spins[2]
-        self.heater3.curr_spin = self.readings_331.krdg_spins[0]
+        self.heater1.sigPIDInputSet.connect(self.update_336_heater_input)
+        self.heater2.sigPIDInputSet.connect(self.update_336_heater_input)
+        self.heater3.sigPIDInputSet.connect(self.update_331_heater_input)
 
         self.heatswitch.instrument = self.mkpower
 
@@ -337,13 +337,34 @@ class MainWindow(MainWindowGUI):
             self.lake218.request_write("*RST")
 
         # Set heater options
+        log.info("Setting heater control loop")
+
+        # OUTMODE <output>,<mode>,<input>,<powerup enable> [336 manual 139p]
+        self.lake336.request_write("OUTMODE 1,1,2,0")
+        self.lake336.request_write("OUTMODE 2,1,8,0")
+
+        # CMODE <loop>,<mode> [331 manual 94p]
+        self.lake331.request_write("CMODE 1,3")  # Manual output
+
+        log.info("Setting heater protection")
         # Max current 0.1 A for pump is hardcoded to protect the GL4.
         # HTRSET <output>,<heater resistance>,<max current>,
         # <max user current>,<current/power> [336 manual 132p]
 
-        log.info("Setting heater protection")
-        self.lake336.request_write("HTRSET 1,1,2,0,2")
+        # Sample stage heater
+        # Hardcoded to max 0.707 A (25 W), increase if more power is needed
+        self.lake336.request_write("HTRSET 1,2,1,0,2")
+
+        # GL4 He pump heater, max current 0.1 A (3 W)
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
+
+        # heater3 is unused
+        self.dock_heater3.setVisible(False)
+
+        # Heater settings should have been properly initialized by now
+        self.heater1.trigger_outmode_update()
+        self.heater2.trigger_outmode_update()
+        self.heater3.trigger_outmode_update()
 
         # Setup plotting
         self.refresh_time = float(self.config["acquisition"]["refresh_time"])
@@ -391,6 +412,29 @@ class MainWindow(MainWindowGUI):
         self.update()
         self.log_timer.start()
         log.info("Begin data acquisition")
+
+    @QtCore.Slot(object, int)
+    def update_336_heater_input(
+        self, heater_widget: HeaterWidget, input_number: int
+    ) -> None:
+        """Set heater widget title and current spinbox based on input number."""
+        idx = input_number - 1
+        heater_widget.set_input_name(
+            self.readings_336.inputs[idx], self.readings_336.names[idx]
+        )
+        heater_widget.curr_spin = self.readings_336.krdg_spins[idx]
+
+    @QtCore.Slot(object, int)
+    def update_331_heater_input(
+        self, heater_widget: HeaterWidget, input_number: int
+    ) -> None:
+        """Set heater widget title and current spinbox based on input number."""
+        # input_number is always 1 for the 331
+        idx = input_number - 1
+        heater_widget.set_input_name(
+            self.readings_331.inputs[idx], self.readings_331.names[idx]
+        )
+        heater_widget.curr_spin = self.readings_331.krdg_spins[idx]
 
     def start_threads(self):
         self.lake218.start()
