@@ -11,6 +11,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from erpes_daq.attributeserver.getter import (
     SLIT_TABLE,
+    TEMPERATURE_KEYS,
     get_pressure_strings,
     get_temperature_strings,
 )
@@ -142,9 +143,15 @@ class StatusThread(QtCore.QThread):
 class StatusWidget(
     *uic.loadUiType(os.path.join(os.path.dirname(__file__), "status.ui"))
 ):
+    TEMP_INDICES: tuple[int, int, int] = (1, 4, 7)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        self.label_0.setText(TEMPERATURE_KEYS[self.TEMP_INDICES[0]])
+        self.label_1.setText(TEMPERATURE_KEYS[self.TEMP_INDICES[1]])
+        self.label_2.setText(TEMPERATURE_KEYS[self.TEMP_INDICES[2]])
 
         # Start attribute server
         self.attr_server = AttributeServer()
@@ -157,9 +164,9 @@ class StatusWidget(
 
     @QtCore.Slot(object)
     def update_temperature(self, temp: list[str]):
-        self.line0.setText(temp[0])
-        self.line1.setText(temp[1])
-        self.line2.setText(temp[2])
+        self.line0.setText(temp[self.TEMP_INDICES[0]])
+        self.line1.setText(temp[self.TEMP_INDICES[1]])
+        self.line2.setText(temp[self.TEMP_INDICES[2]])
 
     @QtCore.Slot(object)
     def update_pressure(self, pressure: list[str]):
