@@ -18,11 +18,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "mypy>=1.15.0",
-    "pre-commit>=4.0.1",
-    "ruff>=0.11.5",
-]
+dev = ["mypy>=1.15.0", "pre-commit>=4.0.1", "ruff>=0.11.5"]
 
 [tool.uv.sources]
 qt_extensions = { workspace = true }
@@ -43,7 +39,6 @@ members = ["shared/*", "src/*"]
 [tool.ruff]
 line-length = 88
 indent-width = 4
-include = ["pyproject.toml", "*.py"]
 
 [tool.ruff.lint]
 select = [
@@ -103,6 +98,7 @@ ignore = [
 ]
 extend-select = []
 allowed-confusables = ["−", "γ"]
+exclude = ["*.ipynb"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
