@@ -1,4 +1,0 @@
-opencv-python
-pyqt6
-qtpy
-pyqtgraph>=0.13.4

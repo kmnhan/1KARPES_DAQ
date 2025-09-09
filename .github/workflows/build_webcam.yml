@@ -29,11 +29,11 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/webcam
+      working-directory: ./src/webcam/src/webcam
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Webcam Viewer
-        path: src/webcam/dist/webcam/
+        path: src/webcam/src/webcam/dist/webcam/
