@@ -29,11 +29,11 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/mg15
+      working-directory: ./src/mg15/src/mg15
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: MG15
-        path: src/mg15/dist/mg15/
+        path: src/mg15/src/mg15/dist/mg15/
