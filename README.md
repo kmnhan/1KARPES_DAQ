@@ -115,7 +115,7 @@ make sure all indicators are showing 🟢.
    uv sync --all-extras --dev
    ```
 
-4. Install pre-commit hooks by running `pre-commit install` in the root directory.
+4. Install pre-commit hooks by running `uv run pre-commit install` in the root directory.
 
 ### Notes
 
