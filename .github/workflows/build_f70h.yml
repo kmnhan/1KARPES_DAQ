@@ -34,11 +34,11 @@ jobs:
     #     install-only: true
 
     - name: Building...
-      working-directory: ./src/f70h
+      working-directory: ./src/f70h/src/f70h
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: F70H Monitor
-        path: src/f70h/dist/f70h/
+        path: /src/f70h/src/f70h/dist/f70h/
