@@ -282,7 +282,13 @@ class SingleChannelWidget(*uic.loadUiType("channel.ui")):
         """Refresh calibration factors and set motion bounds."""
         self.cal_A = float(self.current_config.get("a", 1.0))
         self.cal_B = float(self.current_config.get("b", 0.0))
-        self.cal_B -= float(self.current_config.get("origin", 0.0))
+
+        origin_mm = float(self.current_config.get("origin", 0.0))
+        origin_raw = self.current_config.get("origin_raw", None)
+        if origin_raw is not None:
+            self.cal_B = -self.cal_A * float(origin_raw)
+        else:
+            self.cal_B -= origin_mm
 
         bounds = (
             self.convert_pos(int(self.current_config.get("min", 0))),
