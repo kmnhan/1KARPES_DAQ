@@ -29,11 +29,11 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/logviewer
+      working-directory: ./src/logviewer/src/logviewer
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Log Viewer
-        path: src/logviewer/dist/
+        path: src/logviewer/src/logviewer/dist/
