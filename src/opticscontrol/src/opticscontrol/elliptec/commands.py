@@ -28,7 +28,7 @@ STATUS: dict[int, str] = {
 
 
 MOTION_TIMEOUT: float = (
-    20.0  #: The default timeout for motion commands such as move and home.
+    3.0  #: The default timeout for motion commands such as move and home.
 )
 
 

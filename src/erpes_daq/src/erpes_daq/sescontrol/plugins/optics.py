@@ -176,10 +176,10 @@ class Pol(_MotorizedOptic):
     delta: float = 2
 
     pol_to_angles: dict[int, tuple[float, float]] = {
-        -1: (0.0, 45.0),  # RC
-        0: (45.0, 0.0),  # LH
-        1: (45.0, 45.0),  # LC
-        2: (0.0, 0.0),  # LV
+        -1: (90.0, 135.0),  # RC
+        0: (90.0, 90.0),  # LH
+        1: (90.0, 45.0),  # LC
+        2: (135.0, 90.0),  # LV
     }
 
     def refresh_state(self):

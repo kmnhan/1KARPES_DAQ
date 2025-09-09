@@ -31,7 +31,7 @@ log.addHandler(handler)
 
 
 LOG_DIR = "D:/Logs/Power"
-NUM_AVERAGE: int = 3
+NUM_AVERAGE: int = 5
 
 
 class LoggingProc(multiprocessing.Process):

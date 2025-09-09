@@ -7,9 +7,10 @@ from multiprocessing import shared_memory
 
 import numpy as np
 
-from erpes_daq.sescontrol.plugins.optics import HWP
+from erpes_daq.sescontrol.plugins.optics import HWP, QWP
 
-LOG_FILE = "D:/Logs/Misc/250728_glb_hwp_rpm_try2.csv"
+# LOG_FILE = "D:/Logs/Misc/250729_hwp_qwp_rpm_try2.csv"
+LOG_FILE = "D:/Logs/Misc/250730_glb_qwp_rpm.csv"
 
 
 class LoggingProc(multiprocessing.Process):
@@ -68,20 +69,47 @@ def get_power() -> float:
 
 
 if __name__ == "__main__":
-    # hwp_targets = np.linspace(0, 358, 180)
-    hwp_targets = np.linspace(0, 356, 90)
+    # wp_targets = np.linspace(0, 358, 180)
+    wp_targets = np.linspace(0, 356, 90)
 
     logger = LoggingProc()
     logger.start()
 
-    hwp = HWP()
-    hwp.pre_motion()
-    for ang in hwp_targets:
-        hwp.move(ang)
-        time.sleep(0.4)
+    # wp = HWP()
+    wp = QWP()
+    wp.pre_motion()
+    for ang in wp_targets:
+        wp.move(ang)
+        time.sleep(0.7)
         pwr = get_power()
         logger.add_content([ang, pwr])
 
-    hwp.post_motion()
+    wp.post_motion()
     time.sleep(1)  # wait until logger finishes logging
     logger.stop()
+
+
+# if __name__ == "__main__":
+#     qwp_targets = np.linspace(0, 356, 90)
+#     hwp_targets = 22.5 + qwp_targets / 2
+
+#     logger = LoggingProc()
+#     logger.start()
+
+#     wp = HWP()
+
+#     wp.pre_motion()
+#     for hwp_ang, qwp_ang in zip(hwp_targets, qwp_targets, strict=True):
+#         wp.AXIS = 1
+#         wp.move(qwp_ang)
+
+#         wp.AXIS = 0
+#         wp.move(hwp_ang)
+
+#         time.sleep(0.4)
+#         pwr = get_power()
+#         logger.add_content([hwp_ang, qwp_ang, pwr])
+
+#     wp.post_motion()
+#     time.sleep(1)  # wait until logger finishes logging
+#     logger.stop()

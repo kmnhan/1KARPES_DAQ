@@ -69,7 +69,13 @@ class ElliptecThread(QtCore.QThread):
                     result = getattr(device, meth_name)(*args)
                 except Exception:
                     log.exception("Error while calling %s", meth_name)
-                    result = None
+
+                    n_left = int(self.queue.qsize())
+                    self.queue.put((meth_name, callback_signal, args, uid))
+                    for _ in range(n_left):
+                        self.queue.put(self.queue.get())
+                    continue
+
                 self.sigExecutionFinished.emit(uid)
 
                 if callback_signal is not None:
@@ -235,7 +241,7 @@ class _PolSelect(QtWidgets.QWidget):
         pols: dict[str, tuple[float, float]] = {
             "RC (−1)": (90.0, 135.0),
             "LH (0)": (90.0, 90.0),
-            "LC (1)": (135.0, 135.0),
+            "LC (1)": (90.0, 45.0),
             "LV (2)": (135.0, 90.0),
         }
 
@@ -303,9 +309,10 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._control_widget.setLayout(self.control_layout)
 
         self._motors = [
-            # _RotatorWidget(self, "λ/2", 1, offset=-5.7),
-            _RotatorWidget(self, "λ/2", 1),
+            _RotatorWidget(self, "λ/2", 1, offset=0.0),
+            # _RotatorWidget(self, "λ/2", 1),
             _RotatorWidget(self, "λ/4", 2),
+            # _RotatorWidget(self, "λ/4", 2),
         ]
         for motor in self._motors:
             motor.sigToggled.connect(self._update_plot)
