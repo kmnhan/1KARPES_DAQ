@@ -380,7 +380,7 @@ def valid_config(filename: str | None = None) -> bool:
         return False
 
 
-if __name__ == "__main__":
+def main():
     multiprocessing.freeze_support()
 
     qapp = QtWidgets.QApplication(sys.argv)

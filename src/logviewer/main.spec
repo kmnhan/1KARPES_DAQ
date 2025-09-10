@@ -5,11 +5,17 @@ if sys.platform == "darwin":
 else:
     icon_path = "src/logviewer/icon.ico"
 
+from PyInstaller.utils.hooks import collect_data_files
+
+datas = []
+datas += collect_data_files("logviewer")
+
+
 a = Analysis(
     ["src/logviewer/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=["PyQt6"],
     hookspath=[],
     hooksconfig={},

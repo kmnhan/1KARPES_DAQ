@@ -1,3 +1,4 @@
-import runpy
+from logviewer.main import main
 
-runpy.run_module("logviewer.main", run_name="__main__")
+if __name__ == "__main__":
+    main()

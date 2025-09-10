@@ -291,7 +291,7 @@ class MainWindow(MainWindowGUI):
         super().closeEvent(*args, **kwargs)
 
 
-if __name__ == "__main__":
+def main():
     qapp: QtWidgets.QApplication = QtWidgets.QApplication.instance()
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)

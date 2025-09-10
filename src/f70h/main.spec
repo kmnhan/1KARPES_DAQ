@@ -1,17 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
+
+datas = []
+datas += collect_data_files("f70h")
 
 
 a = Analysis(
-    ["main.py"],
+    ["src/f70h/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("plotting.ui", "."),
-        ("pressures.ui", "."),
-        ("mg15.py", "."),
-        ("icon.ico", "."),
-    ],
-    hiddenimports=["PyQt6", "pyqtgraph", "pymodbus"],
+    datas=datas,
+    hiddenimports=["PyQt6", "pyvisa", "pyvisa_py", "serial"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -25,7 +24,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="MG15",
+    name="F70H Monitor",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -36,7 +35,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon.ico"],
+    icon=["src/f70h/icon.ico"],
 )
 coll = COLLECT(
     exe,
@@ -45,5 +44,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="mg15",
+    name="f70h",
 )

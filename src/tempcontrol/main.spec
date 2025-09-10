@@ -1,11 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
+
+datas = []
+datas += collect_data_files("tempcontrol")
 
 
 a = Analysis(
     ["src/tempcontrol/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=["PyQt6", "pyqtgraph", "pyvisa_py"],
     hookspath=[],
     hooksconfig={},
