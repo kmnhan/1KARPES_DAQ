@@ -9,15 +9,16 @@ import tomllib
 from multiprocessing import shared_memory
 
 import numpy as np
-from maniserver import ManiServer
-from moee import MMStatus
-from motionwidgets import (
+from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from motioncontrol.maniserver import ManiServer
+from motioncontrol.moee import MMStatus
+from motioncontrol.motionwidgets import (
     DeltaWidget,
     LoggingProc,
     SingleChannelWidget,
     SingleControllerWidget,
 )
-from qtpy import QtCore, QtGui, QtWidgets, uic
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)

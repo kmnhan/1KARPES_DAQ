@@ -14,8 +14,9 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyqtgraph as pg
 import qtawesome as qta
-from moee import EncoderThread, MMStatus, MMThread
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from motioncontrol.moee import EncoderThread, MMStatus, MMThread
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)

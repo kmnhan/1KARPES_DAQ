@@ -12,11 +12,12 @@ from multiprocessing import shared_memory
 import numpy as np
 import pyvisa
 import tomlkit
-from connection import VISAThread
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from widgets import (
+
+from tempcontrol.connection import VISAThread
+from tempcontrol.widgets import (
     CommandWidget,
     HeaterWidget,
     HeatSwitchWidget,

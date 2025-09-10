@@ -8,8 +8,9 @@ import time
 
 import numpy as np
 import pyqtgraph as pg
-from moee import MMCommand, MMThread
 from qtpy import QtCore, QtGui, QtWidgets
+
+from motioncontrol.moee import MMCommand, MMThread
 
 LOG_DIR = "D:/Logs/Capacitance"
 # FILENAME = "D:/MotionController/logs_capacitance/240227_capacitance.csv"

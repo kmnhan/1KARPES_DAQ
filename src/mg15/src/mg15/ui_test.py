@@ -5,7 +5,7 @@ import sys
 import numpy as np
 from qtpy import QtGui, QtWidgets, uic
 
-import mg15
+from mg15 import mg15
 
 
 class PressuresWidget(

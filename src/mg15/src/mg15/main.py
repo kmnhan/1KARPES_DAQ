@@ -16,7 +16,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-import mg15
+from mg15 import mg15
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
