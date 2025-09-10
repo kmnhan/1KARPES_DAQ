@@ -550,6 +550,10 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot(int, object)
     def plotcolor_changed(self, index: int, color: QtGui.QColor):
+        if len(self.config["plotting"]["colors"]) <= index:
+            self.config["plotting"]["colors"] += [[255, 255, 255, 255]] * (
+                index + 1 - len(self.config["plotting"]["colors"])
+            )
         self.config["plotting"]["colors"][index] = list(color.getRgb())
         self.overwrite_config()
         log.debug("Config file color updated")

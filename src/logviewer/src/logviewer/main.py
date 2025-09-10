@@ -227,7 +227,8 @@ class MainWindow(MainWindowGUI):
             colors += [
                 QtGui.QColor.fromRgb(*list(c)[:3], 200) for c in plot_config["colors"]
             ]
-            colors += 10 * [QtGui.QColor("white")]
+            required_colors = len(self.df.columns) - len(colors)
+            colors += required_colors * [QtGui.QColor("white")]
 
             enabled = self.settings.value("enabled_names", [])
             for i, col in enumerate(self.df.columns):
