@@ -119,9 +119,8 @@ make sure all indicators are showing 🟢.
 
 ### Notes
 
-- Builds must be trigerred manually from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
-- When adding or modifying dependencies, use `uv` to manage them. Do not modify the
-  `pyproject.toml` files manually.
+- Builds can be trigerred from the [GitHub Actions page](https://github.com/kmnhan/1KARPES_DAQ/actions).
+- When adding or modifying dependencies, use `uv` to manage them. Do not modify the `pyproject.toml` files manually.
 
 ### Build status
 

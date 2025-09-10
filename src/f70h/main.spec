@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = [("src/f70h/icon.ico", ".")]
+datas = []
 datas += collect_data_files("f70h")
 
 
