@@ -7,10 +7,11 @@ import weakref
 from collections.abc import Sequence
 
 import pyqtgraph as pg
-from connection import VISAThread, VISAWidgetBase
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import DynamicPlotItemTwiny, XDateSnapCurvePlotDataItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from tempcontrol.connection import VISAThread, VISAWidgetBase
 
 with contextlib.suppress(Exception):
     os.chdir(sys._MEIPASS)
