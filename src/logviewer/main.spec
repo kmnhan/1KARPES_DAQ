@@ -1,19 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 if sys.platform == "darwin":
-    icon_path = "icon.icns"
+    icon_path = "src/logviewer/icon.icns"
 else:
-    icon_path = "icon.ico"
+    icon_path = "src/logviewer/icon.ico"
 
 a = Analysis(
-    ["main.py"],
+    ["src/logviewer/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("logviewer.ui", "."),
-        ("logreader.py", "."),
-        (icon_path, "."),
-    ],
+    datas=[],
     hiddenimports=["PyQt6"],
     hookspath=[],
     hooksconfig={},
