@@ -297,9 +297,13 @@ if __name__ == "__main__":
         qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
     if sys.platform == "darwin":
-        qapp.setWindowIcon(QtGui.QIcon("./icon.icns"))
+        qapp.setWindowIcon(
+            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.icns"))
+        )
     else:
-        qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
+        qapp.setWindowIcon(
+            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.ico"))
+        )
     win = MainWindow()
     win.show()
     win.activateWindow()

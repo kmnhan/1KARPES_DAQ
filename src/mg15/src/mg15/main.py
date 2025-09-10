@@ -385,7 +385,7 @@ if __name__ == "__main__":
 
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
-    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
+    qapp.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.ico")))
 
     while not valid_config():
         configdialog = ConfigFileDialog()

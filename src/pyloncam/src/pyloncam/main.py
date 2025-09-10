@@ -775,7 +775,7 @@ class MainWindow(MainWindowGUI):
 
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
-    qapp.setWindowIcon(QtGui.QIcon("./icon.ico"))
+    qapp.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.ico")))
     qapp.setStyle("Fusion")
 
     win = MainWindow()
