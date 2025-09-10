@@ -60,10 +60,7 @@ class CameraHandler(QtCore.QThread):
         self.focus = value
 
 
-uiclass, baseclass = uic.loadUiType("webcam.ui")
-
-
-class MainWindow(uiclass, baseclass):
+class MainWindow(*uic.loadUiType(os.path.join(os.path.dirname(__file__), "webcam.ui"))):
     sigFocusChanged = QtCore.Signal(int)
 
     def __init__(self):

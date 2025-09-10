@@ -101,7 +101,9 @@ class LoggingProc(multiprocessing.Process):
         self.queue.put((timestamp, content))
 
 
-class PressuresWidget(*uic.loadUiType("pressures.ui")):
+class PressuresWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "pressures.ui"))
+):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -121,7 +123,9 @@ class PressuresWidget(*uic.loadUiType("pressures.ui")):
         return self.label1, self.label2, self.label3
 
 
-class PlottingWidget(*uic.loadUiType("plotting.ui")):
+class PlottingWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "plotting.ui"))
+):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)

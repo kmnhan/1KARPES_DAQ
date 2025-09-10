@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import sys
 
 import numpy as np
@@ -7,7 +8,9 @@ from qtpy import QtGui, QtWidgets, uic
 import mg15
 
 
-class PressuresWidget(*uic.loadUiType("pressures.ui")):
+class PressuresWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "pressures.ui"))
+):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)

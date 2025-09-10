@@ -143,7 +143,9 @@ class MotorStatus(StautsIconWidget):
         super().setState(1 if value else 0)
 
 
-class SingleChannelWidget(*uic.loadUiType("channel.ui")):
+class SingleChannelWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "channel.ui"))
+):
     """Widget for a single channel.
 
     Internally, all positions are `raw` positions before applying calibration factors.

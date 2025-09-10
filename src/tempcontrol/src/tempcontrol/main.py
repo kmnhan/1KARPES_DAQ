@@ -149,7 +149,9 @@ class LoggingProc(multiprocessing.Process):
         self.queue.put((timestamp, content))
 
 
-class MainWindowGUI(*uic.loadUiType("main.ui")):
+class MainWindowGUI(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "main.ui"))
+):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)

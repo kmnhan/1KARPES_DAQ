@@ -32,7 +32,9 @@ class QVLine(QtWidgets.QFrame):
         self.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
 
 
-class HeaterWidgetGUI(*uic.loadUiType("heater.ui")):
+class HeaterWidgetGUI(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "heater.ui"))
+):
     """GUI for a single heater.
 
     The backend needs to connect signals and slots to appropriate SCPI commands.
@@ -554,7 +556,9 @@ class ReadingWidget(ReadingWidgetGUI):
         super().update_srdg([float(t) for t in srdg_raw])
 
 
-class CommandWidget(*uic.loadUiType("command.ui")):
+class CommandWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "command.ui"))
+):
     sigWrite = QtCore.Signal(str)
     sigQuery = QtCore.Signal(str)
     sigReply = QtCore.Signal(str, object)
@@ -587,7 +591,9 @@ class CommandWidget(*uic.loadUiType("command.ui")):
         self.instrument.request_query(self.input, self.sigReply)
 
 
-class PlottingWidget(*uic.loadUiType("plotting.ui")):
+class PlottingWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "plotting.ui"))
+):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent)
         self.setupUi(self)
@@ -624,7 +630,9 @@ class PlottingWidget(*uic.loadUiType("plotting.ui")):
         return self.plotwidget.plotItem
 
 
-class HeatSwitchWidget(*uic.loadUiType("heatswitch.ui")):
+class HeatSwitchWidget(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "heatswitch.ui"))
+):
     sigVOUTRead = QtCore.Signal(str, object)
     sigVSETRead = QtCore.Signal(str, object)
     sigSTATUSRead = QtCore.Signal(str, object)

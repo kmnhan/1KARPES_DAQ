@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import pyqtgraph as pg
 import qtawesome as qta
 import tomlkit
-from logreader import CRYO_DIR, get_cryocooler_log, get_pressure_log
 from qt_extensions.legendtable import LegendTableView
 from qt_extensions.plotting import (
     DynamicPlotItem,
@@ -18,6 +17,8 @@ from qt_extensions.plotting import (
     XDateSnapCurvePlotDataItem,
 )
 from qtpy import QtCore, QtGui, QtWidgets, uic
+
+from logviewer.logreader import CRYO_DIR, get_cryocooler_log, get_pressure_log
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -53,7 +54,9 @@ class BetterCalendarWidget(QtWidgets.QCalendarWidget):
             next_btn.setIcon(qta.icon("mdi6.arrow-right"))
 
 
-class MainWindowGUI(*uic.loadUiType("logviewer.ui")):
+class MainWindowGUI(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "logviewer.ui"))
+):
     def __init__(self):
         super().__init__()
         self.setupUi(self)

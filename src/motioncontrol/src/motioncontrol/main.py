@@ -28,7 +28,9 @@ CONNECTION_CONFIG = "D:/Logs/Motion/controllers.toml"
 log = logging.getLogger("moee")
 
 
-class MainWindow(*uic.loadUiType("controller.ui")):
+class MainWindow(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "controller.ui"))
+):
     """Combines two controlller widgets to form a complete GUI.
 
     On initialization, starts a server so that motion can be controlled by other

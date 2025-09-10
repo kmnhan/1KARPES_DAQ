@@ -135,7 +135,9 @@ class RowOrderingWidget(QtWidgets.QWidget):
                 self._table_widget.cellWidget(r1, i).row_index = r1
 
 
-class ConfigDialog(*uic.loadUiType("cameramonitor_config.ui")):
+class ConfigDialog(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "cameramonitor_config.ui"))
+):
     def __init__(
         self, parent: QtWidgets.QWidget | None = None, *, settings: QtCore.QSettings
     ):
@@ -170,10 +172,9 @@ class ConfigDialog(*uic.loadUiType("cameramonitor_config.ui")):
         super().accept()
 
 
-uiclass, baseclass = uic.loadUiType("pyloncam.ui")
-
-
-class MainWindowGUI(uiclass, baseclass):
+class MainWindowGUI(
+    *uic.loadUiType(os.path.join(os.path.dirname(__file__), "pyloncam.ui"))
+):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
