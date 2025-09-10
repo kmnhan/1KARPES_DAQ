@@ -75,7 +75,7 @@
   <customwidget>
    <class>VISAWidgetBase</class>
    <extends>QWidget</extends>
-   <header>connection</header>
+   <header>tempcontrol.connection</header>
   </customwidget>
  </customwidgets>
  <resources/>
