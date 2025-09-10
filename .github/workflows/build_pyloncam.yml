@@ -29,11 +29,11 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/pyloncam/src/pyloncam
+      working-directory: ./src/pyloncam
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Camera Monitor
-        path: src/pyloncam/src/pyloncam/dist/pyloncam/
+        path: src/pyloncam/dist/pyloncam/

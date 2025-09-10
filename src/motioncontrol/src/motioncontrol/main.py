@@ -385,7 +385,7 @@ class MainWindow(
         super().closeEvent(*args, **kwargs)
 
 
-if __name__ == "__main__":
+def main():
     multiprocessing.freeze_support()
 
     qapp = QtWidgets.QApplication(sys.argv)

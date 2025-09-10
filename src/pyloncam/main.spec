@@ -1,24 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
-
 import pypylon
 import pathlib
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
 pypylon_dir = pathlib.Path(pypylon.__file__).parent
 pylon_binaries = [(str(f), "./pypylon") for f in pypylon_dir.glob("*.dll")]
 pylon_binaries += [(str(f), "./pypylon") for f in pypylon_dir.glob("*.pyd")]
 
-
-datas = [
-    ("pyloncam.ui", "."),
-    ("cameramonitor_config.ui", "."),
-    ("icon.ico", "."),
-]
+datas = []
+datas += collect_data_files("pyloncam")
 datas += copy_metadata("numpy")
 # For some reason, xarray requires numpy metadata on import
 
 a = Analysis(
-    ["main.py"],
+    ["src/pyloncam/__main__.py"],
     pathex=[],
     binaries=pylon_binaries,
     datas=datas,
@@ -54,7 +49,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon.ico"],
+    icon=["src/pyloncam/icon.ico"],
 )
 coll = COLLECT(
     exe,

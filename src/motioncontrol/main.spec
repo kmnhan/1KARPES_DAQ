@@ -1,18 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
+
+datas = []
+datas += collect_data_files("motioncontrol")
 
 
 a = Analysis(
-    ["main.py"],
+    ["src/motioncontrol/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("channel.ui", "."),
-        ("controller.ui", "."),
-        ("icon.ico", "."),
-        ("maniserver.py", "."),
-        ("moee.py", "."),
-        ("motionwidgets.py", "."),
-    ],
+    datas=datas,
     hiddenimports=["PyQt6", "pyqtgraph", "qtawesome"],
     hookspath=[],
     hooksconfig={},
@@ -38,7 +35,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon.ico"],
+    icon=["src/motioncontrol/icon.ico"],
 )
 coll = COLLECT(
     exe,
