@@ -29,11 +29,11 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Building...
-      working-directory: ./src/tempcontrol/src/tempcontrol
+      working-directory: ./src/tempcontrol
       run: uv run pyinstaller main.spec
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: Temperature Controller
-        path: src/tempcontrol/src/tempcontrol/dist/tempcontrol/
+        path: src/tempcontrol/dist/tempcontrol/

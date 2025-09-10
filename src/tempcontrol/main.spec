@@ -2,19 +2,10 @@
 
 
 a = Analysis(
-    ["main.py"],
+    ["src/tempcontrol/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("connection.py", "."),
-        ("widgets.py", "."),
-        ("command.ui", "."),
-        ("heater.ui", "."),
-        ("heatswitch.ui", "."),
-        ("main.ui", "."),
-        ("plotting.ui", "."),
-        ("icon.ico", "."),
-    ],
+    datas=[],
     hiddenimports=["PyQt6", "pyqtgraph", "pyvisa_py"],
     hookspath=[],
     hooksconfig={},
@@ -40,7 +31,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon.ico"],
+    icon=["src/tempcontrol/icon.ico"],
 )
 coll = COLLECT(
     exe,
