@@ -1,14 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
+
+datas = []
+datas += collect_data_files("webcam")
 
 
 a = Analysis(
-    ["main.py"],
+    ["src/webcam/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("webcam.ui", "."),
-        ("icon.ico", "."),
-    ],
+    datas=datas,
     hiddenimports=["PyQt6"],
     hookspath=[],
     hooksconfig={},
@@ -34,7 +35,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon.ico"],
+    icon=["src/webcam/icon.ico"],
 )
 coll = COLLECT(
     exe,
