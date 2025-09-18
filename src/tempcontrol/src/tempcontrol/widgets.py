@@ -96,6 +96,10 @@ class HeaterWidgetGUI(
         self.input_desc.setText("")
 
     @property
+    def input_description(self) -> str:
+        return self.input_desc.text().strip()
+
+    @property
     def sigRangeChanged(self):
         return self.combo.currentIndexChanged
 

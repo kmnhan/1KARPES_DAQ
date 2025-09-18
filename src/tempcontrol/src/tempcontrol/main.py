@@ -511,15 +511,37 @@ class MainWindow(MainWindowGUI):
         else:
             log.log(logging.TRACE, "Regen disabled, skip")
 
+    def find_he_pump_heater(self) -> HeaterWidget | None:
+        """Find the heater widget corresponding to the He pump.
+
+        Checks the input description of each heater widget to find the one
+        corresponding to the He pump. Returns None if not found. The name should be set
+        correctly in the config file.
+        """
+        for heater_widget in (self.heater1, self.heater2, self.heater3):
+            if heater_widget.input_description.casefold() == "He pump".casefold():
+                return heater_widget
+        return None
+
     def regenerate(self):
-        if 45 <= self.heater2.setpoint_spin.value() <= 55:
+        heater_widget = self.find_he_pump_heater()
+        if heater_widget is None:
+            log.critical(
+                "He pump heater not found, cannot regenerate; "
+                "check if input name is correct"
+            )
+            return
+        if 45 <= heater_widget.setpoint_spin.value() <= 55:
             # Setpoint is already within He pump target range
-            self.lake336.request_write("RANGE 2,3")
+            pass
         else:
             # Setpoint is outside He pump target range, set to 45 K
-            self.lake336.request_write("SETP 2,45; RANGE 2,3")
+            heater_widget.change_setpoint(45)
+
+        # Set heater range to High
+        heater_widget.change_range(3)
         self.heatswitch.trigger_update()
-        self.heater2.trigger_update()
+        heater_widget.trigger_update()
         log.info("GL4 regenerate started")
 
     def refresh(self):
