@@ -1,4 +1,4 @@
-name: Build Log Viewer (MacOS)
+name: Build Log Viewer (macOS)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ env:
 jobs:
 
   build:
-    name: Build Log Viewer
+    name: Build Log Viewer for macOS
     runs-on: macos-15
     strategy:
       fail-fast: false
@@ -18,8 +18,8 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
+    # - name: Install uv
+    #   uses: astral-sh/setup-uv@v5
 
     - uses: actions/setup-python@v6
       with:
@@ -29,11 +29,16 @@ jobs:
       working-directory: ./src/logviewer
       run: |
         python -m venv .venv
+        source .venv/bin/activate
+
+    - name: Install qt extensions
+      working-directory: ./shared/qt_extensions
+      run: |
+        pip install .
 
     - name: Install the project
       working-directory: ./src/logviewer
       run: |
-        source .venv/bin/activate
         pip install pyinstaller .
 
     - name: Building...
@@ -50,3 +55,4 @@ jobs:
       with:
         name: Log Viewer
         path: artifact.tar.gz
+#--target venv  --upgrade --platform=arm64 --platform=x86_64 --no-deps
