@@ -29,12 +29,12 @@ jobs:
       working-directory: ./src/logviewer
       run: |
         python -m venv .venv
-        source .venv/bin/activate
 
     - name: Install the project
       working-directory: ./src/logviewer
       run: |
-        pip install pyinstaller . --target venv  --upgrade --platform=arm64 --platform=x86_64 --only-binary=:all:
+        source .venv/bin/activate
+        pip install pyinstaller .
 
     - name: Building...
       working-directory: ./src/logviewer
