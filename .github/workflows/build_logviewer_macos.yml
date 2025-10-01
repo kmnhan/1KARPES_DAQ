@@ -21,19 +21,31 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v5
 
-    - name: Set up Python
-      run: uv python install
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
+    - name: Create venv
+      working-directory: ./src/logviewer
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
 
     - name: Install the project
       working-directory: ./src/logviewer
-      run: uv sync --all-extras --dev
+      run: pip install pyinstaller . --target venv  --upgrade --platform=arm64 --platform=x86_64
 
     - name: Building...
       working-directory: ./src/logviewer
-      run: uv run pyinstaller main.spec
+      run: |
+        source .venv/bin/activate
+        pyinstaller main.spec
 
-    - name: Upload binary
+    - name: Create archive with symlinks
+      run: tar -czhf artifact.tar.gz ./src/logviewer/dist/logviewer/
+
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Log Viewer
-        path: src/logviewer/dist/logviewer/
+        path: artifact.tar.gz

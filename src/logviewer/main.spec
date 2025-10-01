@@ -1,5 +1,5 @@
-# -*- mode: python ; coding: utf-8 -*-
 import sys
+
 if sys.platform == "darwin":
     icon_path = "src/logviewer/icon.icns"
 else:
@@ -38,7 +38,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,
+    target_arch="universal2" if sys.platform == "darwin" else None,
     codesign_identity=None,
     entitlements_file=None,
     icon=[icon_path],

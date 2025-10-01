@@ -296,14 +296,16 @@ def main():
     if not qapp:
         qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
-    if sys.platform == "darwin":
-        qapp.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.icns"))
-        )
-    else:
-        qapp.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.ico"))
-        )
+    if not getattr(sys, "frozen", False) or not hasattr(sys, "_MEIPASS"):
+        # Ignore if running in a PyInstaller bundle
+        if sys.platform == "darwin":
+            qapp.setWindowIcon(
+                QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.icns"))
+            )
+        else:
+            qapp.setWindowIcon(
+                QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.ico"))
+            )
     win = MainWindow()
     win.show()
     win.activateWindow()
