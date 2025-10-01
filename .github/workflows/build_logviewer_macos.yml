@@ -18,41 +18,26 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # - name: Install uv
-    #   uses: astral-sh/setup-uv@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
 
-    - uses: actions/setup-python@v6
-      with:
-        python-version: "3.13"
-
-    - name: Create venv
-      working-directory: ./src/logviewer
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-
-    - name: Install qt extensions
-      working-directory: ./shared/qt_extensions
-      run: |
-        pip install .
+    - name: Set up Python
+      run: uv python install
 
     - name: Install the project
       working-directory: ./src/logviewer
-      run: |
-        pip install pyinstaller .
+      run: uv sync --all-extras --dev
 
     - name: Building...
       working-directory: ./src/logviewer
-      run: |
-        source .venv/bin/activate
-        pyinstaller main.spec
+      run: uv run pyinstaller main.spec
 
     - name: Create archive with symlinks
-      run: tar -czhf artifact.tar.gz ./src/logviewer/dist/logviewer/
+      working-directory: ./src/logviewer
+      run: ditto -c -k --sequesterRsrc --keepParent "dist/LogViewer.app" "logviewer.app.zip"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Log Viewer
-        path: artifact.tar.gz
-#--target venv  --upgrade --platform=arm64 --platform=x86_64 --no-deps
+        path: logviewer.app.zip
