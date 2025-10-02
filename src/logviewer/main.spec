@@ -1,14 +1,15 @@
 import sys
 
-if sys.platform == "darwin":
-    icon_path = "src/logviewer/icon.icns"
-else:
-    icon_path = "src/logviewer/icon.ico"
-
 from PyInstaller.utils.hooks import collect_data_files
 
 datas = []
 datas += collect_data_files("logviewer")
+
+if sys.platform == "darwin":
+    icon_path = "src/logviewer/icon.icns"
+    datas += [("./assets/Assets.car", ".")]  # Liquid glass icon for macOS 26+
+else:
+    icon_path = "src/logviewer/icon.ico"
 
 
 a = Analysis(
@@ -58,4 +59,7 @@ if sys.platform == "darwin":
         name="LogViewer.app",
         icon=icon_path,
         bundle_identifier=None,
+        info_plist={
+            "CFBundleIconName": "logviewer",
+        },
     )
