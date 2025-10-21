@@ -29,8 +29,12 @@ structure research laboratory at Korea Advanced Institute of Science and Technol
    low.
 8. In SES, click on `DA30 -> Control Theta...` and close the control theta window that
    appears.
-9. Double click on `Start DAQ` in the desktop. The system is now ready for data
-   acquisition.
+9. Double click on `Start DAQ` in the desktop.
+10. Double click on `Optics Control` in the desktop.
+11. Double click on `Power Meter` in the desktop.
+12. Once all three programs are running, the system is ready for measurements. Before
+    turning ON the HV rack switch for measurements, make sure that the appropriate
+    analyzer slit is selected.
 
 ### Stopping the software
 
@@ -43,12 +47,12 @@ program is closed.
 
 #### Setting up scans
 
-The DAQ software serves as a front-end for the SES software. All scans *must* be started
-with the `Start` button in the DAQ software, not SES. The user will not have to interact
-with SES menu items directly.
+The DAQ software serves as a front-end for the SES software. All scans **must** be
+started with the `Start` button in the DAQ software, *not* SES. The user will not have
+to interact with SES menu items directly.
 
 The slit indicator in the GUI determines the analyzer slit information recorded in the
-data file. Remember to set the slit indicator to the correct value when changing the
+data file. Remember to set the slit indicator to the correct value after changing the
 analyzer slit.
 
 All attributes are recorded when the scan ends.
@@ -71,9 +75,10 @@ remove the user extension library with the following steps:
 2. Select `UIExtension_Library.dll` in the list and click `Delete`.
 3. Click `Close` to close the window.
 
-Now, you can run scans from the SES software without the DAQ software running. Note
-that the data saved this way will not contain temperature, pressure, position, and
-other attributes that are grabbed from the DAQ software.
+Now, you can run scans from the SES software without the DAQ software running. Note that
+the data saved this way will not contain temperature, pressure, position, and other
+attributes that are grabbed from the DAQ software. The experimenter must obtain those
+from logged data.
 
 #### Starting the F70H Helium compressor program
 
