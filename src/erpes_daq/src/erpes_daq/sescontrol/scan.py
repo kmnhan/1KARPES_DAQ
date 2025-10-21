@@ -1,3 +1,4 @@
+import contextlib
 import csv
 import datetime
 import glob
@@ -41,8 +42,10 @@ def gen_data_name(
     base_file: str,
     data_idx: int,
     slice_idx: int | None = None,
+    *,
     prefix: bool = False,
     motor: bool = False,
+    flux: bool = False,
     ext: str | None = None,
 ) -> str:
     fname = f"{base_file}{str(data_idx).zfill(4)}"
@@ -55,6 +58,9 @@ def gen_data_name(
 
     if motor:
         fname = fname + "_motors"
+
+    if flux:
+        fname = fname + "_flux"
 
     if ext is not None:
         fname = fname + ext
@@ -271,6 +277,25 @@ class ScanWorker(QtCore.QRunnable):
             np.ndarray((1,), "f8", shm.buf)[0] = datetime.datetime.now().timestamp()
             shm.close()
 
+    def get_seq_start_time(self) -> float | None:
+        """Get sequence start time from shared memory.
+
+        Returns
+        -------
+        start_time : float or None
+            Start time as a timestamp, or None if the shared memory does not exist.
+
+        """
+        try:
+            shm = shared_memory.SharedMemory(name="seq_start")
+        except FileNotFoundError:
+            # AttributeServer is not running, skip
+            return None
+        else:
+            start_time = np.ndarray((1,), "f8", shm.buf)[0]
+            shm.close()
+            return float(start_time)
+
     def sequence_run_wait(self) -> bool:
         """Run sequence and wait until it finishes.
 
@@ -320,6 +345,29 @@ class ScanWorker(QtCore.QRunnable):
                         continue
                     else:
                         log.debug("DA map file appears to be intact")
+                        now = datetime.datetime.now().timestamp()
+                        start_time = self.get_seq_start_time()
+                        if start_time is not None:
+                            from powermeter.server import get_flux_data
+
+                            flux_file = os.path.join(
+                                self.base_dir, f"{self.data_name}_flux.csv"
+                            )
+
+                            try:
+                                data = get_flux_data(start_time, now)
+                            except Exception:
+                                log.exception("Failed to get flux data")
+                            else:
+                                if data is not None:
+                                    dt, flux = data
+                                    with open(flux_file, "w", newline="") as f:
+                                        writer = csv.writer(f)
+                                        for d, fl in zip(dt, flux, strict=True):
+                                            writer.writerow([d, fl])
+                                    log.debug("Appended flux data to %s", flux_file)
+                                else:
+                                    log.warning("No flux data received from server")
                         break
                 elif self._stop and time.perf_counter() > timeout_start + 30:
                     # Timeout of 30s to wait for save. If you click stop after ~~ in SES
@@ -387,6 +435,7 @@ class ScanWorker(QtCore.QRunnable):
         """
         for ext in self.valid_ext:
             f = os.path.join(self.base_dir, f"{self.data_name}{ext}")
+            f_flux = os.path.join(self.base_dir, f"{self.data_name}_flux.csv")
 
             new = os.path.join(
                 self.base_dir,
@@ -403,6 +452,27 @@ class ScanWorker(QtCore.QRunnable):
                         continue
                     else:
                         break
+
+                if os.path.isfile(f_flux):
+                    new_flux = os.path.join(
+                        self.base_dir,
+                        gen_data_name(
+                            self.base_file,
+                            self.data_idx,
+                            slice_idx=index,
+                            prefix=True,
+                            flux=True,
+                            ext=".csv",
+                        ),
+                    )
+                    while True:
+                        try:
+                            os.rename(f_flux, new_flux)
+                        except PermissionError:
+                            time.sleep(0.001)
+                            continue
+                        else:
+                            break
 
     def _restore_filenames(self):
         """Restore file names that were modified with `_rename_file`."""

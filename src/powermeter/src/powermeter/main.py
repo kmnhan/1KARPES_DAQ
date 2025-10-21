@@ -15,6 +15,7 @@ import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from powermeter.connection import VISAThread
+from powermeter.server import PowermeterServerThread
 from powermeter.widgets import CommandWidget
 
 logging.addLevelName(5, "TRACE")
@@ -142,6 +143,11 @@ class MainWindowGUI(
         self.logwriter = LoggingProc(LOG_DIR)
         self.logwriter.start()
 
+        # Start server
+        self.server = PowermeterServerThread(self)
+        self.server.sigRequestData.connect(self.get_logged_data)
+        self.server.start()
+
         self.log_timer = QtCore.QTimer(self)
         self.set_logging_interval(5.0)
         self.interval_spin.valueChanged.connect(self.set_logging_interval)
@@ -223,11 +229,45 @@ class MainWindowGUI(
         self._plot_values = []
         self._plot_log_data.setData()
 
+    @QtCore.Slot(float, float)
+    def get_logged_data(
+        self, start_timestamp: float, end_timestamp: float
+    ) -> tuple[np.ndarray, np.ndarray] | None:
+        """Get logged data between the given timestamps.
+
+        Parameters
+        ----------
+        start_timestamp
+            The start timestamp (inclusive).
+        end_timestamp
+            The end timestamp (inclusive).
+
+        Returns
+        -------
+        times : np.ndarray
+            The timestamps of the logged data.
+        values : np.ndarray
+            The logged power values.
+
+        """
+        if self._plot_times and self._plot_values:
+            times = np.array(self._plot_times)
+            values = np.array(self._plot_values)
+
+            mask = (times >= start_timestamp) & (times <= end_timestamp)
+            self.server.set_return_value((times[mask], values[mask]))
+        else:
+            self.server.set_return_value(None)
+
     def closeEvent(self, event: QtGui.QCloseEvent):
         self._command_widget.close()
 
         self.logwriter.stop()
         log.info("Logging process stopped")
+
+        self.server.stop()
+        self.server.wait()
+        log.info("ZMQ server stopped")
 
         # Free shared memory
         self.shm.close()
