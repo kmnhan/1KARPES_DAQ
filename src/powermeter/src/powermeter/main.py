@@ -32,6 +32,7 @@ log.addHandler(handler)
 
 
 LOG_DIR = "D:/Logs/Power"
+LOG_INTERVAL_SECONDS: float = 5.0
 NUM_AVERAGE: int = 5
 
 
@@ -149,7 +150,7 @@ class MainWindowGUI(
         self.server.start()
 
         self.log_timer = QtCore.QTimer(self)
-        self.set_logging_interval(5.0)
+        self.set_logging_interval(LOG_INTERVAL_SECONDS)
         self.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.log_timer.timeout.connect(self.write_log)
 
@@ -250,10 +251,13 @@ class MainWindowGUI(
             The logged power values.
 
         """
-        if self._plot_times and self._plot_values:
-            times = np.array(self._plot_times)
-            values = np.array(self._plot_values)
-
+        if self._recorded_times and self._recorded_values:
+            times = np.array(self._recorded_times)
+            values = np.array(self._recorded_values)
+            if times[0] > start_timestamp:
+                # Include a NaN value at the start timestamp to indicate missing data
+                times = np.r_[start_timestamp, times]
+                values = np.r_[np.nan, values]
             mask = (times >= start_timestamp) & (times <= end_timestamp)
             self.server.set_return_value((times[mask], values[mask]))
         else:
