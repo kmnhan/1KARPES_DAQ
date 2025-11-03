@@ -6,7 +6,6 @@ import time
 from multiprocessing import shared_memory
 
 import numpy as np
-
 from erpes_daq.sescontrol.plugins.optics import HWP, QWP
 
 # LOG_FILE = "D:/Logs/Misc/250729_hwp_qwp_rpm_try2.csv"
