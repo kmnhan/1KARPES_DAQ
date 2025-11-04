@@ -37,8 +37,7 @@ class ServerBase:
 
         while self.running.is_set():
             try:
-                client_socket, client_address = self.server_socket.accept()
-                # print(f"Connection from {client_address}")
+                client_socket, _ = self.server_socket.accept()
 
                 self.post(client_socket)
                 client_socket.close()
