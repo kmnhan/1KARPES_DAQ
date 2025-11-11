@@ -58,6 +58,9 @@ class CameraConfiguration(pylon.ConfigurationEventHandler, QtCore.QObject):
             # camera.Width.Value = camera.Width.Max
             # camera.Height.Value = camera.Height.Max
 
+            camera.UserSetSelector.Value = "Default"
+            camera.UserSetLoad.Execute()
+
             # Flip image.
             if genicam.IsWritable(camera.ReverseX):
                 camera.ReverseX.Value = True
@@ -537,8 +540,10 @@ class FrameGrabber(QtCore.QThread):
                         self._img_file = None
 
             grab_result.Release()
-            if genicam.IsWritable(self.camera.ExposureTimeRaw) and (
-                self.camera.ExposureTimeRaw.Value != self.exposure
+            if (
+                genicam.IsWritable(self.camera.ExposureTimeRaw)
+                and genicam.IsReadable(self.camera.ExposureTimeRaw)
+                and (self.camera.ExposureTimeRaw.Value != self.exposure)
             ):
                 self.camera.ExposureTimeRaw.Value = self.exposure
 
@@ -584,7 +589,7 @@ class MainWindow(MainWindowGUI):
         self.actionsave.triggered.connect(self.save_image)
         self.actionsaveh5.triggered.connect(self.save_hdf5)
         self.actionsaveas.triggered.connect(self.save_dialog)
-        self.autosave_timer.timeout.connect(self.save_image)
+        self.autosave_timer.timeout.connect(self.save_hdf5_auto)
 
     def save_dialog(self):
         # Set the file filters
@@ -647,7 +652,7 @@ class MainWindow(MainWindowGUI):
         # self.exposure_spin.blockSignals(False)
         # self.exposure_slider.blockSignals(False)
 
-    def image_to_xarray(self, image) -> xr.DataArray:
+    def image_to_xarray(self, image, dt: datetime.datetime) -> xr.DataArray:
         shape = image.shape
         xlim, zlim = self._cal_h * (shape[1] - 1) / 2, self._cal_v * (shape[0] - 1) / 2
         return xr.DataArray(
@@ -656,6 +661,7 @@ class MainWindow(MainWindowGUI):
             coords={
                 "z": np.linspace(-zlim, zlim, shape[0]) + self._off_v,
                 "x": np.linspace(-xlim, xlim, shape[1]) + self._off_h,
+                "t": dt,
             },
         )
 
@@ -668,8 +674,8 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot(object, object)
     def grabbed(self, grabtime: datetime.datetime, image: npt.NDArray):
-        self.grab_time: datetime.datetime = grabtime
         image = np.flip(image, axis=0)
+        self.grab_time, self._image_array = grabtime, image
 
         if self.image_item.image is None:
             self.image_item.setImage(image, autoLevels=False, axisOrder="row-major")
@@ -682,7 +688,6 @@ class MainWindow(MainWindowGUI):
                 axisOrder="row-major",
                 rect=self.get_rect(image.shape),
             )
-        self._image_array = image
 
         # msg = "Last Update "
         # msg += self.grab_time.isoformat(sep=" ", timespec="milliseconds")
@@ -729,12 +734,11 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def save_hdf5(self, filename: str | None = None):
-        data = self.image_to_xarray(self._image_array)
+        arr, dt = self._image_array, self.grab_time
+        data = self.image_to_xarray(arr, dt)
 
         if filename is None:
-            filename = os.path.join(
-                SAVE_DIR, f"Image_{format_datetime(self.grab_time)}.h5"
-            )
+            filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
 
         # Compatibility with Igor HDF5 loader
         scaling = [[1, 0]]
@@ -755,6 +759,12 @@ class MainWindow(MainWindowGUI):
             engine="h5netcdf",
             invalid_netcdf=True,
         )
+
+    @QtCore.Slot()
+    def save_hdf5_auto(self):
+        arr, dt = self._image_array, self.grab_time
+        filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
+        self.image_to_xarray(arr, dt).to_netcdf(filename, engine="h5netcdf")
 
     @QtCore.Slot()
     def toggle_grabbing(self):
