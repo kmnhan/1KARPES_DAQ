@@ -442,7 +442,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
         if pol_num in pol_map:
             angles = pol_map[pol_num]
-            if self._qwp_check.isChecked():
+            if self._motors[1].enabled:
                 self._motors[0].move(angles[0])
                 self._motors[1].move(angles[1], unique_id=unique_id)
             else:
@@ -460,7 +460,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         if -90.0 <= angle_deg <= 90.0:
             hwp = (90.0 + angle_deg / 2.0) % 360.0
             qwp = (90.0 + angle_deg) % 360.0
-            if self._qwp_check.isChecked():
+            if self._motors[1].enabled:
                 self._motors[0].move(hwp)
                 self._motors[1].move(qwp, unique_id=unique_id)
             else:
@@ -678,8 +678,8 @@ if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
 
-    # win = PolarizationControlWidget()
-    win = PolarizationVisualizer()
+    win = PolarizationControlWidget()
+    # win = PolarizationVisualizer()
     win.show()
     win.activateWindow()
     qapp.exec()
