@@ -243,7 +243,7 @@ class LinearPol(_MotorizedOptic):
             print("terminating with nan, invalid angle input")
             return np.nan
 
-        uid = self.client.request_move_pol(float(target))
+        uid = self.client.request_move_linpol(float(target))
         self.client.wait_motion_finish(uid)
         self.client.clear_uid(uid)
 
