@@ -105,6 +105,11 @@ class OpticsClient(_OpticsClientSingleton):
         self.write(f"MOVE {axis},{target},{unique_id}")
         return unique_id
 
+    def request_move_pol(self, pol_num: int) -> str:
+        unique_id: str = str(uuid.uuid4())
+        self.write(f"MOVEPOL {pol_num},{unique_id}")
+        return unique_id
+
     # def status(self, controller: int | None = None) -> int:
     #     if controller is None:
     #         return self.query_int("STATUS?")
@@ -210,22 +215,29 @@ class Pol(_MotorizedOptic):
 
         print("target_integer", target_int)
 
-        hwp_ang, qwp_ang = self.pol_to_angles[target_int]
+        # hwp_ang, qwp_ang = self.pol_to_angles[target_int]
 
-        uid_hwp: str = self.client.request_move(0, hwp_ang)
+        uid = self.client.request_move_pol(target_int)
+        self.client.wait_motion_finish(uid)
+        self.client.clear_uid(uid)
 
-        print(f"requested move hwp {hwp_ang} with uid {uid_hwp}")
-        if qwp_enabled:
-            uid_qwp: str = self.client.request_move(1, qwp_ang)
+        # uid_hwp: str = self.client.request_move(0, hwp_ang)
 
-        self.client.wait_motion_finish(uid_hwp)
-        print("motion commanded successfully, sleeping 0.5sec")
-        time.sleep(0.5)
-        self.client.clear_uid(uid_hwp)
+        # print(f"requested move hwp {hwp_ang} with uid {uid_hwp}")
+        # if qwp_enabled:
+        #     uid_qwp: str = self.client.request_move(1, qwp_ang)
 
-        if qwp_enabled:
-            self.client.wait_motion_finish(uid_qwp)
-            self.client.clear_uid(uid_qwp)
+        # self.client.wait_motion_finish(uid_hwp)
+        # print("hwp motion commanded successfully")
+        # self.client.clear_uid(uid_hwp)
+
+        # if qwp_enabled:
+        #     self.client.wait_motion_finish(uid_qwp)
+        #     print("qwp motion commanded successfully")
+        #     self.client.clear_uid(uid_qwp)
+
+        print("sleeping 0.2s to ensure beam stability")
+        time.sleep(0.2)
 
         return target
 

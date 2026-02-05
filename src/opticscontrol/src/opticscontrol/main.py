@@ -238,21 +238,21 @@ class _PolSelect(QtWidgets.QWidget):
         _layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(_layout)
 
-        pols: dict[str, tuple[float, float]] = {
-            "RC (−1)": (90.0, 135.0),
-            "LH (0)": (90.0, 90.0),
-            "LC (1)": (90.0, 45.0),
-            "LV (2)": (135.0, 90.0),
+        pols: dict[int, str] = {
+            -1: "RC (−1)",
+            0: "LH (0)",
+            1: "LC (1)",
+            2: "LV (2)",
         }
 
         self._btns = []
-        for label, angles in pols.items():
+        for pol_num, label in pols.items():
             btn = QtWidgets.QPushButton(label)
             btn_width: int = (
                 QtGui.QFontMetrics(btn.font()).boundingRect("RC (−1)").width() + 15
             )
             btn.setFixedWidth(btn_width)
-            btn.clicked.connect(lambda _, angles=angles: self._go_to_values(*angles))
+            btn.clicked.connect(lambda _, n=pol_num: self._go_to_pol(n))
 
             self._btns.append(btn)
             _layout.addWidget(btn)
@@ -266,6 +266,9 @@ class _PolSelect(QtWidgets.QWidget):
         if not self.pcw._motors[1].enabled:
             self._btns[0].setDisabled(True)
             self._btns[2].setDisabled(True)
+
+    def _go_to_pol(self, pol_num: int):
+        self.pcw._parse_server_movepol(pol_num)
 
     def _go_to_values(self, p0, p1):
         self.pcw._motors[0].move(p0)
@@ -297,6 +300,20 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self._pol_info = QtWidgets.QLabel()
         self._pol_info.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._pol_info)
+
+        tilt_layout = QtWidgets.QHBoxLayout()
+        self._tilt_corr_check = QtWidgets.QCheckBox("Tilt correction")
+        self._tilt_corr_check.setChecked(True)
+        self._tilt_angle_spin = QtWidgets.QDoubleSpinBox()
+        self._tilt_angle_spin.setValue(0.0)
+        self._tilt_angle_spin.setRange(-90.0, 90.0)
+        self._tilt_angle_spin.setDecimals(4)
+        self._tilt_angle_spin.setSuffix("°")
+        tilt_layout.addWidget(self._tilt_corr_check)
+        tilt_layout.addStretch()
+        tilt_layout.addWidget(QtWidgets.QLabel("Tilt"))
+        tilt_layout.addWidget(self._tilt_angle_spin)
+        self._layout.addLayout(tilt_layout)
 
         self._pol_choose = _PolSelect(self)
         self._layout.addWidget(self._pol_choose)
@@ -347,6 +364,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self.server.sigRequest.connect(self._parse_server_request)
         self.server.sigCommand.connect(self._parse_server_command)
         self.server.sigMove.connect(self._parse_server_move)
+        self.server.sigMovePol.connect(self._parse_server_movepol)
         self.sigServerReply.connect(self.server.set_value)
         self.server.start()
 
@@ -395,6 +413,35 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         log.debug("Move %s %s %s", axis, value, unique_id)
         motor = self._motors[int(axis)]
         motor.move(value, unique_id=unique_id)
+
+    @QtCore.Slot(int)
+    @QtCore.Slot(int, object)
+    def _parse_server_movepol(self, pol_num: int, unique_id: str | None = None):
+        log.debug("MovePol %s %s", pol_num, unique_id)
+        pol_map: dict[int, tuple[float, float]] = {
+            -1: (90.0, 135.0),
+            0: (90.0, 90.0),
+            1: (90.0, 45.0),
+            2: (135.0, 90.0),
+        }
+        if self._tilt_corr_check.isChecked():
+            rot_ang = np.rad2deg(
+                np.arctan2(
+                    (np.tan(np.deg2rad(self._tilt_angle_spin.value()))),
+                    np.cos(np.deg2rad(40.0)),
+                )
+            )
+            # LV to s-pol
+            pol_map[2] = (135.0 - rot_ang / 2, 90.0 - rot_ang)
+            # LH to be perp. to LV
+            pol_map[0] = (90.0 - rot_ang / 2, 90.0 - rot_ang)
+
+        if pol_num in pol_map:
+            angles = pol_map[pol_num]
+            self._motors[0].move(angles[0])
+            self._motors[1].move(angles[1], unique_id=unique_id)
+        else:
+            log.error("Invalid polarization number: %d", pol_num)
 
     @QtCore.Slot(object)
     def command_started(self, uid: str | None) -> None:

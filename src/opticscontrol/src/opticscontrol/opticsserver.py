@@ -34,6 +34,14 @@ MOVE <axis>,<position>[,<uid>]
     the `CMD?` command. The <uid> parameter must be a unique string. Using a uuid
     generator is recommended. If the given channel is not found, the command is silently
     ignored, and the <uid>, if given, is silently discarded.
+MOVEPOL <pol_num>[,<uid>]
+    Queues the motion to move the polarization state to the specified polarization
+    number. The mapping between polarization number and motor positions is pre-defined
+    in the optics controller program. If the <uid> parameter is provided, the state of
+    the motion can be tracked with the given identifier using the `CMD?` command. The
+    <uid> parameter must be a unique string. Using a uuid generator is recommended. If
+    the given polarization number is invalid, the command is silently ignored, and the
+    <uid>, if given, is silently discarded.
 
 """
 
@@ -55,6 +63,7 @@ class OpticsServer(QtCore.QThread):
     sigRequest = QtCore.Signal(str, str)
     sigCommand = QtCore.Signal(str, str)
     sigMove = QtCore.Signal(str, float, object)
+    sigMovePol = QtCore.Signal(int, object)
 
     def __init__(self):
         super().__init__()
@@ -120,6 +129,14 @@ class OpticsServer(QtCore.QThread):
                         elif len(args) == 3:
                             axis, pos, uid = args
                         self.sigMove.emit(axis, float(pos), uid)
+                    elif command == "MOVEPOL":
+                        args = args.split(",")
+                        if len(args) == 1:
+                            pol_num = args[0]
+                            uid = None
+                        elif len(args) == 2:
+                            pol_num, uid = args
+                        self.sigMovePol.emit(int(pol_num), uid)
                     else:
                         self.sigCommand.emit(command, args)
 
