@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import contextlib
 import datetime
 import logging
@@ -36,8 +37,11 @@ DEVICE_ALIASES: dict[str, str] = {
 }  #: Mapping from serial number to custom label.
 
 SAVE_DIR: str = "D:/Camera/Sample Camera"  #: Directory to save the image to.
+# SAVE_DIR: str = "D:/Camera/260113_images"  #: Directory to save the image to.
 
-PIXEL_BITS: int = 8  #: Pixel format bits, 8 or 10 for our sample camera.
+PIXEL_BITS: int = 10  #: Pixel format bits, 8 or 10 for our sample camera.
+
+HDF_SAVE_N_AVG: int = 1200  # about 120 s
 
 tlf: pylon.TlFactory = pylon.TlFactory.GetInstance()  #: The transport layer factory.
 img: pylon.PylonImage = pylon.PylonImage()  #: Handles image saving.
@@ -568,6 +572,8 @@ class MainWindow(MainWindowGUI):
         # Store grabbed time here
         self.grab_time: datetime.datetime | None = None
 
+        self._recent_n_images = collections.deque(maxlen=HDF_SAVE_N_AVG)
+
         # Handle image grabbing
         self.frame_grabber = FrameGrabber()
         self.frame_grabber.sigGrabbed.connect(self.grabbed)
@@ -676,6 +682,7 @@ class MainWindow(MainWindowGUI):
     def grabbed(self, grabtime: datetime.datetime, image: npt.NDArray):
         image = np.flip(image, axis=0)
         self.grab_time, self._image_array = grabtime, image
+        self._recent_n_images.append(image)
 
         if self.image_item.image is None:
             self.image_item.setImage(image, autoLevels=False, axisOrder="row-major")
@@ -732,10 +739,17 @@ class MainWindow(MainWindowGUI):
         else:
             self.frame_grabber.request_save(filename)
 
+    def get_averaged_image(self):
+        recent_images = list(self._recent_n_images)
+        averaged_image = np.zeros_like(recent_images[0], dtype=np.float64)
+        for img in recent_images:
+            averaged_image = averaged_image + img.astype(np.float64)
+        return averaged_image / len(recent_images)
+
     @QtCore.Slot()
     def save_hdf5(self, filename: str | None = None):
-        arr, dt = self._image_array, self.grab_time
-        data = self.image_to_xarray(arr, dt)
+        dt = self.grab_time
+        data = self.image_to_xarray(self.get_averaged_image(), dt)
 
         if filename is None:
             filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
@@ -762,9 +776,10 @@ class MainWindow(MainWindowGUI):
 
     @QtCore.Slot()
     def save_hdf5_auto(self):
-        arr, dt = self._image_array, self.grab_time
-        filename = os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5")
-        self.image_to_xarray(arr, dt).to_netcdf(filename, engine="h5netcdf")
+        dt = self.grab_time
+        self.image_to_xarray(self.get_averaged_image(), dt).to_netcdf(
+            os.path.join(SAVE_DIR, f"Image_{format_datetime(dt)}.h5"), engine="h5netcdf"
+        )
 
     @QtCore.Slot()
     def toggle_grabbing(self):
@@ -775,6 +790,7 @@ class MainWindow(MainWindowGUI):
                 self.frame_grabber.set_device(
                     self.devices[self.camera_combo.currentIndex()]
                 )
+                self._recent_n_images.clear()
                 self.frame_grabber.start()
                 self.frame_grabber.live = True
             self.actionsave.setEnabled(True)
