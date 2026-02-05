@@ -110,6 +110,11 @@ class OpticsClient(_OpticsClientSingleton):
         self.write(f"MOVEPOL {pol_num},{unique_id}")
         return unique_id
 
+    def request_move_linpol(self, angle_deg: float) -> str:
+        unique_id: str = str(uuid.uuid4())
+        self.write(f"MOVELINPOL {angle_deg},{unique_id}")
+        return unique_id
+
     # def status(self, controller: int | None = None) -> int:
     #     if controller is None:
     #         return self.query_int("STATUS?")
@@ -180,13 +185,6 @@ class Pol(_MotorizedOptic):
     maximum: float = 2
     delta: float = 2
 
-    pol_to_angles: dict[int, tuple[float, float]] = {
-        -1: (90.0, 135.0),  # RC
-        0: (90.0, 90.0),  # LH
-        1: (90.0, 45.0),  # LC
-        2: (135.0, 90.0),  # LV
-    }
-
     def refresh_state(self):
         self.enabled: bool = self.client.enabled(0)
         # Allow without QWP
@@ -197,7 +195,7 @@ class Pol(_MotorizedOptic):
     def move(self, target: float) -> float:
         target_int: int = round(target)
         print(f"target {target_int}")
-        if target_int not in self.pol_to_angles:
+        if target_int not in (-1, 0, 1, 2):
             print("terminating with nan, invalid pol input")
             return np.nan
 
@@ -215,26 +213,39 @@ class Pol(_MotorizedOptic):
 
         print("target_integer", target_int)
 
-        # hwp_ang, qwp_ang = self.pol_to_angles[target_int]
-
         uid = self.client.request_move_pol(target_int)
         self.client.wait_motion_finish(uid)
         self.client.clear_uid(uid)
 
-        # uid_hwp: str = self.client.request_move(0, hwp_ang)
+        print("sleeping 0.2s to ensure beam stability")
+        time.sleep(0.2)
 
-        # print(f"requested move hwp {hwp_ang} with uid {uid_hwp}")
-        # if qwp_enabled:
-        #     uid_qwp: str = self.client.request_move(1, qwp_ang)
+        return target
 
-        # self.client.wait_motion_finish(uid_hwp)
-        # print("hwp motion commanded successfully")
-        # self.client.clear_uid(uid_hwp)
+    def post_motion(self):
+        self.client.disconnect()
 
-        # if qwp_enabled:
-        #     self.client.wait_motion_finish(uid_qwp)
-        #     print("qwp motion commanded successfully")
-        #     self.client.clear_uid(uid_qwp)
+
+class LinearPol(_MotorizedOptic):
+    minimum: float = -90.0
+    maximum: float = 90.0
+    delta: float = 5.0
+
+    def refresh_state(self):
+        self.enabled: bool = self.client.enabled(0)
+
+    def pre_motion(self):
+        self.client.connect()
+
+    def move(self, target: float) -> float:
+        target = float(target)
+        if not (-90.0 <= target <= 90.0):
+            print("terminating with nan, invalid angle input")
+            return np.nan
+
+        uid = self.client.request_move_pol(float(target))
+        self.client.wait_motion_finish(uid)
+        self.client.clear_uid(uid)
 
         print("sleeping 0.2s to ensure beam stability")
         time.sleep(0.2)

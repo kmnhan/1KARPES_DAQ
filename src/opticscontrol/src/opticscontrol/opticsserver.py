@@ -42,7 +42,15 @@ MOVEPOL <pol_num>[,<uid>]
     <uid> parameter must be a unique string. Using a uuid generator is recommended. If
     the given polarization number is invalid, the command is silently ignored, and the
     <uid>, if given, is silently discarded.
-
+MOVELINPOL <angle_deg>[,<uid>]
+    Queues the motion to move the polarization state to linear polarization at the
+    specified angle in degrees. 0° corresponds to linear horizontal polarization (+x
+    direction), and angles increase counterclockwise. angle_deg must be between -90° and
+    +90°. If the <uid> parameter is provided, the state of the motion can be tracked
+    with the given identifier using the `CMD?` command. The <uid> parameter must be a
+    unique string. Using a uuid generator is recommended. If the given angle is out of
+    range, the command is silently ignored, and the <uid>, if given, is silently
+    discarded.
 """
 
 import logging
@@ -64,6 +72,7 @@ class OpticsServer(QtCore.QThread):
     sigCommand = QtCore.Signal(str, str)
     sigMove = QtCore.Signal(str, float, object)
     sigMovePol = QtCore.Signal(int, object)
+    sigMoveLinPol = QtCore.Signal(float, object)
 
     def __init__(self):
         super().__init__()
@@ -137,6 +146,14 @@ class OpticsServer(QtCore.QThread):
                         elif len(args) == 2:
                             pol_num, uid = args
                         self.sigMovePol.emit(int(pol_num), uid)
+                    elif command == "MOVELINPOL":
+                        args = args.split(",")
+                        if len(args) == 1:
+                            angle_deg = args[0]
+                            uid = None
+                        elif len(args) == 2:
+                            angle_deg, uid = args
+                        self.sigMoveLinPol.emit(float(angle_deg), uid)
                     else:
                         self.sigCommand.emit(command, args)
 

@@ -365,6 +365,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
         self.server.sigCommand.connect(self._parse_server_command)
         self.server.sigMove.connect(self._parse_server_move)
         self.server.sigMovePol.connect(self._parse_server_movepol)
+        self.server.sigMoveLinPol.connect(self._parse_server_movelinpol)
         self.sigServerReply.connect(self.server.set_value)
         self.server.start()
 
@@ -419,18 +420,21 @@ class PolarizationControlWidget(QtWidgets.QWidget):
     def _parse_server_movepol(self, pol_num: int, unique_id: str | None = None):
         log.debug("MovePol %s %s", pol_num, unique_id)
         pol_map: dict[int, tuple[float, float]] = {
-            -1: (90.0, 135.0),
-            0: (90.0, 90.0),
-            1: (90.0, 45.0),
-            2: (135.0, 90.0),
+            -1: (90.0, 135.0),  # RC
+            0: (90.0, 90.0),  # LH
+            1: (90.0, 45.0),  # LC
+            2: (135.0, 90.0),  # LV
         }
+
         if self._tilt_corr_check.isChecked():
             rot_ang = np.rad2deg(
                 np.arctan2(
                     (np.tan(np.deg2rad(self._tilt_angle_spin.value()))),
-                    np.cos(np.deg2rad(40.0)),
+                    np.sin(np.deg2rad(50.0)),  # beam incidence angle
                 )
-            )
+            )  # real s-pol angle with respect to +y axis
+
+            # TODO: this is wrong, reverse sign after finishing calibration
             # LV to s-pol
             pol_map[2] = (135.0 - rot_ang / 2, 90.0 - rot_ang)
             # LH to be perp. to LV
@@ -438,10 +442,32 @@ class PolarizationControlWidget(QtWidgets.QWidget):
 
         if pol_num in pol_map:
             angles = pol_map[pol_num]
-            self._motors[0].move(angles[0])
-            self._motors[1].move(angles[1], unique_id=unique_id)
+            if self._qwp_check.isChecked():
+                self._motors[0].move(angles[0])
+                self._motors[1].move(angles[1], unique_id=unique_id)
+            else:
+                # Only HWP installed, move HWP only
+                self._motors[0].move(angles[0], unique_id=unique_id)
         else:
             log.error("Invalid polarization number: %d", pol_num)
+
+    @QtCore.Slot(float)
+    @QtCore.Slot(float, object)
+    def _parse_server_movelinpol(
+        self, angle_deg: float, unique_id: str | None = None
+    ) -> None:
+        log.debug("MoveLinPol %s %s", angle_deg, unique_id)
+        if -90.0 <= angle_deg <= 90.0:
+            hwp = (90.0 + angle_deg / 2.0) % 360.0
+            qwp = (90.0 + angle_deg) % 360.0
+            if self._qwp_check.isChecked():
+                self._motors[0].move(hwp)
+                self._motors[1].move(qwp, unique_id=unique_id)
+            else:
+                # Only HWP installed, move HWP only
+                self._motors[0].move(hwp, unique_id=unique_id)
+        else:
+            log.error("Invalid linear polarization angle: %f", angle_deg)
 
     @QtCore.Slot(object)
     def command_started(self, uid: str | None) -> None:
@@ -593,46 +619,48 @@ class PolarizationPlotter(QtWidgets.QWidget):
         rect = self.rect()
         center = rect.center()
 
-        a = np.abs(self.jones[0])
-        b = np.abs(self.jones[1])
-        delta = np.angle(self.jones[1]) - np.angle(self.jones[0])
-
-        # Calculate ellipse parameters from the polarization components.
-        # The ellipse representing the polarization has semi-axes A and B given by:
-        #   A², B² = (a²+b² ± sqrt((a²-b²)²+4a²b²cos²(delta)))/2
-        term = np.sqrt((a**2 - b**2) ** 2 + 4 * (a * b * np.cos(delta)) ** 2)
-        A = np.sqrt(max((a**2 + b**2 + term) / 2, 1e-15))
-        B = np.sqrt(max((a**2 + b**2 - term) / 2, 1e-15))
-
-        # The rotation angle (psi) of the ellipse is:
-        #   psi = 0.5 * arctan(2a*b*cos(delta)/(a²-b²))
-        if abs(a**2 - b**2) < 1e-15:
-            angle = np.pi / 4
-        else:
-            angle = 0.5 * np.atan2(2 * a * b * np.cos(delta), (a**2 - b**2))
-
         # Scale the drawing based on the widget size.
         scale = min(rect.width(), rect.height()) / 3.0
 
         # Draw the polarization ellipse.
+        # painter.save()
+        # a = np.abs(self.jones[0])
+        # b = np.abs(self.jones[1])
+        # delta = np.angle(self.jones[1]) - np.angle(self.jones[0])
+
+        # # Calculate ellipse parameters from the polarization components.
+        # # The ellipse representing the polarization has semi-axes A and B given by:
+        # #   A², B² = (a²+b² ± sqrt((a²-b²)²+4a²b²cos²(delta)))/2
+        # term = np.sqrt((a**2 - b**2) ** 2 + 4 * (a * b * np.cos(delta)) ** 2)
+        # A = np.sqrt(max((a**2 + b**2 + term) / 2, 1e-15))
+        # B = np.sqrt(max((a**2 + b**2 - term) / 2, 1e-15))
+
+        # # The rotation angle (psi) of the ellipse is:
+        # #   psi = 0.5 * arctan(2a*b*cos(delta)/(a²-b²))
+        # if abs(a**2 - b**2) < 1e-15:
+        #     angle = np.pi / 4
+        # else:
+        #     angle = 0.5 * np.atan2(2 * a * b * np.cos(delta), (a**2 - b**2))
+
+        # painter.translate(center)
+        # painter.rotate(np.rad2deg(angle))
+
+        # painter.setPen(QtGui.QPen(QtGui.QColor("blue"), 2))
+        # painter.drawEllipse(
+        #     QtCore.QRectF(-A * scale, -B * scale, 2 * A * scale, 2 * B * scale)
+        # )
+        # painter.restore()
         painter.save()
-        painter.translate(center)
-        painter.rotate(np.rad2deg(angle))
+        polygon = QtGui.QPolygonF()
+        t = np.linspace(0, 2 * np.pi, 100)
+        x = np.real(self.jones[0] * np.exp(-1j * t))
+        y = -np.real(self.jones[1] * np.exp(-1j * t))
 
-        painter.setPen(QtGui.QPen(QtGui.QColor("blue"), 2))
-        painter.drawEllipse(
-            QtCore.QRectF(-A * scale, -B * scale, 2 * A * scale, 2 * B * scale)
-        )
-        # polygon = QtGui.QPolygonF()
-        # t = np.linspace(0, 2 * np.pi, 100)
-        # x = np.real(self.jones[0] * np.exp(1j * t))
-        # y = np.real(self.jones[1] * np.exp(1j * t))
-
-        # for xi, yi in zip(x, y, strict=True):
-        #     polygon.append(
-        #         QtCore.QPointF(center.x() + xi * scale, center.y() + yi * scale)
-        #     )
-        # painter.drawPolygon(polygon)
+        for xi, yi in zip(x, y, strict=True):
+            polygon.append(
+                QtCore.QPointF(center.x() + xi * scale, center.y() + yi * scale)
+            )
+        painter.drawPolygon(polygon)
         painter.restore()
 
         painter.save()
@@ -650,8 +678,8 @@ if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
     qapp.setStyle("Fusion")
 
-    win = PolarizationControlWidget()
-    # win = PolarizationVisualizer()
+    # win = PolarizationControlWidget()
+    win = PolarizationVisualizer()
     win.show()
     win.activateWindow()
     qapp.exec()
