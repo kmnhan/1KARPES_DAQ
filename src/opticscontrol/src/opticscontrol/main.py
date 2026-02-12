@@ -481,7 +481,7 @@ class PolarizationControlWidget(QtWidgets.QWidget):
     @QtCore.Slot(object)
     def command_finished(self, uid: str | None) -> None:
         self.busy = False
-        self._wait_dialog.close()
+        self._wait_dialog.hide()
 
         if uid is not None:
             # Remove the unique id of the command
