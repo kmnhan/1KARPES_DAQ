@@ -355,8 +355,8 @@ class MainWindow(MainWindowGUI):
         # <max user current>,<current/power> [336 manual 132p]
 
         # Sample stage heater
-        # Hardcoded to max 0.2 A (0.5 W) to protect wiring
-        self.lake336.request_write("HTRSET 1,2,0,0.1,2")
+        # Hardcoded to max 0.2 A (2 W) to protect wiring
+        self.lake336.request_write("HTRSET 1,2,0,0.2,2")
 
         # GL4 He pump heater, max current 0.1 A (3 W)
         self.lake336.request_write("HTRSET 2,2,0,0.1,2")
