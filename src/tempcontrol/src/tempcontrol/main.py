@@ -7,6 +7,7 @@ import multiprocessing
 import os
 import sys
 import time
+from logging.handlers import RotatingFileHandler
 from multiprocessing import shared_memory
 
 import numpy as np
@@ -35,7 +36,14 @@ logging.TRACE = 5
 log = logging.getLogger("tempctrl")
 log.setLevel(logging.DEBUG)
 # handler = logging.StreamHandler(sys.stdout)
-handler = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+# Delay opening so spawned CSV logging processes do not hold the file open.
+handler = RotatingFileHandler(
+    f"D:/daq_logs/{log.name}.log",
+    maxBytes=20 * 1024 * 1024,
+    backupCount=10,
+    encoding="utf-8",
+    delay=True,
+)
 handler.setFormatter(
     logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
 )

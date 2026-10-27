@@ -57,6 +57,17 @@ analyzer slit.
 
 All attributes are recorded when the scan ends.
 
+### Diagnostic logs
+
+Temperature control, motion control, and F70H write diagnostic logs to
+`D:/daq_logs/tempctrl.log`, `D:/daq_logs/moee.log`, and `D:/daq_logs/F70H.log`.
+Each file rotates at approximately 20 MiB, retaining up to 10 backups named `.log.1`
+through `.log.10`. The `.log.1` backup is the most recent; the oldest backup is deleted
+when another is created. Measurement CSV files use a separate logging system.
+
+An existing log larger than 20 MiB becomes the first backup when the updated program
+next writes a message. That backup retains its original size until it ages out.
+
 ### Troubleshooting
 
 #### Running scans without the DAQ software
