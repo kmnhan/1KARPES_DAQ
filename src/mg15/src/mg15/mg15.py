@@ -109,10 +109,15 @@ class MG15Connection(QtCore.QThread):
         client.connect()  # connect to device, reconnect automatically
 
         while not self.stopped.is_set():
-            registers: list[int] = client.read_holding_registers(0, 125).registers
-            registers += client.read_holding_registers(125, 76).registers
+            # Preserve the unit ID used by pymodbus 3.6.9's default.
+            registers: list[int] = client.read_holding_registers(
+                0, count=125, device_id=0
+            ).registers
+            registers += client.read_holding_registers(
+                125, count=76, device_id=0
+            ).registers
             remote_enabled: bool = bool(
-                client.read_holding_registers(1100, 1).registers[0]
+                client.read_holding_registers(1100, count=1, device_id=0).registers[0]
             )
 
             self.sigRead.emit(datetime.datetime.now(), registers, remote_enabled)
