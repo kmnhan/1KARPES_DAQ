@@ -6,6 +6,7 @@ import socket
 import sys
 import threading
 import time
+from logging.handlers import RotatingFileHandler
 from multiprocessing import shared_memory
 
 import numpy as np
@@ -15,7 +16,14 @@ log = logging.getLogger("moee")
 log.setLevel(logging.INFO)
 
 _fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
-_fh = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
+# Delay opening so spawned CSV logging processes do not hold the file open.
+_fh = RotatingFileHandler(
+    f"D:/daq_logs/{log.name}.log",
+    maxBytes=20 * 1024 * 1024,
+    backupCount=10,
+    encoding="utf-8",
+    delay=True,
+)
 _sh = logging.StreamHandler(sys.stdout)
 _fh.setFormatter(_fmt)
 _sh.setFormatter(_fmt)
