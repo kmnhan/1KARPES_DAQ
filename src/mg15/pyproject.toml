@@ -10,8 +10,12 @@ dependencies = [
     "pymodbus<=3.6.9",
     "pyqt6>=6.8.0",
     "pyqtgraph>=0.13.4",
+    "qt_extensions",
     "qtpy>=2.4.2",
 ]
+
+[tool.uv.sources]
+qt_extensions = { workspace = true }
 
 [dependency-groups]
 dev = ["pyinstaller>=6.11.1"]

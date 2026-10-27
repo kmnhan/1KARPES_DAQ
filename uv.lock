@@ -949,6 +949,7 @@ dependencies = [
     { name = "pymodbus" },
     { name = "pyqt6" },
     { name = "pyqtgraph" },
+    { name = "qt-extensions" },
     { name = "qtpy" },
 ]
 
@@ -963,6 +964,7 @@ requires-dist = [
     { name = "pymodbus", specifier = "<=3.6.9" },
     { name = "pyqt6", specifier = ">=6.8.0" },
     { name = "pyqtgraph", specifier = ">=0.13.4" },
+    { name = "qt-extensions", editable = "shared/qt_extensions" },
     { name = "qtpy", specifier = ">=2.4.2" },
 ]
 

@@ -14,6 +14,7 @@ import pymodbus
 import pyqtgraph as pg
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
+from qt_extensions.plotting import XDateSnapCurvePlotDataItem
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from mg15 import mg15
@@ -123,6 +124,22 @@ class PressuresWidget(
         return self.label1, self.label2, self.label3
 
 
+class PressureSnapCurvePlotDataItem(XDateSnapCurvePlotDataItem):
+    def __init__(self, *args, **kwargs):
+        self.relative_time = False
+        super().__init__(*args, **kwargs)
+        self.curve.target.hide()
+
+    def format_x(self, x: float) -> str:
+        if self.relative_time:
+            return f"{x:.3f} s"
+        return super().format_x(x)
+
+    @staticmethod
+    def format_y(y: float) -> str:
+        return f"{y:.3g}"
+
+
 class PlottingWidget(
     *uic.loadUiType(os.path.join(os.path.dirname(__file__), "plotting.ui"))
 ):
@@ -131,9 +148,9 @@ class PlottingWidget(
         self.setupUi(self)
         self.plotItem.showGrid(x=True, y=True, alpha=1.0)
         self.plots = (
-            pg.PlotDataItem(pen="c"),
-            pg.PlotDataItem(pen="m"),
-            pg.PlotDataItem(pen="y"),
+            PressureSnapCurvePlotDataItem(pen="c"),
+            PressureSnapCurvePlotDataItem(pen="m"),
+            PressureSnapCurvePlotDataItem(pen="y"),
         )
         for plot in self.plots:
             self.plotItem.addItem(plot)
@@ -157,10 +174,12 @@ class PlottingWidget(
             xval: list[float] = [t.timestamp() for t in x]
 
         for plot, yval in zip(self.plots, ylist, strict=True):
+            plot.relative_time = self.relative_check.isChecked()
             plot.setData(xval, yval)
 
     def clear(self):
         for plot in self.plots:
+            plot.curve.target.hide()
             plot.setData()
 
     @property
@@ -207,10 +226,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Setup frontend widgets
         self.pressure_widget = PressuresWidget()
-        for i, idx in enumerate(self.main_gauges):
-            self.pressure_widget.set_label(i, self.channel_names[idx - 1])
         d1.addWidget(self.pressure_widget)
         self.plotting = PlottingWidget()
+        for i, idx in enumerate(self.main_gauges):
+            self.pressure_widget.set_label(i, self.channel_names[idx - 1])
+            self.plotting.plots[i].opts["name"] = self.channel_names[idx - 1]
         self.plotting.interval_spin.setValue(log_interval)
         self.plotting.interval_spin.valueChanged.connect(self.set_logging_interval)
         self.plotting.plotItem.getAxis("left").setLabel(f"Pressure ({self.log_units})")
