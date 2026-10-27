@@ -6,7 +6,6 @@ import multiprocessing
 import os
 import sys
 import time
-from logging.handlers import RotatingFileHandler
 
 import pyvisa
 import slack_sdk
@@ -22,19 +21,13 @@ F70_INST_NAME: str = ""
 REFRESH_INTERVAL_MS: int = 1000
 WATER_WARNING_TEMP: int = 28
 WATER_TEMP_ENVELOPE: tuple[int, int] = (5, 26)
+COMPRESSOR_LOG_DIR: str = "D:/Logs/Compressor"
 
 log = logging.getLogger("F70H")
 log.setLevel(logging.INFO)
 
 _fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s - %(message)s")
-# Delay opening so spawned CSV logging processes do not hold the file open.
-_fh = RotatingFileHandler(
-    f"D:/daq_logs/{log.name}.log",
-    maxBytes=20 * 1024 * 1024,
-    backupCount=10,
-    encoding="utf-8",
-    delay=True,
-)
+_fh = logging.FileHandler(f"D:/daq_logs/{log.name}.log", mode="a", encoding="utf-8")
 _sh = logging.StreamHandler(sys.stdout)
 _fh.setFormatter(_fmt)
 _sh.setFormatter(_fmt)
@@ -57,6 +50,24 @@ sys.excepthook = handle_exception
 client = slack_sdk.WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 
+def log_start_stop(timestamp: str, event: str, reason: str):
+    """Append a compressor start/stop event to the local history."""
+    try:
+        os.makedirs(COMPRESSOR_LOG_DIR, exist_ok=True)
+        with open(
+            os.path.join(COMPRESSOR_LOG_DIR, "start_stop.csv"),
+            "a",
+            newline="",
+            encoding="utf-8",
+        ) as f:
+            writer = csv.writer(f)
+            if f.tell() == 0:
+                writer.writerow(["timestamp", "event", "reason"])
+            writer.writerow([timestamp, event, reason])
+    except OSError:
+        log.exception("Failed to write compressor start/stop log")
+
+
 def send_message(message: str | list[str]):
     """Send a message to the slack channel."""
     if isinstance(message, list):
@@ -74,7 +85,7 @@ def send_message(message: str | list[str]):
 class LoggingProc(multiprocessing.Process):
     def __init__(self):
         super().__init__()
-        self.log_dir = "D:/Logs/Compressor"
+        self.log_dir = COMPRESSOR_LOG_DIR
         self._stopped = multiprocessing.Event()
         self.queue = multiprocessing.Manager().Queue()
         self._last_logged: datetime.datetime = datetime.datetime.now()
@@ -283,18 +294,22 @@ class MainWindow(F70GUI):
         self.wait_thread()
         self.instr.turn_on()
 
+        timestamp = self.current_time_formatted
+        log_start_stop(timestamp, "ON", "manual")
+
         # Notify slack channel
-        send_message(
-            f":large_green_circle: {self.current_time_formatted} Compressor ON"
-        )
+        send_message(f":large_green_circle: {timestamp} Compressor ON")
 
     def stop_button_clicked(self):
         # Turn off compressor
         self.wait_thread()
         self.instr.turn_off()
 
+        timestamp = self.current_time_formatted
+        log_start_stop(timestamp, "OFF", "manual")
+
         # Notify slack channel
-        send_message(f":red_circle: {self.current_time_formatted} Compressor OFF")
+        send_message(f":red_circle: {timestamp} Compressor OFF")
 
     def stop_if_hot(self, bits: str, temperature: tuple[int, int, int], pressure: int):
         if (bits[-1] == "1") and temperature[-1] > WATER_WARNING_TEMP:
@@ -310,10 +325,13 @@ class MainWindow(F70GUI):
         self.wait_thread()
         self.instr.turn_off()
 
+        timestamp = self.current_time_formatted
+        log_start_stop(timestamp, "OFF", "high water temperature")
+
         # Notify slack channel
         send_message(
             [
-                f":large_orange_circle: {self.current_time_formatted} Compressor OFF, "
+                f":large_orange_circle: {timestamp} Compressor OFF, "
                 "high water temperature",
                 f"Temperatures {', '.join([f'{t}°C' for t in temperature])}",
                 f"Return pressure {pressure} psig",
