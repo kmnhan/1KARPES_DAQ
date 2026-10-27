@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v10.3.2
 
     - name: Set up Python
       run: uv python install
@@ -37,7 +37,7 @@ jobs:
       run: ditto -c -k --sequesterRsrc --keepParent "dist/LogViewer.app" "logviewer.app.zip"
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Log Viewer
         path: ./src/logviewer/logviewer.app.zip
