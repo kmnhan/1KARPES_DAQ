@@ -97,7 +97,7 @@ class LoggingProc(multiprocessing.Process):
         self._stopped = multiprocessing.Event()
         self.queue = multiprocessing.Manager().Queue()
         self._last_logged: datetime.datetime = datetime.datetime.now()
-        self._content_old: tuple[int, int, int] = (0, 0, 0)
+        self._content_old: tuple[int, int, int, int] = (0, 0, 0, 0)
 
     def run(self):
         self._stopped.clear()
@@ -154,7 +154,7 @@ class LoggingProc(multiprocessing.Process):
         self._stopped.set()
         self.join()
 
-    def append(self, timestamp: datetime.datetime, values: tuple[int, int, int]):
+    def append(self, timestamp: datetime.datetime, values: tuple[int, int, int, int]):
         self.queue.put((timestamp, values))
 
 
@@ -388,7 +388,7 @@ class MainWindow(F70GUI):
         self, bits: str, temperature: tuple[int, int, int], pressure: int
     ):
         self._water_in_temp = temperature[-1]
-        self.log_writer.append(datetime.datetime.now(), temperature)
+        self.log_writer.append(datetime.datetime.now(), (*temperature, pressure))
 
         state = F70H_STATE[int(bits[4:7], 2)]
 

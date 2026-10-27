@@ -55,18 +55,8 @@ The slit indicator in the GUI determines the analyzer slit information recorded 
 data file. Remember to set the slit indicator to the correct value after changing the
 analyzer slit.
 
-All attributes are recorded when the scan ends.
-
-### Diagnostic logs
-
-Temperature control, motion control, and F70H write diagnostic logs to
-`D:/daq_logs/tempctrl.log`, `D:/daq_logs/moee.log`, and `D:/daq_logs/F70H.log`.
-Each file rotates at approximately 20 MiB, retaining up to 10 backups named `.log.1`
-through `.log.10`. The `.log.1` backup is the most recent; the oldest backup is deleted
-when another is created. Measurement CSV files use a separate logging system.
-
-An existing log larger than 20 MiB becomes the first backup when the updated program
-next writes a message. That backup retains its original size until it ages out.
+For regular scans (saved as `.pxt`), all attributes are recorded when the scan ends. For
+DA maps (saved as `.zip`), the attributes are recorded at the start of the scan.
 
 ### Troubleshooting
 
@@ -96,13 +86,6 @@ from logged data.
 The F70H program (🎛️) is used to monitor the helium compressor status and send
 notifications through slack. The program is started by double clicking on the desktop
 icon.
-
-Start/stop events are also appended to `D:/Logs/Compressor/start_stop.csv`, with
-`timestamp`, `event` (`ON` or `OFF`), and `reason` columns. This includes manual starts
-and stops and automatic stops due to high water temperature. The directory and file
-are created as needed, and each entry uses the same local time as its Slack message.
-Entries are written before sending to Slack, so they are retained if Slack is
-unavailable. This history is kept across program restarts and does not rotate.
 
 Upon starting the program, the user will be prompted to select a COM port. The Helium
 compressor is connected via a RS-232 serial connection to a USB-to-serial multiport
