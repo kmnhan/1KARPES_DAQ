@@ -174,7 +174,7 @@ class MainWindow(
             unique_id = args
             self.forget_uid(unique_id)
         else:
-            log.exception("Command %s not recognized", command)
+            log.error("Command %s not recognized", command)
 
     @QtCore.Slot(str, float, object)
     def parse_move(self, axis: int | str, value: float, unique_id: str | None):
